@@ -56,16 +56,16 @@ repositories and sending Pull Requests.
 The `index.html` of this project expects to be installed alongside with
 DecafMUD, like this:
 
-    mume/               # Or whatever
-        DecafMUD/       # Clone of https://github.com/YOU/DecafMUD/
-        play/           # Clone of https://github.com/YOU/play-mume/
-            index.html  # point your browser here (/mume/play/)
+    play/           # Clone of https://github.com/YOU/play-mume/
+        index.html  # point your browser here (/mume/play/)
+        DecafMUD/   # Clone of https://github.com/YOU/DecafMUD/
 
 So, assuming you are in your project directory and are using the `git`
 command-line software, run:
 
-    git clone https://github.com/YOU/DecafMUD.git
     git clone https://github.com/YOU/play-mume.git play
+    cd play
+    git submodule update --init
 
 Remember to replace `YOU` by your Github username.
 
@@ -87,15 +87,25 @@ produce more features in less time. Try it with a [compatible
 editor](https://github.com/Microsoft/TypeScript/wiki/TypeScript-Editor-Support)
 and you'll love it too!
 
+Alternatively, you can also use Docker Compose to quickly get a working
+developer environment up and running:
+
+    docker-compose up --build
+
 ### Getting the Third-party Libraries
 
 Play MUME! relies on a few 3rd-party Javascript libraries. As I didn't
 integrate with NPM or Yarn yet, you'll have to download them by hand into the
-`libs/` directory. See `libs/README.txt` for the instructions.
+`node_modules/` directory. See `node_modules/README.txt` for the instructions.
 
 Or just grab the `libs` folder from a recent
 [release](https://github.com/waba4mume/play-mume/releases)'s
 `play-mume-vX.Y.Z.zip`.
+
+If you're using `docker-compose` you can enter into the container and grab the
+libraries out:
+
+    docker exec -it play_play-mume_1 sh
 
 ### Getting Map Data
 

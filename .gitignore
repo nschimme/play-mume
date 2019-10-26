@@ -1,5 +1,2 @@
 .*.swp
-libs/*.js
-libs/*.ts
-built/*.js
 mapdata
