@@ -51,7 +51,7 @@ jobs:
           cp mume.macros.js deploy_dir/
           cp mume.menu.js deploy_dir/
           cp -r resources/ deploy_dir/
-          cp -r dist/ deploy_dir/
+          cp -r built/ deploy_dir/
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
