@@ -1,12 +1,12 @@
 const CACHE_NAME = 'play-mume-cache-v1';
 const urlsToCache = [
-  'index.html', // Changed from '/' and '/index.html'
+  '/',
+  'index.html',
   'play.css',
   'DecafMUD/src/css/main.css',
   'DecafMUD/src/css/mud-colors.css',
   'DecafMUD/src/css/decafmud.css',
   'DecafMUD/src/css/decafmud-dark.css',
-  'errorhandler.js',
   'node_modules/jquery/dist/jquery.min.js',
   'node_modules/jquery-throttle-debounce/jquery.ba-throttle-debounce.min.js',
   'node_modules/split.js/dist/split.min.js',
@@ -21,8 +21,9 @@ const urlsToCache = [
   'DecafMUD/src/js/decafmud.interface.panels.menu.js',
   'DecafMUD/src/js/decafmud.interface.panels.settings.js',
   'DecafMUD/src/js/dragelement.js',
-  'mume.macros.js',
-  'mume.menu.js',
+  'built/errorhandler.js',
+  'built/mume.macros.js',
+  'built/mume.menu.js',
   'built/mume.mapper.js',
   'icons/icon-192x192.png',
   'icons/icon-512x512.png'
