@@ -15,12 +15,15 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
-// Placeholder declarations for global variables
-declare const MENU_HELP: any;
-declare const MI_SUBMENU: any;
-declare const MENU_OPTIONS: any;
-declare let toolbar_menus: any; // Assuming it's an array or object that can be modified
+import {
+    toolbar_menus,
+    MENU_HELP,
+    MENU_OPTIONS,
+    MI_SUBMENU
+} from './decafmud/decafmud.interface.panels.menu';
 
+// Placeholder declarations for other global variables that might be defined elsewhere
+// or will be part of a future refactor.
 interface GlobalMapHere {
     x: number;
     y: number;
@@ -43,34 +46,44 @@ declare let globalSplit: GlobalSplit | null | undefined;
 declare function canvasFitParent(): void;
 declare let globalMapWindow: Window | null; // For the popup window
 
-toolbar_menus[MENU_HELP][MI_SUBMENU].unshift(
-    'New to MUME?', 'mume_menu_new();',
-    'MUME Help',    'mume_menu_help();',
-    'MUME Rules',   'mume_menu_rules();' );
+// Ensure toolbar_menus is initialized before attempting to modify it.
+// This might require toolbar_menus from decafmud.interface.panels.menu.ts to be loaded first.
+// For now, we assume it's available and proceed with modifications.
+if (toolbar_menus && toolbar_menus[MENU_HELP] && toolbar_menus[MENU_HELP][MI_SUBMENU]) {
+    toolbar_menus[MENU_HELP][MI_SUBMENU].unshift(
+        'New to MUME?', 'mume_menu_new();',
+        'MUME Help',    'mume_menu_help();',
+        'MUME Rules',   'mume_menu_rules();' );
 
-toolbar_menus[MENU_HELP][MI_SUBMENU].push(
-    'About Map',     'mume_menu_about_map();',
-    'Map(per) Bug?', 'mume_menu_map_bug();', );
+    toolbar_menus[MENU_HELP][MI_SUBMENU].push(
+        'About Map',     'mume_menu_about_map();',
+        'Map(per) Bug?', 'mume_menu_map_bug();', );
+}
 
-toolbar_menus[MENU_OPTIONS][MI_SUBMENU].unshift(
-    'Detach Map', 'open_mume_map_window();' );
+if (toolbar_menus && toolbar_menus[MENU_OPTIONS] && toolbar_menus[MENU_OPTIONS][MI_SUBMENU]) {
+    toolbar_menus[MENU_OPTIONS][MI_SUBMENU].unshift(
+        'Detach Map', 'open_mume_map_window();' );
+}
 
-function mume_menu_new(): void
+export function mume_menu_new(): void
 {
     window.open('http://mume.org/newcomers.php', 'mume_new_players');
 }
+(window as any).mume_menu_new = mume_menu_new;
 
-function mume_menu_help(): void
+export function mume_menu_help(): void
 {
     window.open('http://mume.org/help.php', 'mume_help');
 }
+(window as any).mume_menu_help = mume_menu_help;
 
-function mume_menu_rules(): void
+export function mume_menu_rules(): void
 {
     window.open('http://mume.org/rules.php', 'mume_rules');
 }
+(window as any).mume_menu_rules = mume_menu_rules;
 
-function mume_menu_about_map(): void
+export function mume_menu_about_map(): void
 {
     alert(
         "Play MUME!, a modern web client for MUME using DecafMUD, is brought to you by Waba,\n" +
@@ -82,13 +95,15 @@ function mume_menu_about_map(): void
         "\n" +
         "The map data is covered by a separate license." );
 }
+(window as any).mume_menu_about_map = mume_menu_about_map;
 
-function mume_menu_map_bug(): void
+export function mume_menu_map_bug(): void
 {
     window.open( 'https://github.com/MUME/play-mume/issues/new', 'mume_map_bug' );
 }
+(window as any).mume_menu_map_bug = mume_menu_map_bug;
 
-function open_mume_map_window(): void
+export function open_mume_map_window(): void
 {
     let where: string | undefined;
     let url: string;
