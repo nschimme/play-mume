@@ -27,7 +27,7 @@ window.onerror = function (msg, file_loc, line_no, col_no, error) {
         message = msg;
     }
     else if (msg && msg.type) {
-        message = "Event: " + msg.type; // Or more detailed event info
+        message = "Event: ".concat(msg.type); // Or more detailed event info
     }
     else {
         message = "Unknown error";

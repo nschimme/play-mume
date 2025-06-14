@@ -15,6 +15,77 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var PIXI = __importStar(require("pixi.js"));
 var Mapper;
 (function (Mapper) {
     var ROOM_PIXELS = 48;
@@ -103,10 +174,15 @@ var Mapper;
         MumeMap.load = function (containerElementName) {
             var result = jQuery.Deferred();
             MumeMapData.load().done(function (mapData) {
-                MumeMapDisplay.load(containerElementName, mapData).done(function (display) {
+                MumeMapDisplay.load(containerElementName, mapData)
+                    .then(function (display) {
                     var map = new MumeMap(mapData, display);
                     $(map.pathMachine).on(MumePathMachine.SIG_MOVEMENT, function (event, where) { return map.onMovement(event, where); });
                     result.resolve(map);
+                })
+                    .catch(function (error) {
+                    console.error("Failed to load MumeMapDisplay:", error);
+                    result.reject(error);
                 });
             });
             return result;
@@ -283,7 +359,7 @@ var Mapper;
             this.z = z;
         }
         RoomCoords.prototype.toString = function () {
-            return "RoomCoords(" + this.x + ", " + this.y + ", " + this.z + ")";
+            return "RoomCoords(".concat(this.x, ", ").concat(this.y, ", ").concat(this.z, ")");
         };
         return RoomCoords;
     }());
@@ -745,7 +821,7 @@ var Mapper;
                 default:
                     console.error("unable to load a texture for dirsf %d", dirsf);
             }
-            return "resources/pixmaps/" + kind + "-" + name + ".png";
+            return "resources/pixmaps/".concat(kind, "-").concat(name, ".png");
         }
         function getExtraAssetPath(extra, kind) {
             var name = "";
@@ -886,7 +962,7 @@ var Mapper;
                         console.error("unable to load load texture %d", extra);
                 }
             ;
-            return "resources/pixmaps/" + kind + "-" + name + ".png";
+            return "resources/pixmaps/".concat(kind, "-").concat(name, ".png");
         }
         function getAllAssetPaths() {
             var paths = [];
@@ -918,15 +994,15 @@ var Mapper;
             var dirsf = roadDirsFlags(room);
             if (room.data.sector === Sector.ROAD) {
                 var imgPath = getRoadAssetPath(dirsf, "road");
-                display = sector = new PIXI.Sprite(PIXI.loader.resources[imgPath].texture);
+                display = sector = new PIXI.Sprite(PIXI.Assets.get(imgPath));
             }
             else {
                 var imgPath = getSectorAssetPath(room.data.sector);
-                sector = new PIXI.Sprite(PIXI.loader.resources[imgPath].texture);
+                sector = new PIXI.Sprite(PIXI.Assets.get(imgPath));
                 if (dirsf !== 0) // Trail (road exits but not Sectors.ROAD)
                  {
                     var trailPath = getRoadAssetPath(dirsf, "trail");
-                    var trail = new PIXI.Sprite(PIXI.loader.resources[trailPath].texture);
+                    var trail = new PIXI.Sprite(PIXI.Assets.get(trailPath));
                     // Just in case the trail and sector dimensions don't match
                     trail.scale.set(sector.width / trail.width, sector.height / trail.height);
                     display = new PIXI.Container();
@@ -997,14 +1073,14 @@ var Mapper;
                 return null;
             // Do not allocate a container for the common case of a single load flag
             if (paths.length === 1) {
-                var sprite = new PIXI.Sprite(PIXI.loader.resources[paths[0]].texture);
+                var sprite = new PIXI.Sprite(PIXI.Assets.get(paths[0]));
                 sprite.scale.set(ROOM_PIXELS / sprite.width, ROOM_PIXELS / sprite.height);
                 return sprite;
             }
             var display = new PIXI.Container();
             for (var _i = 0, paths_1 = paths; _i < paths_1.length; _i++) {
                 var path = paths_1[_i];
-                var sprite = new PIXI.Sprite(PIXI.loader.resources[path].texture);
+                var sprite = new PIXI.Sprite(PIXI.Assets.get(path));
                 sprite.scale.set(ROOM_PIXELS / sprite.width, ROOM_PIXELS / sprite.height);
                 display.addChild(sprite);
             }
@@ -1069,35 +1145,47 @@ var Mapper;
         }
         // Async factory function. Returns a Display when the prerequisites are loaded.
         MumeMapDisplay.load = function (containerElementName, mapData) {
-            var result = jQuery.Deferred();
-            // Start loading assets
-            PIXI.loader.add(Mm2Gfx.getAllAssetPaths());
-            PIXI.loader.load(function () {
-                var display = new MumeMapDisplay(containerElementName, mapData);
-                result.resolve(display);
+            return __awaiter(this, void 0, void 0, function () {
+                var assetPaths, display;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            assetPaths = Mm2Gfx.getAllAssetPaths().map(function (p) { return String(p); });
+                            return [4 /*yield*/, PIXI.Assets.load(assetPaths)];
+                        case 1:
+                            _a.sent();
+                            display = new MumeMapDisplay(containerElementName, mapData);
+                            return [2 /*return*/, display];
+                    }
+                });
             });
-            return result;
         };
         /* Installs the viewport into the DOM. */
         MumeMapDisplay.prototype.installMap = function (containerElementName) {
-            this.pixi = new PIXI.Application({ autoStart: false, backgroundColor: 0x6e6e6e, });
-            this.pixi.renderer.autoResize = true;
-            PIXI.settings.RESOLUTION = window.devicePixelRatio;
+            this.pixi = new PIXI.Application({
+                autoStart: false,
+                backgroundColor: 0x6e6e6e,
+                resolution: window.devicePixelRatio || 1, // Added fallback for devicePixelRatio
+                autoDensity: true, // Manages resolution and density
+            });
             var stub = document.getElementById(containerElementName);
-            if (stub == null || stub.parentElement == null)
-                $("body").append(this.pixi.renderer.view);
-            else
-                stub.parentElement.replaceChild(this.pixi.renderer.view, stub);
+            if (stub == null || stub.parentElement == null) {
+                document.body.appendChild(this.pixi.view); // Use app.view
+            }
+            else {
+                stub.parentElement.replaceChild(this.pixi.view, stub); // Use app.view
+            }
         };
         MumeMapDisplay.prototype.fitParent = function () {
-            if (this.pixi.renderer.view.parentElement == null) {
-                console.warn("PIXI canvas has no parent element?");
+            var parentElement = this.pixi.view.parentElement;
+            if (parentElement === null) {
+                console.warn("PIXI canvas parentElement is null.");
                 return false;
             }
-            var canvasParent = $(this.pixi.renderer.view.parentElement);
+            var canvasParent = $(parentElement);
             if (canvasParent.is(":visible") && canvasParent.width() && canvasParent.height()) {
-                var width = canvasParent.width();
-                var height = canvasParent.height();
+                var width = canvasParent.width(); // Added type assertion
+                var height = canvasParent.height(); // Added type assertion
                 // Non-integers may cause the other dimension to unexpectedly
                 // increase. 535.983,520 => 535.983,520.95, then rounded up to the
                 // nearest integer, causing scrollbars.
@@ -1106,16 +1194,16 @@ var Mapper;
                 // causing scrollbars again. Same issue in Chromium 62 for the map window.
                 width = Math.floor(width);
                 height = Math.floor(height) - 4;
-                this.pixi.renderer.resize(width, height);
+                this.pixi.renderer.resize(width, height); // Resize method might be on app.renderer or app.screen
                 this.fullRefresh();
             }
             else {
-                this.pixi.renderer.resize(0, 0);
+                this.pixi.renderer.resize(0, 0); // Resize method might be on app.renderer or app.screen
             }
             return true;
         };
         MumeMapDisplay.prototype.isVisible = function () {
-            var visible = this.pixi.screen.width > 0 && this.pixi.screen.height > 0;
+            var visible = this.pixi.renderer.width > 0 && this.pixi.renderer.height > 0; // Or app.screen
             return visible;
         };
         /* Called when all assets are available. Constructs the graphical structure
@@ -1210,8 +1298,9 @@ var Mapper;
                  {
                     layer.visible = true;
                     layer.scale.set(0.8, 0.8);
-                    if (this.pixi.renderer.type === PIXI.RENDERER_TYPE.WEBGL) {
-                        var filter = new PIXI.filters.ColorMatrixFilter();
+                    if (this.pixi.renderer.type === PIXI.RENDERER_TYPE.WEBGL) // Corrected Enum name
+                     {
+                        var filter = new PIXI.ColorMatrixFilter(); // Namespace Filters removed
                         filter.brightness(0.4, false);
                         layer.filters = [filter];
                     }
@@ -1270,13 +1359,14 @@ var Mapper;
             background.done(function () { return _this.pixi.render(); });
         };
         MumeMapDisplay.prototype.reshapeInitialHint = function () {
+            // if (!this.pixi.renderer) await this.pixi.init(); // Ensure renderer is initialized - app constructor should handle this
             this.initialHint.style.wordWrapWidth = this.pixi.renderer.width - 40;
             var hintSize = this.initialHint.getLocalBounds();
             this.initialHint.pivot.x = hintSize.width / 2;
             this.initialHint.pivot.y = hintSize.height / 2;
             this.initialHint.x = this.pixi.renderer.width / 2;
             this.initialHint.y = this.pixi.renderer.height / 2;
-            this.pixi.render();
+            // this.pixi.render(); // render is usually called by Application's ticker or explicitly after stage changes
         };
         /* Update all graphical elements to match the current position, going as
          * far as fetching rooms if needed. */
@@ -1520,7 +1610,7 @@ var Mapper;
         MumeXmlParser.prototype.startTag = function (tagName, attr) {
             if (this.tagStack.length > 5) {
                 var tags = this.tagStack.map(function (t) { return t.name; }).join();
-                console.warn("Ignoring MumeXmlParser tag " + tagName + " because of deeply nested tags: " + tags);
+                console.warn("Ignoring MumeXmlParser tag ".concat(tagName, " because of deeply nested tags: ").concat(tags));
                 return;
             }
             this.tagStack.push({ name: tagName, attr: attr, text: "" });
