@@ -56,8 +56,8 @@
             DecafMUD.plugins.TextInputFilter.mumexml = Mapper.MumeXmlParser;
 
             new DecafMUD({
-                host: currentHost,
-                port: currentPort,
+                host: 'mume.org',
+                port: 443,
                 autoreconnect : false,
                 autoconnect : true,
 
@@ -68,9 +68,9 @@
                     swf             : 'DecafMUD/src/flash/DecafMUDFlashSocket.swf',
 
                     // WebSocket Specific
-                    wsport          : currentPort,
+                    wsport          : 443,
                     wspath          : 'ws-play/',
-                    ssl             : currentPort == 443
+                    ssl             : true
                 },
 
                 interface           : 'panels',
