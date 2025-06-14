@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-or-later
+// SPDX-License-Identifier: MIT
 /* code stolen from http://www.switchonthecode.com/tutorials/javascript-draggable-elements */
 
 function hookEvent(
