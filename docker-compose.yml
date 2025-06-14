@@ -1,0 +1,7 @@
+services:
+  play-mume:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 4000:4000
