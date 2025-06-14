@@ -41,23 +41,25 @@ jobs:
         run: npm install
       - name: Compile TypeScript
         run: npm run tsc
+      - name: Prepare deployment directory
+        run: |
+          mkdir deploy_dir
+          cp index.html deploy_dir/
+          cp map.html deploy_dir/
+          cp play.css deploy_dir/
+          cp errorhandler.js deploy_dir/
+          cp mume.macros.js deploy_dir/
+          cp mume.menu.js deploy_dir/
+          cp -r resources/ deploy_dir/
+          if [ -d "dist" ]; then cp -r dist/ deploy_dir/; fi
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./
+          publish_dir: ./deploy_dir
           publish_branch: gh-pages
           keep_files: false
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
           commit_message: 'Deploy to GitHub Pages'
           full_commit_message: 'Deploy to GitHub Pages'
-          files_to_deploy: |
-            index.html
-            map.html
-            play.css
-            errorhandler.js
-            mume.macros.js
-            mume.menu.js
-            resources/
-            dist/
