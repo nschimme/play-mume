@@ -22,5 +22,5 @@ declare interface DecafMUD
 
 declare interface DecafMUDSocket
 {
-    write( data: string ): void;
+    write( _data: string ): void;
 }

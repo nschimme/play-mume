@@ -5,7 +5,7 @@
  */
 
 interface Decaf {
-  sendInput(command: string): void;
+  sendInput(_command: string): void;
 }
 
 declare function fkeys_enabled(): boolean;

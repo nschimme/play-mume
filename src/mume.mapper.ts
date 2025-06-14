@@ -58,15 +58,6 @@ function whenAll<T>( deferreds: Array<JQueryPromise<T>> )
     return master;
 }
 
-/* Like map.keys(), but as an Array and IE-compatible.
- */
-function mapKeys<T, U>( map: Map<T, U> )
-{
-    let keys: Array<T> = [];
-    map.forEach( function( value, key ) { keys.push( key ); } );
-    return keys;
-}
-
 // Adapted from MMapper2: the result must be identical for the hashes to match
 function translitUnicodeToAsciiLikeMMapper( unicode: string ): string
 {
@@ -479,8 +470,8 @@ class MapMetaData
     }
 }
 
-interface RoomId extends Number {
-    _roomIdBrand: never; // Prevent implicit conversion with Number
+interface RoomId extends number {
+    _roomIdBrand: never; // Prevent implicit conversion with the primitive 'number' type
 }
 
 // This is what we load from the server, inside RoomData.
@@ -1014,9 +1005,9 @@ namespace Mm2Gfx
                 case 14:
                     name = "passivemob";
                     break;
-                case 14:
-                    name = "elitemob";
-                    break;
+                // case 14: // Duplicate: elitemob was also 14. Assuming passivemob is correct for 14.
+                //     name = "elitemob";
+                //     break;
                 case 15:
                     name = "smob";
                     break;
@@ -1106,9 +1097,9 @@ namespace Mm2Gfx
         return `resources/pixmaps/${kind}-${name}.png`;
     }
 
-    export function getAllAssetPaths(): Array<String>
+    export function getAllAssetPaths(): Array<string>
     {
-        let paths: Array<String> = [];
+        let paths: Array<string> = [];
 
         for ( let i = 0; i < Sector.COUNT; ++i )
             paths.push( getSectorAssetPath( i ) );
