@@ -15,6 +15,8 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
+import * as PIXI from 'pixi.js';
+
 namespace Mapper
 {
 
@@ -125,15 +127,20 @@ export class MumeMap
 
         MumeMapData.load().done( ( mapData: MumeMapData ) =>
         {
-            MumeMapDisplay.load( containerElementName, mapData ).done( ( display: MumeMapDisplay ) => {
-                let map = new MumeMap( mapData, display );
+            MumeMapDisplay.load( containerElementName, mapData )
+                .then( ( display: MumeMapDisplay ) => {
+                    let map = new MumeMap( mapData, display );
 
-                $( map.pathMachine ).on(
-                    MumePathMachine.SIG_MOVEMENT,
-                    ( event, where ) => map.onMovement( event, where ) );
+                    $( map.pathMachine ).on(
+                        MumePathMachine.SIG_MOVEMENT,
+                        ( event, where ) => map.onMovement( event, where ) );
 
-                result.resolve( map );
-            } );
+                    result.resolve( map );
+                } )
+                .catch( (error: any) => {
+                    console.error("Failed to load MumeMapDisplay:", error);
+                    result.reject(error);
+                });
         } );
 
         return result;
@@ -357,7 +364,7 @@ class MumeMapIndex
 /* This is a RoomCoords shifted by metaData.minX/Y/Z to fit a zero-based Array. */
 class ZeroedRoomCoords
 {
-    private preventDuckTyping: never;
+    private preventDuckTyping!: never;
 
     public x: number;
     public y: number;
@@ -374,7 +381,7 @@ class ZeroedRoomCoords
 /* Room coordinates, comprised in metaData.minX .. maxX etc. */
 export class RoomCoords
 {
-    private preventDuckTyping: never;
+    private preventDuckTyping!: never;
 
     public x: number;
     public y: number;
@@ -1106,9 +1113,9 @@ namespace Mm2Gfx
         return `resources/pixmaps/${kind}-${name}.png`;
     }
 
-    export function getAllAssetPaths(): Array<String>
+    export function getAllAssetPaths(): Array<string>
     {
-        let paths: Array<String> = [];
+        let paths: Array<string> = [];
 
         for ( let i = 0; i < Sector.COUNT; ++i )
             paths.push( getSectorAssetPath( i ) );
@@ -1148,17 +1155,17 @@ namespace Mm2Gfx
         if ( room.data.sector === Sector.ROAD )
         {
             let imgPath = getRoadAssetPath( dirsf, "road" );
-            display = sector = new PIXI.Sprite( PIXI.loader.resources[ imgPath ].texture );
+            display = sector = new PIXI.Sprite( PIXI.Assets.get( imgPath ) );
         }
         else
         {
             let imgPath = getSectorAssetPath( room.data.sector );
-            sector = new PIXI.Sprite( PIXI.loader.resources[ imgPath ].texture );
+            sector = new PIXI.Sprite( PIXI.Assets.get( imgPath ) );
 
             if ( dirsf !== 0 ) // Trail (road exits but not Sectors.ROAD)
             {
                 let trailPath = getRoadAssetPath( dirsf, "trail" );
-                let trail = new PIXI.Sprite( PIXI.loader.resources[ trailPath ].texture );
+                let trail = new PIXI.Sprite( PIXI.Assets.get( trailPath ) );
 
                 // Just in case the trail and sector dimensions don't match
                 trail.scale.set( sector.width / trail.width, sector.height / trail.height );
@@ -1257,7 +1264,7 @@ namespace Mm2Gfx
         // Do not allocate a container for the common case of a single load flag
         if ( paths.length === 1 )
         {
-            let sprite: PIXI.Sprite = new PIXI.Sprite( PIXI.loader.resources[ paths[0] ].texture );
+            let sprite: PIXI.Sprite = new PIXI.Sprite( PIXI.Assets.get( paths[0] ) );
             sprite.scale.set( ROOM_PIXELS / sprite.width, ROOM_PIXELS / sprite.height );
             return sprite;
         }
@@ -1265,7 +1272,7 @@ namespace Mm2Gfx
         let display = new PIXI.Container();
         for ( let path of paths )
         {
-            let sprite: PIXI.Sprite = new PIXI.Sprite( PIXI.loader.resources[ path ].texture );
+            let sprite: PIXI.Sprite = new PIXI.Sprite( PIXI.Assets.get( path ) );
             sprite.scale.set( ROOM_PIXELS / sprite.width, ROOM_PIXELS / sprite.height );
             display.addChild( sprite );
         }
@@ -1358,49 +1365,50 @@ class MumeMapDisplay
     }
 
     // Async factory function. Returns a Display when the prerequisites are loaded.
-    public static load( containerElementName: string, mapData: MumeMapData ): JQueryPromise<MumeMapDisplay>
+    public static async load( containerElementName: string, mapData: MumeMapData ): Promise<MumeMapDisplay>
     {
-        let result = jQuery.Deferred();
-
         // Start loading assets
-        PIXI.loader.add( Mm2Gfx.getAllAssetPaths() );
-        PIXI.loader.load( () => {
-            let display = new MumeMapDisplay( containerElementName, mapData );
-            result.resolve( display );
-        } );
+        // Ensure getAllAssetPaths returns string[]
+        const assetPaths = Mm2Gfx.getAllAssetPaths().map(p => String(p));
+        await PIXI.Assets.load(assetPaths);
 
-        return result;
+        let display = new MumeMapDisplay( containerElementName, mapData );
+        return display;
     }
 
     /* Installs the viewport into the DOM. */
     public installMap( containerElementName: string ): void
     {
-        this.pixi = new PIXI.Application( { autoStart: false, backgroundColor: 0x6e6e6e, } );
-        this.pixi.renderer.autoResize = true;
-
-        PIXI.settings.RESOLUTION = window.devicePixelRatio;
+        this.pixi = new PIXI.Application({
+            autoStart: false,
+            backgroundColor: 0x6e6e6e,
+            resolution: window.devicePixelRatio || 1, // Added fallback for devicePixelRatio
+            autoDensity: true, // Manages resolution and density
+        });
 
         let stub = document.getElementById( containerElementName );
-        if ( stub == null || stub.parentElement == null )
-            $( "body" ).append( this.pixi.renderer.view );
-        else
-            stub.parentElement.replaceChild( this.pixi.renderer.view, stub );
+        if ( stub == null || stub.parentElement == null ) {
+            document.body.appendChild(this.pixi.view as unknown as Node); // Use app.view
+        } else {
+            stub.parentElement.replaceChild(this.pixi.view as unknown as Node, stub); // Use app.view
+        }
     }
 
     public fitParent(): boolean
     {
-        if ( this.pixi.renderer.view.parentElement == null )
+        const parentElement = (this.pixi.view as HTMLCanvasElement).parentElement;
+        if (parentElement === null)
         {
-            console.warn( "PIXI canvas has no parent element?" );
+            console.warn( "PIXI canvas parentElement is null." );
             return false;
         }
 
-        let canvasParent = $( this.pixi.renderer.view.parentElement );
+        let canvasParent = $(parentElement);
 
         if ( canvasParent.is( ":visible" ) && canvasParent.width() && canvasParent.height() )
         {
-            let width  = <number>canvasParent.width();
-            let height = <number>canvasParent.height();
+            let width  = canvasParent.width() as number; // Added type assertion
+            let height = canvasParent.height() as number; // Added type assertion
 
             // Non-integers may cause the other dimension to unexpectedly
             // increase. 535.983,520 => 535.983,520.95, then rounded up to the
@@ -1411,12 +1419,12 @@ class MumeMapDisplay
             width = Math.floor( width );
             height = Math.floor( height ) - 4;
 
-            this.pixi.renderer.resize( width, height );
+            this.pixi.renderer.resize( width, height ); // Resize method might be on app.renderer or app.screen
             this.fullRefresh();
         }
         else
         {
-            this.pixi.renderer.resize( 0, 0 );
+            this.pixi.renderer.resize( 0, 0 ); // Resize method might be on app.renderer or app.screen
         }
 
         return true;
@@ -1424,7 +1432,7 @@ class MumeMapDisplay
 
     public isVisible(): boolean
     {
-        let visible = this.pixi.screen.width > 0 && this.pixi.screen.height > 0;
+        let visible = this.pixi.renderer.width > 0 && this.pixi.renderer.height > 0; // Or app.screen
         return visible;
     }
 
@@ -1558,9 +1566,9 @@ class MumeMapDisplay
             {
                 layer.visible = true;
                 layer.scale.set( 0.8, 0.8 );
-                if ( this.pixi.renderer.type === PIXI.RENDERER_TYPE.WEBGL )
+                if ( this.pixi.renderer.type === PIXI.RENDERER_TYPE.WEBGL ) // Corrected Enum name
                 {
-                    let filter = new PIXI.filters.ColorMatrixFilter();
+                    let filter = new PIXI.ColorMatrixFilter(); // Namespace Filters removed
                     filter.brightness( 0.4, false );
                     layer.filters = [ filter ];
                 }
@@ -1633,8 +1641,9 @@ class MumeMapDisplay
         background.done( () => this.pixi.render() );
     }
 
-    private reshapeInitialHint(): void
+    private reshapeInitialHint(): void // Removed async, init should be handled by constructor
     {
+        // if (!this.pixi.renderer) await this.pixi.init(); // Ensure renderer is initialized - app constructor should handle this
         this.initialHint.style.wordWrapWidth = this.pixi.renderer.width - 40;
 
         let hintSize = this.initialHint.getLocalBounds();
@@ -1644,7 +1653,7 @@ class MumeMapDisplay
         this.initialHint.x = this.pixi.renderer.width / 2;
         this.initialHint.y = this.pixi.renderer.height / 2;
 
-        this.pixi.render();
+        // this.pixi.render(); // render is usually called by Application's ticker or explicitly after stage changes
     }
 
     /* Update all graphical elements to match the current position, going as

@@ -9,10 +9,13 @@
             "ES2015.Iterable",
             // Iterable declares containers as generics through an interface, but lack the implementation
             "ES2015.Collection",
+            "ES2015.Promise"
         ],
         "strict": true,
         "preserveConstEnums": true,
-        "outDir": "built"
+        "outDir": "built",
+        "esModuleInterop": true,
+        "skipLibCheck": true
     },
     "include": [
         "src/**/*",
