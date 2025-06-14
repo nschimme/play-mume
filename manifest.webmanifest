@@ -1,7 +1,7 @@
 {
   "name": "Play MUME - DecafMUD Client",
   "short_name": "PlayMUME",
-  "description": "A modern web client for MUME using DecafMUD, enhanced as a PWA.",
+  "description": "A modern web client for MUME using DecafMUD.",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#000000",
