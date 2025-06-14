@@ -18,12 +18,25 @@
 var globalErrorHandlerWasHit = false;
 
 // Log the error in the Apache logs with a dummy URL
-window.onerror = function (msg, file_loc, line_no, col_no) {
-    col_no = (typeof col_no === "undefined") ? "" : col_no;
+window.onerror = function (msg: string | Event, file_loc?: string, line_no?: number, col_no?: number, error?: Error) {
+    // col_no can be undefined, ensure it's a string for concatenation, or handle it if you use it as a number
+    const col_no_str = (typeof col_no === "undefined") ? "" : col_no.toString();
+    const file_loc_str = file_loc || "unknown_file";
+    const line_no_str = (typeof line_no === "undefined") ? "" : line_no.toString();
+
+    let message: string;
+    if (typeof msg === 'string') {
+        message = msg;
+    } else if (msg && msg.type) {
+        message = `Event: ${msg.type}`; // Or more detailed event info
+    } else {
+        message = "Unknown error";
+    }
+
     var url = '/mume/play/jserror'
-        + '?at=' + encodeURIComponent(file_loc + ":" + line_no + ":" + col_no)
-        + "&msg=" + encodeURIComponent(msg);
-    var xhr = new XMLHttpRequest();
+        + '?at=' + encodeURIComponent(file_loc_str + ":" + line_no_str + ":" + col_no_str)
+        + "&msg=" + encodeURIComponent(message);
+    const xhr: XMLHttpRequest = new XMLHttpRequest();
     xhr.open('GET', url, true);
     xhr.send(null);
     if (!globalErrorHandlerWasHit) {
@@ -35,7 +48,7 @@ window.onerror = function (msg, file_loc, line_no, col_no) {
             +"For other cases: the error was logged and will hopefully be fixed... "
             +"Nag Waba if he didn't notice it!\n"
             +"\n"
-            +"Technical details: " + msg);
+            +"Technical details: " + message); // Use the processed message
     }
     globalErrorHandlerWasHit = true;
     return false;
