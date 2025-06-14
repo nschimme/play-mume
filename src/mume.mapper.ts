@@ -1147,9 +1147,9 @@ namespace Mm2Gfx
         return dirsf;
     }
 
-    function buildRoomSector( room: Room ) : PIXI.DisplayObject
+    function buildRoomSector( room: Room ) : PIXI.Container
     {
-        let display: PIXI.DisplayObject;
+        let display: PIXI.Container;
         let sector: PIXI.Sprite;
         let dirsf = roadDirsFlags( room );
         if ( room.data.sector === Sector.ROAD )
@@ -1206,7 +1206,7 @@ namespace Mm2Gfx
         return borders;
     }
 
-    function buildUpExit( room: Room ): PIXI.DisplayObject | null
+    function buildUpExit( room: Room ): PIXI.Container | null
     {
         if ( room.data.exits[ Dir.UP ].out.length === 0 )
             return null;
@@ -1223,7 +1223,7 @@ namespace Mm2Gfx
         return exit;
     }
 
-    function buildDownExit( room: Room ): PIXI.DisplayObject | null
+    function buildDownExit( room: Room ): PIXI.Container | null
     {
         if ( room.data.exits[ Dir.DOWN ].out.length === 0 )
             return null;
@@ -1248,7 +1248,7 @@ namespace Mm2Gfx
         return exit;
     }
 
-    function buildRoomExtra( room: Room, kind: ExtraKind ) : PIXI.DisplayObject | null
+    function buildRoomExtra( room: Room, kind: ExtraKind ) : PIXI.Container | null
     {
         const flagsCount = (kind === "load" ? LOAD_FLAGS : MOB_FLAGS );
         const flags = (kind === "load" ? room.data.loadflags : room.data.mobflags );
@@ -1279,7 +1279,7 @@ namespace Mm2Gfx
         return display;
     }
 
-    function maybeAddChild( display: PIXI.Container, child: PIXI.DisplayObject | null ): void
+    function maybeAddChild( display: PIXI.Container, child: PIXI.Container | null ): void
     {
         if ( child != null )
             display.addChild( child );
@@ -1309,7 +1309,7 @@ namespace Mm2Gfx
 
     /* Returns the graphical structure for the yellow square that shows the current
      * position to the player. */
-    export function buildHerePointer(): PIXI.DisplayObject
+    export function buildHerePointer(): PIXI.Container
     {
         const size = ROOM_PIXELS * 1.4;
         const offset = ( size - ROOM_PIXELS ) / 2;
@@ -1332,7 +1332,13 @@ namespace Mm2Gfx
             {
                 fontFamily : 'Arial', fontSize: 24, fill : 'white', align : 'center',
                 wordWrap: true, wordWrapWidth: 400,
-                dropShadow: true, dropShadowBlur: 5, dropShadowDistance: 0,
+                dropShadow: {
+                    alpha: 1, // Default
+                    angle: Math.PI / 6, // Default
+                    blur: 5, // From original dropShadowBlur
+                    color: 'black', // Default
+                    distance: 0, // From original dropShadowDistance
+                },
             } );
 
         return text;
@@ -1348,7 +1354,7 @@ class MumeMapDisplay
 
     // PIXI elements
     private roomDisplays: SpatialIndex<PIXI.Container>;
-    private herePointer!: PIXI.DisplayObject;
+    private herePointer!: PIXI.Container;
     private layers: Array<PIXI.Container> = [];
     private pixi!: PIXI.Application;
     private initialHint!: PIXI.Text;
@@ -1469,7 +1475,7 @@ class MumeMapDisplay
         return;
     }
 
-    private static dumpContainer( indent: number, name: string, what: PIXI.DisplayObject ): void
+    private static dumpContainer( indent: number, name: string, what: PIXI.Container ): void
     {
         let indentStr = "";
         while ( indent-- )
@@ -1566,7 +1572,7 @@ class MumeMapDisplay
             {
                 layer.visible = true;
                 layer.scale.set( 0.8, 0.8 );
-                if ( this.pixi.renderer.type === PIXI.RENDERER_TYPE.WEBGL ) // Corrected Enum name
+                if ( this.pixi.renderer.type === PIXI.RendererType.WEBGL ) // Corrected Enum name
                 {
                     let filter = new PIXI.ColorMatrixFilter(); // Namespace Filters removed
                     filter.brightness( 0.4, false );
