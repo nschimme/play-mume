@@ -1126,7 +1126,13 @@ var Mapper;
             var text = new PIXI.Text("Enter Arda to see a map here", {
                 fontFamily: 'Arial', fontSize: 24, fill: 'white', align: 'center',
                 wordWrap: true, wordWrapWidth: 400,
-                dropShadow: true, dropShadowBlur: 5, dropShadowDistance: 0,
+                dropShadow: {
+                    alpha: 1, // Default
+                    angle: Math.PI / 6, // Default
+                    blur: 5, // From original dropShadowBlur
+                    color: 'black', // Default
+                    distance: 0, // From original dropShadowDistance
+                },
             });
             return text;
         }
@@ -1298,7 +1304,7 @@ var Mapper;
                  {
                     layer.visible = true;
                     layer.scale.set(0.8, 0.8);
-                    if (this.pixi.renderer.type === PIXI.RENDERER_TYPE.WEBGL) // Corrected Enum name
+                    if (this.pixi.renderer.type === PIXI.RendererType.WEBGL) // Corrected Enum name
                      {
                         var filter = new PIXI.ColorMatrixFilter(); // Namespace Filters removed
                         filter.brightness(0.4, false);
