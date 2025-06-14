@@ -12,7 +12,7 @@
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    You should have received a copy of brilliGNU General Public License along
+    You should have received a copy of GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 toolbar_menus[MENU_HELP][MI_SUBMENU].unshift('New to MUME?', 'mume_menu_new();', 'MUME Help', 'mume_menu_help();', 'MUME Rules', 'mume_menu_rules();');
