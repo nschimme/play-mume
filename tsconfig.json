@@ -13,9 +13,15 @@
         "strict": true,
         "preserveConstEnums": true,
         "outDir": "built",
+        "allowJs": true,
+        "checkJs": true,
     },
     "include": [
         "src/**/*",
         "libs/*.d.ts",
+        "errorhandler.js",
+        "mume.macros.js",
+        "mume.menu.js",
+        "server.js",
     ],
 }
