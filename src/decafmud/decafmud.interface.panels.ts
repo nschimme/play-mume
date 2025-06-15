@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /*!
  * DecafMUD v0.9.0
  * http://decafmud.stendec.me
@@ -257,7 +258,6 @@ class PanelsInterface {
 // Defaults from prototype are now initialized in class properties or constructor
 
 // Splash Functionality
-// Splash Functionality
     public initSplash(percentage: number = 0, message?: string): void {
         if (message === undefined) {
             message = (this.decaf.tr ? this.decaf.tr('Discombobulating interface recipient...') : 'Discombobulating interface recipient...');
@@ -381,7 +381,6 @@ class PanelsInterface {
         this.sizetm = window.setTimeout(() => this.hideSize(true), 250);
     }
 
-// Status Notifications (and Stuff)
 // Status Notifications (and Stuff)
     public print_msg(txt: string): void {
         if (this.display) {
