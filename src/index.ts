@@ -30,16 +30,16 @@ import Split from 'split.js';
 // Their direct import might not be necessary if DecafMUD itself handles their registration when it's imported/run.
 // This is a common pattern for older libraries with plugin architectures.
 // We'll need to verify this. If they don't export modules, they might need to be concatenated or loaded sequentially.
-import '../DecafMUD/src/js/decafmud.js'; // Main script for side effects (sets up global DecafMUD)
-import '../DecafMUD/src/js/decafmud.display.standard.js';
-import '../DecafMUD/src/js/decafmud.encoding.iso885915.js';
-import '../DecafMUD/src/js/decafmud.socket.websocket.js';
-import '../DecafMUD/src/js/decafmud.storage.standard.js';
-import '../DecafMUD/src/js/decafmud.telopt.gmcp.js';
-import '../DecafMUD/src/js/decafmud.interface.panels.js';
-import '../DecafMUD/src/js/decafmud.interface.panels.menu.js';
-import '../DecafMUD/src/js/decafmud.interface.panels.settings.js';
-import '../DecafMUD/src/js/dragelement.js';
+import './decafmud/decafmud'; // Main script for side effects (sets up global DecafMUD)
+import './decafmud/decafmud.display.standard';
+import './decafmud/decafmud.encoding.iso885915';
+import './decafmud/decafmud.socket.websocket';
+import './decafmud/decafmud.storage.standard';
+import './decafmud/decafmud.telopt.gmcp';
+import './decafmud/decafmud.interface.panels';
+import './decafmud/decafmud.interface.panels.menu';
+import './decafmud/decafmud.interface.panels.settings';
+import './decafmud/dragelement';
 
 
 // Import project's own TypeScript modules
