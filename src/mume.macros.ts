@@ -14,7 +14,7 @@ declare function numpad_enabled(): boolean;
 function tryExtraMacro(decaf: Decaf, keycode: number): number {
   // f-key macros
   if (112 <= keycode && keycode <= 121 && fkeys_enabled()) {
-    var cmd = "f" + (keycode-111);
+    const cmd = "f" + (keycode-111);
     decaf.sendInput(cmd);
     return 1;
   }
