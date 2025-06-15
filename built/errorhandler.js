@@ -15,27 +15,27 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
-var globalErrorHandlerWasHit = false;
+let globalErrorHandlerWasHit = false;
 // Log the error in the Apache logs with a dummy URL
-window.onerror = function (msg, file_loc, line_no, col_no, error) {
+window.onerror = function (msg, file_loc, line_no, col_no, _error) {
     // col_no can be undefined, ensure it's a string for concatenation, or handle it if you use it as a number
-    var col_no_str = (typeof col_no === "undefined") ? "" : col_no.toString();
-    var file_loc_str = file_loc || "unknown_file";
-    var line_no_str = (typeof line_no === "undefined") ? "" : line_no.toString();
-    var message;
+    const col_no_str = (typeof col_no === "undefined") ? "" : col_no.toString();
+    const file_loc_str = file_loc || "unknown_file";
+    const line_no_str = (typeof line_no === "undefined") ? "" : line_no.toString();
+    let message;
     if (typeof msg === 'string') {
         message = msg;
     }
     else if (msg && msg.type) {
-        message = "Event: ".concat(msg.type); // Or more detailed event info
+        message = `Event: ${msg.type}`; // Or more detailed event info
     }
     else {
         message = "Unknown error";
     }
-    var url = '/mume/play/jserror'
+    const url = '/mume/play/jserror'
         + '?at=' + encodeURIComponent(file_loc_str + ":" + line_no_str + ":" + col_no_str)
         + "&msg=" + encodeURIComponent(message);
-    var xhr = new XMLHttpRequest();
+    const xhr = new XMLHttpRequest();
     xhr.open('GET', url, true);
     xhr.send(null);
     if (!globalErrorHandlerWasHit) {
