@@ -1794,10 +1794,10 @@ export class MumeXmlParser
     private plainText!: string;
     private mode!: MumeXmlMode;
     private xmlDesirableBytes: number = 0;
-    private decaf: DecafMUD;
+    private decaf: DecafMUDInstance;
     private scouting!: ScoutingState
 
-    constructor( decaf: DecafMUD )
+    constructor( decaf: DecafMUDInstance )
     {
         this.decaf = decaf;
         this.clear();
