@@ -1,3 +1,5 @@
+/// <reference types="pixi.js" />
+
 /*  Play MUME!, a modern web client for MUME using DecafMUD.
     Copyright (C) 2017, Waba.
 
