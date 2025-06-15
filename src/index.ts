@@ -1,9 +1,25 @@
+/*  Play MUME!, a modern web client for MUME using DecafMUD.
+    Copyright (C) 2017, Waba.
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
+
 import $ from 'jquery'; // Assuming jQuery will be installed as a module
 import 'jquery-throttle-debounce'; // Assuming this is a jQuery plugin, it might need to be imported like this
 // For Split.js, ensure it's installed via npm if not already, then import
 import Split from 'split.js';
-// For SparkMD5, ensure it's installed via npm, then import
-import SparkMD5 from 'spark-md5'; // Or: import * as SparkMD5 from 'spark-md5'; depending on its export structure
+// For SparkMD5, ensure it's installed via npm, then import // Or: import * as SparkMD5 from 'spark-md5'; depending on its export structure
 
 // Import DecafMUD related components. This is a placeholder and might need significant adjustment
 // depending on how DecafMUD's JS files are structured (ES modules, UMD, or global scripts).
@@ -35,7 +51,7 @@ import { MumeMap, MumeXmlParser } from './mume.mapper'; // Corrected import from
 // Global variables that were in the original script
 // We should try to avoid globals if possible, but let's mirror the existing structure first.
 let globalMapWindow: Window | null | undefined; // Adjusted type
-let globalSplit: Split.Instance | undefined; // Correct type for Split.js instance
+let _globalSplit: Split.Instance | undefined; // Correct type for Split.js instance
 let globalMap: MumeMap | undefined;
 
 // This function was global, now it's part of the module scope
@@ -88,7 +104,7 @@ $(window).on('load', function () {
     socket: 'websocket',
   });
 
-  globalSplit = Split(['#mume-client-panel', '#mume-map-panel'], {
+  _globalSplit = Split(['#mume-client-panel', '#mume-map-panel'], {
     sizes: [80, 20],
     cursor: 'col-resize',
     snapOffset: 100,
@@ -155,7 +171,7 @@ $(window).on('load', function () {
         // Fallback or polyfill might be needed for older browser support for ResizeObserver
     }
     handleSizeChange();
-  }).fail(function(error: any) { // Added error handling for MumeMap.load
+  }).fail(function(error: unknown) { // Added error handling for MumeMap.load
     console.error("Failed to load MumeMap:", error);
   });
 

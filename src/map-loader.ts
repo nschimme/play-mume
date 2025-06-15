@@ -1,6 +1,23 @@
+/*  Play MUME!, a modern web client for MUME using DecafMUD.
+    Copyright (C) 2017, Waba.
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
+
 import $ from 'jquery';
 // Assuming jquery-throttle-debounce is loaded via main import or extends jQuery prototype
-import { MumeMap, MumeXmlParser, RoomCoords } from './mume.mapper'; // Ensure RoomCoords is exported from mume.mapper if not already
+import { MumeMap, MumeXmlParser, RoomCoords, MumeXmlParserTag } from './mume.mapper'; // Ensure RoomCoords is exported from mume.mapper if not already
 
 // It's good practice to ensure DecafMUD and its parts are loaded if they are needed globally.
 // However, map.html's script primarily interacts with an existing DecafMUD instance from the opener window.
@@ -8,17 +25,17 @@ import { MumeMap, MumeXmlParser, RoomCoords } from './mume.mapper'; // Ensure Ro
 (function () {
   "use strict";
 
-  let tagEventHandler: ((_event: unknown, tag: any) => void) | undefined; // Define type for tagEventHandler
+  let tagEventHandler: ((_event: unknown, tag: MumeXmlParserTag) => void) | undefined; // Define type for tagEventHandler
 
-  $(window).on("load", function (_e: any) { // _e for event object type
+  $(window).on("load", function (_e: JQuery.Event) { // _e for event object type
     MumeMap.load("mume-map").done(function (map: MumeMap) { // map type
       let parser: MumeXmlParser; // parser type
       let matches: RegExpExecArray | null; // matches type
 
       // Accessing DecafMUD from the opener window. This is a cross-window communication.
       // Ensure that window.opener and its properties exist before accessing them.
-      if (window.opener && (window.opener as any).DecafMUD && (window.opener as any).DecafMUD.instances && (window.opener as any).DecafMUD.instances[0]) {
-        parser = (window.opener as any).DecafMUD.instances[0].textInputFilter as MumeXmlParser;
+      if (window.opener && (window.opener as OpenerWindow).DecafMUD && (window.opener as OpenerWindow).DecafMUD.instances && (window.opener as OpenerWindow).DecafMUD.instances[0]) {
+        parser = (window.opener as OpenerWindow).DecafMUD.instances[0].textInputFilter as MumeXmlParser;
 
         // A more robust check for parser validity might be needed here
         // e.g., if (!parser || !(parser instanceof MumeXmlParser)) if MumeXmlParser is a class
@@ -28,7 +45,7 @@ import { MumeMap, MumeXmlParser, RoomCoords } from './mume.mapper'; // Ensure Ro
         }
 
         tagEventHandler = map.processTag.bind(map);
-        (window.opener as any).$(parser).on(MumeXmlParser.SIG_TAG_END, tagEventHandler);
+        (window.opener as OpenerWindow).$(parser).on(MumeXmlParser.SIG_TAG_END, tagEventHandler);
 
         console.log("The main window will now send data to the map window");
 
@@ -54,17 +71,17 @@ import { MumeMap, MumeXmlParser, RoomCoords } from './mume.mapper'; // Ensure Ro
         // Optionally, display a message to the user in the map window itself.
         $('#mume-map').html('<p>Error: Could not connect to the main MUME window. Please ensure the main window is open and DecafMUD is running.</p>');
       }
-    }).fail(function(error: any) {
+    }).fail(function(error: unknown) {
       console.error("Failed to load MumeMap for map.html:", error);
       $('#mume-map').html('<p>Error: Failed to load map components.</p>');
     });
   });
 
-  $(window).on("unload", function (_e: any) { // _e for event object type
-    if (window.opener && (window.opener as any).DecafMUD && (window.opener as any).DecafMUD.instances && (window.opener as any).DecafMUD.instances[0]) {
-      const parser = (window.opener as any).DecafMUD.instances[0].textInputFilter;
+  $(window).on("unload", function (_e: JQuery.Event) { // _e for event object type
+    if (window.opener && (window.opener as OpenerWindow).DecafMUD && (window.opener as OpenerWindow).DecafMUD.instances && (window.opener as OpenerWindow).DecafMUD.instances[0]) {
+      const parser = (window.opener as OpenerWindow).DecafMUD.instances[0].textInputFilter;
       if (tagEventHandler && parser) {
-        (window.opener as any).$(parser).off(MumeXmlParser.SIG_TAG_END, tagEventHandler);
+        (window.opener as OpenerWindow).$(parser).off(MumeXmlParser.SIG_TAG_END, tagEventHandler);
       }
     }
   });
