@@ -1,5 +1,3 @@
-/// <reference types="pixi.js" />
-
 /*  Play MUME!, a modern web client for MUME using DecafMUD.
     Copyright (C) 2017, Waba.
 
@@ -16,6 +14,8 @@
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
+
+import * as PIXI from 'pixi.js';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-namespace
 namespace Mapper
