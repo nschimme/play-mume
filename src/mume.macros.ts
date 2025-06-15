@@ -4,13 +4,17 @@
  * This file is originally from Discworld.
  */
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Provided by the environment/DecafMUD core
 interface Decaf {
   sendInput(command: string): void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Provided by the environment
 declare function fkeys_enabled(): boolean;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Provided by the environment
 declare function numpad_enabled(): boolean;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Potentially used by global event handlers or index.html
 function tryExtraMacro(decaf: Decaf, keycode: number): number {
   // f-key macros
   if (112 <= keycode && keycode <= 121 && fkeys_enabled()) {
@@ -41,9 +45,8 @@ function tryExtraMacro(decaf: Decaf, keycode: number): number {
   }
 
   // don't allow the tab key to do anything!
-  if (keycode == 9) return 1;
+  if (keycode == 9) return 1; // This was a comment, but it's functional code
 
   // anything else (not handled)
   return 0;
 }
-

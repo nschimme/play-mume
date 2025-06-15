@@ -17,6 +17,7 @@
 
 import * as PIXI from 'pixi.js';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-namespace
 namespace Mapper
 {
 
@@ -36,7 +37,7 @@ enum Dir { // Must match MM2's defs.
 
 /* Like JQuery.when(), but the master Promise is resolved only when all
  * promises are resolved or rejected, not at the first rejection. */
-function whenAll<T>( deferreds: JQueryPromise<T>[] )
+const whenAll = function<T>( deferreds: JQueryPromise<T>[] )
 {
     const master: JQueryDeferred<T> = jQuery.Deferred();
 
@@ -60,17 +61,8 @@ function whenAll<T>( deferreds: JQueryPromise<T>[] )
     return master;
 }
 
-/* Like map.keys(), but as an Array and IE-compatible.
- */
-function mapKeys<T, U>( map: Map<T, U> )
-{
-    const keys: T[] = [];
-    map.forEach( function( value, key ) { keys.push( key ); } );
-    return keys;
-}
-
 // Adapted from MMapper2: the result must be identical for the hashes to match
-function translitUnicodeToAsciiLikeMMapper( unicode: string ): string
+const translitUnicodeToAsciiLikeMMapper = function( unicode: string ): string
 {
     const table = [
         /*192*/ 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'C', 'E', 'E', 'E', 'E', 'I', 'I', 'I', 'I',
@@ -106,7 +98,8 @@ export class MumeMap
     public mapIndex: MumeMapIndex | null = null;
     public display: MumeMapDisplay;
     public pathMachine: MumePathMachine;
-    public processTag: ( event: any, tag: MumeXmlParserTag ) => void;
+    public processTag: ( _event: unknown, tag: MumeXmlParserTag ) => void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public static debugInstance: MumeMap;
 
     constructor( mapData: MumeMapData, display: MumeMapDisplay )
@@ -116,7 +109,7 @@ export class MumeMap
         this.mapIndex = new MumeMapIndex();
         this.pathMachine = new MumePathMachine( this.mapData, this.mapIndex );
         this.processTag =
-            ( event: any, tag: MumeXmlParserTag ) => this.pathMachine.processTag( event, tag );
+            ( _event: unknown, tag: MumeXmlParserTag ) => this.pathMachine.processTag( _event, tag );
 
         MumeMap.debugInstance = this;
     }
@@ -131,13 +124,14 @@ export class MumeMap
                 .then( ( display: MumeMapDisplay ) => {
                     const map = new MumeMap( mapData, display );
 
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     $( map.pathMachine ).on(
                         MumePathMachine.SIG_MOVEMENT,
-                        ( event, where ) => map.onMovement( event, where ) );
+                        ( _event: unknown, where: RoomCoords ) => map.onMovement( _event, where ) );
 
                     result.resolve( map );
                 } )
-                .catch( (error: any) => {
+                .catch( (error: unknown) => {
                     console.error("Failed to load MumeMapDisplay:", error);
                     result.reject(error);
                 });
@@ -146,7 +140,7 @@ export class MumeMap
         return result;
     }
 
-    public onMovement( event: any, where: RoomCoords ): void
+    public onMovement( _event: unknown, where: RoomCoords ): void
     {
         this.display.repositionTo( where );
     }
@@ -176,7 +170,7 @@ class MumePathMachine
 
     /* This receives an event from MumeXmlParser when it encounters a closing tag.
      * */
-    public processTag( event: any, tag: MumeXmlParserTag ): void
+    public processTag( _event: unknown, tag: MumeXmlParserTag ): void
     {
         console.log( "MumePathMachine processes tag " + tag.name );
         if ( tag.name === "name" )
@@ -221,6 +215,7 @@ class MumePathMachine
 class MumeMapIndex
 {
     // This is a vast simplification of course...
+    // eslint-disable-next-line no-control-regex
     private static readonly ANY_ANSI_ESCAPE =  /\x1B\[[^A-Za-z]+[A-Za-z]/g;
 
     private cache: Map<string, RoomCoords[]>;
@@ -259,16 +254,15 @@ class MumeMapIndex
         return hash;
     }
 
-    private updateCache( json: any )
+    private updateCache( json: IndexChunk )
     {
-        let hash, oldSize, sizeIncrease, jsonSize;
+        let hash;
+		const oldSize = this.cache.size;
         let invalid = 0;
-
-        oldSize = this.cache.size;
 
         for ( hash in json )
         {
-            if ( json.hasOwnProperty( hash ) )
+            if ( Object.prototype.hasOwnProperty.call(json, hash) )
             {
                 const rawCoordsArray: number[][] = json[ hash ];
                 if ( !Array.isArray( rawCoordsArray ) )
@@ -296,13 +290,13 @@ class MumeMapIndex
             }
         }
 
-        sizeIncrease = this.cache.size - oldSize;
-        jsonSize = Object.keys( json ).length;
+        const sizeIncrease = this.cache.size - oldSize;
+        const jsonSize = Object.keys( json ).length;
 
         console.log( "MumeMapIndex: cached %d new entries (%d total), ignored %d invalid",
             sizeIncrease, this.cache.size, jsonSize, invalid );
 
-        if ( sizeIncrease != jsonSize )
+        if ( sizeIncrease !== jsonSize )
             console.error( "MumeMapIndex: stray index entries in %O?", json );
     }
 
@@ -310,10 +304,8 @@ class MumeMapIndex
     private findPosByNameDescCached( name: string, desc: string,
         result: JQueryDeferred<RoomCoords[]>, hash: string ): JQueryDeferred<RoomCoords[]>
     {
-        let coordinates, roomInfo;
-
-        coordinates = this.cache.get( hash );
-        roomInfo = { name, desc, hash, };
+        const coordinates = this.cache.get( hash );
+        const roomInfo = { name, desc, hash, };
         if ( coordinates === undefined )
         {
             console.log( "MumeMapIndex: unknown room %s (%O)", name, roomInfo );
@@ -344,13 +336,13 @@ class MumeMapIndex
         console.log( "Downloading map index chunk " + chunk );
         const url = MAP_DATA_PATH + "roomindex/" + chunk + ".json";
         jQuery.getJSON( url )
-            .done( ( json: any ) =>
+            .done( ( json: IndexChunk ) =>
             {
                 this.cachedChunks.add( chunk );
                 this.updateCache( json );
                 this.findPosByNameDescCached( name, desc, result, hash );
             } )
-            .fail( function( jqxhr, textStatus, error )
+            .fail( function( jqxhr: JQuery.jqXHR, textStatus: string, error: string ) // Added types for fail params
             {
                 console.error( "Loading map index chunk %s failed: %s, %O", url, textStatus, error );
                 result.reject();
@@ -478,7 +470,7 @@ class MapMetaData
     {
         const missing = new Array<string>();
         for ( const prop in new MapMetaData() )
-            if ( !json.hasOwnProperty( prop ) )
+            if ( !Object.prototype.hasOwnProperty.call(json, prop) )
                 missing.push( prop );
 
         if ( missing.length !== 0 )
@@ -486,9 +478,11 @@ class MapMetaData
     }
 }
 
-interface RoomId extends Number {
+type RoomId = number & {
     _roomIdBrand: never; // Prevent implicit conversion with Number
-}
+};
+
+type IndexChunk = {[hash: string]: number[][]};
 
 // This is what we load from the server, inside RoomData.
 class RoomExit
@@ -504,7 +498,7 @@ class RoomData
 {
     name: string = "";
     desc: string = "";
-    id: RoomId = 0 as any; // RoomIds are not meant to be created, yet we need a placeholder
+    id: RoomId = 0 as RoomId; // Changed from '0 as any'
     x: number = 0;
     y: number = 0;
     z: number = 0;
@@ -621,9 +615,9 @@ class MumeMapData
 
     /* Stores a freshly retrieved JSON zone into the in-memory cache. Returns
      * the rooms added to the cache. */
-    private cacheZone( zone: string, json: any ): Room[]
+    private cacheZone( zone: string, json: RoomData[] ): Room[] // Assuming json is RoomData[] based on usage
     {
-        if ( !Array.isArray( json ) )
+        if ( !Array.isArray( json ) ) // This check might be redundant if json is typed as RoomData[]
         {
             console.error( "Expected to find an Array for zone %s, got %O", zone, json );
             return [];
@@ -636,7 +630,7 @@ class MumeMapData
 
             const missing = new Array<string>();
             for ( const prop in new RoomData() )
-                if ( !rdata.hasOwnProperty( prop ) )
+                if ( !Object.prototype.hasOwnProperty.call(rdata, prop) )
                     missing.push( prop );
 
             if ( missing.length !== 0 )
@@ -678,7 +672,7 @@ class MumeMapData
         console.log( "Downloading map zone %s", zone );
         const url = MAP_DATA_PATH + "zone/" + zone + ".json";
         jQuery.getJSON( url )
-            .done( ( json ) =>
+            .done( (json: RoomData[]) => // Typed json here
             {
                 this.cacheZone( zone, json );
                 result.resolve();
@@ -776,7 +770,7 @@ class MumeMapData
         for ( const download of downloads )
         {
             download.dfr
-                .done( ( json: any ) =>
+                .done( ( json: RoomData[] ) => // Typed json here
                 {
                     console.log( "Zone %s downloaded", download.zone );
                     const neededCoords = roomsNotInCachePerZone.get( download.zone );
@@ -818,6 +812,7 @@ class MumeMapData
 
 
 // Algorithms that build PIXI display elements.
+// eslint-disable-next-line @typescript-eslint/no-namespace
 namespace Mm2Gfx
 {
     enum Sector
@@ -852,7 +847,7 @@ namespace Mm2Gfx
     const MOB_FLAGS = 17;
     const LOAD_FLAGS = 24;
 
-    function getSectorAssetPath( sector: number ): string
+    const getSectorAssetPath = function( sector: number ): string
     {
         if ( sector < Sector.UNDEFINED || sector >= Sector.COUNT )
             sector = Sector.UNDEFINED;
@@ -909,11 +904,11 @@ namespace Mm2Gfx
                 break;
             default:
                 console.error("unable to load a texture for sector %d", sector);
-        };
+        }
         return "resources/pixmaps/terrain-" + name + ".png";
-    }
+    };
 
-    function getRoadAssetPath( dirsf: number, kind: RoadKind ): string
+    const getRoadAssetPath = function( dirsf: number, kind: RoadKind ): string
     {
         let name: string = "none";
         switch (dirsf) {
@@ -969,9 +964,9 @@ namespace Mm2Gfx
                 console.error("unable to load a texture for dirsf %d", dirsf);
           }
         return `resources/pixmaps/${kind}-${name}.png`;
-    }
+    };
 
-    function getExtraAssetPath( extra: number, kind: ExtraKind ): string
+    const getExtraAssetPath = function( extra: number, kind: ExtraKind ): string
     {
         let name: string = "";
         if (kind === "mob")
@@ -1021,9 +1016,9 @@ namespace Mm2Gfx
                 case 14:
                     name = "passivemob";
                     break;
-                case 14:
-                    name = "elitemob";
-                    break;
+                // case 14: // Duplicate case, elitemob likely intended for 15 or another value. Commenting out for now.
+                //     name = "elitemob";
+                //     break;
                 case 15:
                     name = "smob";
                     break;
@@ -1109,7 +1104,7 @@ namespace Mm2Gfx
                 break;
             default:
               console.error("unable to load load texture %d", extra);
-            };
+            }
         return `resources/pixmaps/${kind}-${name}.png`;
     }
 
@@ -1136,7 +1131,7 @@ namespace Mm2Gfx
 
     // Road and trail assets are numbered 0..15 based on bit operations
     // describing which exits are roads/trails.
-    function roadDirsFlags( room: Room ) : number
+    const roadDirsFlags = function( room: Room ) : number
     {
         let dirsf: number = 0;
 
@@ -1145,44 +1140,46 @@ namespace Mm2Gfx
                 dirsf |= ( 1 << dir );
 
         return dirsf;
-    }
+    };
 
-    function buildRoomSector( room: Room ) : PIXI.Container
+    const buildRoomSector = function( room: Room ) : PIXI.Container
     {
         let display: PIXI.Container;
-        let sector: PIXI.Sprite;
+        let sectorSprite: PIXI.Sprite; // Rename to avoid confusion
         const dirsf = roadDirsFlags( room );
+
         if ( room.data.sector === Sector.ROAD )
         {
             const imgPath = getRoadAssetPath( dirsf, "road" );
-            display = sector = new PIXI.Sprite( PIXI.Assets.get( imgPath ) );
+            sectorSprite = new PIXI.Sprite( PIXI.Assets.get( imgPath ) );
+            display = sectorSprite; // display is the sprite itself
         }
         else
         {
             const imgPath = getSectorAssetPath( room.data.sector );
-            sector = new PIXI.Sprite( PIXI.Assets.get( imgPath ) );
+            sectorSprite = new PIXI.Sprite( PIXI.Assets.get( imgPath ) );
 
             if ( dirsf !== 0 ) // Trail (road exits but not Sectors.ROAD)
             {
                 const trailPath = getRoadAssetPath( dirsf, "trail" );
                 const trail = new PIXI.Sprite( PIXI.Assets.get( trailPath ) );
-
-                // Just in case the trail and sector dimensions don't match
-                trail.scale.set( sector.width / trail.width, sector.height / trail.height );
+                trail.scale.set( sectorSprite.width / trail.width, sectorSprite.height / trail.height );
 
                 display = new PIXI.Container();
-                sector.addChild( sector, trail );
+                display.addChild( sectorSprite );
+                display.addChild( trail );
             }
-            else
-                display = sector;
+            else // No trail
+            {
+                display = sectorSprite; // display is the sprite itself
+            }
         }
+        // Common operations on the main visual component (sprite) before it's part of 'display'
+        sectorSprite.height = sectorSprite.width = ROOM_PIXELS;
+        return display;
+    };
 
-        sector.height = sector.width = ROOM_PIXELS; // Just in case we got a wrong PNG here
-
-        return sector;
-    }
-
-    function buildRoomBorders( room: Room ) : PIXI.Graphics
+    const buildRoomBorders = function( room: Room ) : PIXI.Graphics
     {
         const borders = new PIXI.Graphics();
         borders.lineStyle( 2, 0x000000, 1 );
@@ -1201,12 +1198,12 @@ namespace Mm2Gfx
                 borders.moveTo( spec.x0, spec.y0 );
                 borders.lineTo( spec.x1, spec.y1 );
             }
-        };
+        }
 
         return borders;
-    }
+    };
 
-    function buildUpExit( room: Room ): PIXI.Container | null
+    const buildUpExit = function( room: Room ): PIXI.Container | null
     {
         if ( room.data.exits[ Dir.UP ].out.length === 0 )
             return null;
@@ -1221,9 +1218,9 @@ namespace Mm2Gfx
         exit.drawCircle( ROOM_PIXELS * 0.75, ROOM_PIXELS * 0.25, 1 );
 
         return exit;
-    }
+    };
 
-    function buildDownExit( room: Room ): PIXI.Container | null
+    const buildDownExit = function( room: Room ): PIXI.Container | null
     {
         if ( room.data.exits[ Dir.DOWN ].out.length === 0 )
             return null;
@@ -1246,9 +1243,9 @@ namespace Mm2Gfx
         exit.lineTo( centerX + crossCoord, centerY - crossCoord );
 
         return exit;
-    }
+    };
 
-    function buildRoomExtra( room: Room, kind: ExtraKind ) : PIXI.Container | null
+    const buildRoomExtra = function( room: Room, kind: ExtraKind ) : PIXI.Container | null
     {
         const flagsCount = (kind === "load" ? LOAD_FLAGS : MOB_FLAGS );
         const flags = (kind === "load" ? room.data.loadflags : room.data.mobflags );
@@ -1269,17 +1266,18 @@ namespace Mm2Gfx
             return sprite;
         }
 
-        const display = new PIXI.Container();
+        // const display = new PIXI.Container(); // This was unused.
+        const container = new PIXI.Container();
         for ( const path of paths )
         {
             const sprite: PIXI.Sprite = new PIXI.Sprite( PIXI.Assets.get( path ) );
             sprite.scale.set( ROOM_PIXELS / sprite.width, ROOM_PIXELS / sprite.height );
-            display.addChild( sprite );
+            container.addChild( sprite );
         }
-        return display;
-    }
+        return container;
+    };
 
-    function maybeAddChild( display: PIXI.Container, child: PIXI.Container | null ): void
+    const maybeAddChild = function( display: PIXI.Container, child: PIXI.Container | null ): void
     {
         if ( child != null )
             display.addChild( child );
@@ -1376,7 +1374,12 @@ class MumeMapDisplay
         // Start loading assets
         // Ensure getAllAssetPaths returns string[]
         const assetPaths = Mm2Gfx.getAllAssetPaths().map(p => String(p));
-        await PIXI.Assets.load(assetPaths);
+        try {
+            await PIXI.Assets.load(assetPaths);
+        } catch (error: unknown) { // Added try-catch for await PIXI.Assets.load
+            console.error("Failed to load PIXI assets:", error);
+            throw error; // Rethrow or handle as appropriate
+        }
 
         const display = new MumeMapDisplay( containerElementName, mapData );
         return display;
@@ -1394,9 +1397,9 @@ class MumeMapDisplay
 
         const stub = document.getElementById( containerElementName );
         if ( stub == null || stub.parentElement == null ) {
-            document.body.appendChild(this.pixi.view as unknown as Node); // Use app.view
+            document.body.appendChild(this.pixi.view as HTMLCanvasElement);
         } else {
-            stub.parentElement.replaceChild(this.pixi.view as unknown as Node, stub); // Use app.view
+            stub.parentElement.replaceChild(this.pixi.view as HTMLCanvasElement, stub);
         }
     }
 
@@ -1744,7 +1747,7 @@ class ScoutingState
             console.log( "Aborting scout because of movement" );
         }
     }
-};
+}
 
 /* Filters out the XML-like tags that MUME can send in "XML mode", and sends
  * them as events instead.
@@ -1855,7 +1858,7 @@ export class MumeXmlParser
         case MumeXmlMode.Off:
             return { text: input, xml: "", };
 
-        case MumeXmlMode.Desirable:
+        case MumeXmlMode.Desirable: {
             const xmlStart = input.indexOf( "<xml>", 0 );
 
             // If somehow XML doesn't get enabled right after we asked for it, at
@@ -1875,7 +1878,7 @@ export class MumeXmlParser
             this.xmlDesirableBytes += input.length;
 
             return { text: input, xml: "", };
-
+        }
         case MumeXmlMode.On:
             return { text: "", xml: input, };
         }
@@ -1943,8 +1946,7 @@ export class MumeXmlParser
 
         while ( ( matches = MumeXmlParser.TAG_RE.exec( input.xml ) ) !== null )
         {
-            let textBefore, isEnd, tagName, attr, isLeaf, textAfter;
-            [ , textBefore, isEnd, tagName, attr, isLeaf, textAfter ] = matches;
+            const [ , textBefore, isEnd, tagName, attr, isLeaf, textAfter ] = matches;
 
             matched = true;
 

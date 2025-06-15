@@ -18,7 +18,7 @@
 let globalErrorHandlerWasHit = false;
 
 // Log the error in the Apache logs with a dummy URL
-window.onerror = function (msg: string | Event, file_loc?: string, line_no?: number, col_no?: number, error?: Error) {
+window.onerror = function (msg: string | Event, file_loc?: string, line_no?: number, col_no?: number, _error?: Error) {
     // col_no can be undefined, ensure it's a string for concatenation, or handle it if you use it as a number
     const col_no_str = (typeof col_no === "undefined") ? "" : col_no.toString();
     const file_loc_str = file_loc || "unknown_file";
