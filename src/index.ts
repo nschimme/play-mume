@@ -9,11 +9,12 @@ import SparkMD5 from 'spark-md5'; // Or: import * as SparkMD5 from 'spark-md5'; 
 // depending on how DecafMUD's JS files are structured (ES modules, UMD, or global scripts).
 // If they are not modules, this part will fail and need a different strategy (e.g. ordered concatenation or specific loaders).
 // For now, let's assume we can import the main DecafMUD object and other specific files if they export anything.
-import { DecafMUD } from '../DecafMUD/src/js/decafmud'; // This path and export needs verification
+// This path and export needs verification // import { DecafMUD } from '../DecafMUD/src/js/decafmud';
 // The following DecafMUD scripts might attach to the DecafMUD object directly or to jQuery.
 // Their direct import might not be necessary if DecafMUD itself handles their registration when it's imported/run.
 // This is a common pattern for older libraries with plugin architectures.
 // We'll need to verify this. If they don't export modules, they might need to be concatenated or loaded sequentially.
+import '../DecafMUD/src/js/decafmud.js'; // Main script for side effects (sets up global DecafMUD)
 import '../DecafMUD/src/js/decafmud.display.standard.js';
 import '../DecafMUD/src/js/decafmud.encoding.iso885915.js';
 import '../DecafMUD/src/js/decafmud.socket.websocket.js';

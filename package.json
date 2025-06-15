@@ -31,7 +31,8 @@
     "webpack-cli": "*",
     "ts-loader": "*",
     "html-webpack-plugin": "*",
-    "copy-webpack-plugin": "*"
+    "copy-webpack-plugin": "*",
+    "@types/spark-md5": "*"
   },
   "engines": {
     "node": ">=8.9.0"

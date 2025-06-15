@@ -17,10 +17,6 @@
 
 import * as PIXI from 'pixi.js';
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-namespace
-namespace Mapper
-{
-
 const ROOM_PIXELS = 48;
 const MAP_DATA_PATH = "mapdata/v1/";
 enum Dir { // Must match MM2's defs.
@@ -1680,7 +1676,7 @@ class MumeMapDisplay
 
 
 
-interface MumeXmlParserTag
+export interface MumeXmlParserTag
 {
     name: string;
     attr: string;
@@ -2059,5 +2055,3 @@ export class MumeXmlParser
             $(this).triggerHandler( MumeXmlParser.SIG_TAG_END, [ topTag, ] );
     }
 }
-
-} // ns
