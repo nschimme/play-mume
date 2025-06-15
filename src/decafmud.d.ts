@@ -3,6 +3,7 @@
 // Define the structure of the DecafMUD instance
 interface DecafMUDInstance {
   textInputFilter?: any; // Property accessed in src/index.ts
+  socket: DecafMUDSocket; // Added this line
   // Add other known properties/methods of an instance if available
   // For example, from the original inline script:
   // host: string;
