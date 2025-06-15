@@ -45,16 +45,21 @@ module.exports = {
       patterns: [
         { from: 'resources', to: 'resources' },
         { from: 'icons', to: 'icons' },
-        { from: 'DecafMUD/src/css', to: 'DecafMUD/src/css' },
-        // Add other static assets that need to be copied
-        // Note: DecafMUD js files will be bundled if imported, or need to be copied if used as separate scripts
-        // For now, let's assume we'll handle DecafMUD js via imports or copy them as needed later.
-        // The original index.html loads many DecafMUD js files. These will need to be
-        // either imported in the TypeScript entry point or copied and loaded if they can't be bundled.
-        { from: 'DecafMUD/src/flash', to: 'DecafMUD/src/flash', globOptions: { ignore: ['**/README.md'] } }, // Example for flash
+        { from: 'DecafMUD', to: 'DecafMUD' }, // Copy entire DecafMUD directory
         { from: 'play.css', to: 'play.css' },
         { from: 'manifest.webmanifest', to: 'manifest.webmanifest' },
         { from: 'sw.js', to: 'sw.js' }, // Service worker
+        // Note on JavaScript dependencies:
+        // External JavaScript libraries (like jQuery, PixiJS) and application-specific
+        // JavaScript files (e.g., from DecafMUD/src/ SCRIPT_DIR or other subdirectories)
+        // are expected to be imported into the webpack entry points (src/index.ts or src/map-loader.ts)
+        // to be included in the output bundles (main.bundle.js, map.bundle.js).
+        // HtmlWebpackPlugin automatically adds <script> tags for these bundles.
+        // If any JavaScript files are simply copied to the 'dist' directory by CopyWebpackPlugin
+        // without being part of a webpack bundle, HtmlWebpackPlugin will NOT add script tags for them,
+        // and they will not be active in the application unless manually loaded, which is not the
+        // recommended approach when using webpack.
+        // This might be a subject for a future refactoring task if such dependencies are not currently bundled.
       ],
     }),
   ],
