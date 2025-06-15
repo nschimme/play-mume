@@ -40,7 +40,7 @@ import { MumeMap, MumeXmlParser, RoomCoords, MumeXmlParserTag } from './mume.map
         }
 
 
-        if (!parser || typeof (parser as any).filterInputText !== 'function') { // Cast to any for filterInputText if parser is MumeXmlParser|undefined
+        if (!parser || typeof parser.filterInputText !== 'function') { // Cast to any for filterInputText if parser is MumeXmlParser|undefined
           console.error("Bug: expected to find a MumeXmlParser instance in opener window or textInputFilter is invalid.");
           // No 'throw' here, allow map to load, but without parser events.
           parser = undefined; // Ensure parser is undefined if not valid
