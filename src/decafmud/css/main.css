@@ -5,7 +5,7 @@
  */
 
 body {
-  background: /*url(../../assets/decafmud/images/Shadow2.png)*/ top center repeat-x #4f4e4c;
+  background: top center repeat-x #4f4e4c;
   color: #FFF;
   margin: 0;
   height: 100%;
@@ -19,7 +19,7 @@ body {
 }
 
 div#head-cont {
-  background: /*url(../../assets/decafmud/images/Shadow.png)*/ top center repeat-y #572c01;
+  background: top center repeat-y #572c01;
 }
 
 div#heading {
@@ -33,7 +33,7 @@ div#heading {
 }
 
 div#logo {
-  background: url(../../assets/decafmud/images/Logo.png) 10px 0px no-repeat;
+  background-image: none;
   min-height: 119px;
 
   position: relative;
@@ -191,7 +191,7 @@ div#subnav li.active a, div#subnav li.active a:hover {
 }
 
 div#container {
-  background: url(../../assets/decafmud/images/Shadow.png) top center repeat-y;
+  background-image: none;
   width: 830px;
   margin: 0 auto;
 }
@@ -212,7 +212,7 @@ div#foot-cont {
   width: 830px;
   margin: 0 auto;
   margin-top: 0px;
-  background: url(../../assets/decafmud/images/Shadow3.png) top center repeat-x;
+  background-image: none;
   min-height: 45px;
 }
 

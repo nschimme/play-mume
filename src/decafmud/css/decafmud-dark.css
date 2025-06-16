@@ -147,7 +147,7 @@ afmud.toolbar .button.disabled:focus {
 
 /* Info Bars */
 .decafmud.infobar {
-        background: url(../../assets/decafmud/images/decaf-icon.png) 5px 17px no-repeat;
+        background-image: none; background-position: 5px 17px; background-repeat: no-repeat;
         background-color: #191919;
         background-color: rgba(26,26,26,0.95);
         border-color: #666;
