@@ -1323,9 +1323,9 @@ namespace Mm2Gfx
 
     export function buildInitialHint(): PIXI.Text
     {
-        const text = new PIXI.Text(
-            "Enter Arda to see a map here",
-            {
+        const text = new PIXI.Text({
+            text: "Enter Arda to see a map here",
+            style: {
                 fontFamily : 'Arial', fontSize: 24, fill : 'white', align : 'center',
                 wordWrap: true, wordWrapWidth: 400,
                 dropShadow: {
@@ -1335,7 +1335,8 @@ namespace Mm2Gfx
                     color: 'black', // Default
                     distance: 0, // From original dropShadowDistance
                 },
-            } );
+            }
+        });
 
         return text;
     }
