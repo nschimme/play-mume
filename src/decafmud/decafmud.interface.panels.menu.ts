@@ -1,4 +1,17 @@
-// SPDX-License-Identifier: MIT
+import { DecafMUD } from './decafmud';
+import { dragObject } from './dragelement';
+import {
+    get_fontsize,
+    set_fontsize,
+    fkeymacros,
+    numpadwalking,
+    toggle_fkeys,
+    toggle_numpad,
+    progress_visible,
+    toggle_progressbars,
+    showmap,
+    toggle_map
+} from './decafmud.interface.panels.settings';
 /*!
  * DecafMUD v0.9.0
  * http://decafmud.stendec.me
@@ -17,7 +30,7 @@
  * string.
  */
 
-var toolbar_menus = [
+const toolbar_menus = [
   [ 'File', 'menu_file', 'Used for (re-)connecting.',
     ['Reconnect', 'menu_reconnect();']
   ],
@@ -37,7 +50,7 @@ var toolbar_menus = [
   ]
 ];
 
-var MENU_FILE    = 0,
+const MENU_FILE    = 0,
     MENU_LOG     = 1,
     MENU_OPTIONS = 2,
     MENU_HELP    = 3,
@@ -49,9 +62,9 @@ var MENU_FILE    = 0,
  * =======================================
  */
 function build_menu(id) {
-  var ret = toolbar_menus[id][0] + "<ul id=\"sub" +
+  let ret = toolbar_menus[id][0] + "<ul id=\"sub" +
             toolbar_menus[id][1] + "\" class=\"submenu\">";
-  for (j = 0; j < toolbar_menus[id][3].length; j+=2) {
+  for (let j = 0; j < toolbar_menus[id][3].length; j+=2) {
     ret += "<li><a href=\"javascript:" + toolbar_menus[id][3][j+1] +
            "\">" + toolbar_menus[id][3][j] + "</a></li>";
   }
@@ -63,9 +76,9 @@ function build_menu(id) {
  * This function tells decafmud.interface.discworld.js which menus it
  * should put on the screen.
  */
-function get_menus() {
-  var ret = new Array();
-  for (i = 0; i < toolbar_menus.length; i++) {
+export function get_menus() {
+  const ret = new Array();
+  for (let i = 0; i < toolbar_menus.length; i++) {
     ret.push(toolbar_menus[i][1]);
     ret.push(build_menu(i));
     ret.push(toolbar_menus[i][2]);
@@ -78,19 +91,19 @@ function get_menus() {
  * Functionality for opening and closing the menus.
  * ================================================
  */
-var open_menu = -1;
+export let open_menu = -1;
 
-function close_menus() {
-  for (i = 0; i < toolbar_menus.length; i++) {
-    menuname = "sub" + toolbar_menus[i][1];
+export function close_menus() {
+  for (let i = 0; i < toolbar_menus.length; i++) {
+    let menuname = "sub" + toolbar_menus[i][1];
     document.getElementById(menuname).style.visibility = 'hidden';
   }
   open_menu = -1;
   DecafMUD.instances[0].ui.input.focus();
 }
 
-function toggle_menu(index) {
-  menuid = "sub" + toolbar_menus[index][1];
+export function toggle_menu(index: number) { // Added type for index
+  let menuid = "sub" + toolbar_menus[index][1];
   if (open_menu == index) {
     document.getElementById(menuid).style.visibility = 'hidden';
     open_menu = -1;
@@ -108,11 +121,11 @@ function toggle_menu(index) {
  * Functionality to open and close a popup window.
  * ===============================================
  */
-var popup;
-var popupheader;
-var headerdrag;
+let popup: HTMLDivElement | undefined;
+let popupheader: HTMLDivElement | undefined;
+let headerdrag: any; // Changed from dragObject | undefined to any
 
-function show_popup() {
+function show_popup(): HTMLDivElement | undefined {
   // if we already have a popup, clear it
   if (popup != null) {
     while (popup.children.length > 0) {
@@ -124,14 +137,14 @@ function show_popup() {
   popup = document.createElement("div");
 
   // get data about the screen size
-  var w = DecafMUD.instances[0].ui.maxPopupWidth();
-  var h = DecafMUD.instances[0].ui.maxPopupHeight();
-  var t = DecafMUD.instances[0].ui.verticalPopupOffset();
-  var l = DecafMUD.instances[0].ui.horizontalPopupOffset();
+  const w_base = DecafMUD.instances[0].ui.maxPopupWidth();
+  const h_base = DecafMUD.instances[0].ui.maxPopupHeight();
+  const t = DecafMUD.instances[0].ui.verticalPopupOffset();
+  let l = DecafMUD.instances[0].ui.horizontalPopupOffset();
 
-  l += w * 2 / 10;
-  w = w * 6 / 10;
-  h = h * 7 / 10;
+  l += w_base * 2 / 10;
+  const w = w_base * 6 / 10;
+  const h = h_base * 7 / 10;
 
   popup.style.width = w + "px";
   popup.style.height = h + "px";
@@ -149,10 +162,12 @@ function show_popup() {
   popupheader.className = 'decafmud window-header';
   popupheader.id = "popupheader";
   popup.appendChild(popupheader);
-  headerdrag = new dragObject("popup", "popupheader");
+  if (popup && popupheader) {
+    headerdrag = new dragObject(popup, popupheader);
+  }
 
   // create a close button
-  var x = document.createElement('button');
+  const x = document.createElement('button');
   x.innerHTML = '<big>X</big>';
   x.className = 'closebutton';
   x.onclick = function() { close_popup(); };
@@ -168,30 +183,30 @@ function close_popup() {
   popupheader = undefined;
 }
 
-function add_element(inside, kind, innerhtml) {
-  var el = document.createElement(kind);
+function add_element(inside: HTMLElement, kind: string, innerhtml: string): HTMLElement {
+  const el = document.createElement(kind);
   el.innerHTML = innerhtml;
   inside.appendChild(el);
   return el;
 }
 
-function button_line(par) {
-  var buttonline = document.createElement("p");
+function button_line(par: HTMLElement): HTMLParagraphElement {
+  const buttonline = document.createElement("p");
   buttonline.style.textAlign = "center";
   par.appendChild(buttonline);
   return buttonline;
 }
 
-function add_close_button(parentob) {
-  var closebtn = document.createElement('a');
+function add_close_button(parentob: HTMLElement) {
+  const closebtn = document.createElement('a');
   closebtn.className = "fakebutton";
   closebtn.href = 'javascript:close_popup();';
   closebtn.innerHTML = '<big>Close</big>';
   parentob.appendChild(closebtn);
 }
 
-function popup_header(text) {
-  var p = document.createElement("p");
+function popup_header(text: string) {
+  const p = document.createElement("p");
   p.innerHTML = text;
   p.style.marginLeft = "5px";
   p.style.marginRight = "5px";
@@ -201,10 +216,10 @@ function popup_header(text) {
   popup.appendChild(p);
 }
 
-function popup_textarea(name, adjust) {
-  var w = DecafMUD.instances[0].ui.maxPopupWidth() * 6 / 10 - 15;
-  var h = DecafMUD.instances[0].ui.maxPopupHeight() * 7 / 10 - 100 - adjust;
-  var textarea = document.createElement("textarea");
+function popup_textarea(name: string, adjust: number): HTMLTextAreaElement {
+  const w = DecafMUD.instances[0].ui.maxPopupWidth() * 6 / 10 - 15;
+  const h = DecafMUD.instances[0].ui.maxPopupHeight() * 7 / 10 - 100 - adjust;
+  const textarea = document.createElement("textarea");
   textarea.id = name;
   textarea.cols = 80;
   textarea.rows = 20;
@@ -215,10 +230,10 @@ function popup_textarea(name, adjust) {
   return textarea;
 }
 
-function popup_textdiv() {
-  var w = DecafMUD.instances[0].ui.maxPopupWidth() * 6 / 10 - 10;
-  var h = DecafMUD.instances[0].ui.maxPopupHeight() * 7 / 10 - 60;
-  var div = document.createElement("div");
+function popup_textdiv(): HTMLDivElement {
+  const w = DecafMUD.instances[0].ui.maxPopupWidth() * 6 / 10 - 10;
+  const h = DecafMUD.instances[0].ui.maxPopupHeight() * 7 / 10 - 60;
+  const div = document.createElement("div");
   div.style.width = w + "px";
   div.style.height = h + "px";
   div.style.margin = "5px";
@@ -237,12 +252,13 @@ function menu_reconnect() {
   DecafMUD.instances[0].reconnect();
 }
 
-function menu_log(style) {
-  var popup = show_popup();
-  var textarea = popup_textarea("editor", 70);
+function menu_log(style: string) {
+  const popup_el = show_popup();
+  if (!popup_el) return; // Guard against undefined popup
+  const textarea = popup_textarea("editor", 70);
 
   // get the log file
-  var txt = DecafMUD.instances[0].ui.display.display.innerHTML;
+  let txt = DecafMUD.instances[0].ui.display.display.innerHTML;
   if (style == "plain") {
     txt = txt.replace(/\n/g, ' ');
     txt = txt.replace(/<br>/g, '\n');
@@ -252,7 +268,7 @@ function menu_log(style) {
     txt = txt.replace(/\&gt;/g, '>');
   }
   else {
-    var currentTime = new Date();
+    const currentTime = new Date();
     txt = "<html><head><title>DecafMUD " + currentTime.getDate() +
       "/" + currentTime.getMonth() + "/" + currentTime.getFullYear()+
       "</title>\n<link rel=\"stylesheet\" href=\"mud-colors.css\" "+
@@ -262,22 +278,22 @@ function menu_log(style) {
   textarea.value = txt;
 
   // add an explanation
-  add_element(popup, "p", "To log, copy the text from this area to "+
+  add_element(popup_el, "p", "To log, copy the text from this area to "+
     "a text file (on most systems you can copy by clicking in the " +
     "field, then ctrl+a, ctrl+c).");
-  if (style == "html") add_element(popup, "p", "The css-file used "+
+  if (style == "html") add_element(popup_el, "p", "The css-file used "+
     "for the colours can be downloaded <a href=\"mud-colors.css\">"+
     "here</a>.");
 
   // and end with a closing button
-  var btns = button_line(popup);
+  const btns = button_line(popup_el);
   add_close_button(btns);
 }
 
 function menu_font_size() {
-  var pop = popup_textdiv(show_popup());
+  const pop = popup_textdiv(); // Removed show_popup() argument
   add_element(pop, "h2", "Change fonts.");
-  var frm = document.createElement("form");
+  const frm = document.createElement("form");
   frm.name = "formfonts";
   pop.appendChild(frm);
   add_element(frm, "p", "Font Size: "+
@@ -289,13 +305,13 @@ function menu_font_size() {
     "<input name=\"txtfontfamily\" type=\"text\" size=20 value=\"\">");
   add_element(frm, "p", "(Select a font that is supported by your "+
     "browser, or leave empty for the current font.)");
-  var savebtn = document.createElement("a");
+  const savebtn = document.createElement("a");
   savebtn.className = "fakebutton";
   savebtn.href = "javascript:change_font();";
   savebtn.innerHTML = "<big>Save</big>";
   frm.appendChild(savebtn);
   add_element(frm, "span", "&nbsp;&nbsp;&nbsp;");
-  var closebtn = document.createElement("a");
+  const closebtn = document.createElement("a");
   closebtn.className = "fakebutton";
   closebtn.href = "javascript:close_popup();";
   closebtn.innerHTML = "<big>Cancel</big>";
@@ -303,14 +319,16 @@ function menu_font_size() {
 }
 
 function change_font() {
-  var k = parseInt(document.formfonts.txtfontsize.value);
+  const k_input = (document.getElementsByName("txtfontsize")[0] as HTMLInputElement)?.value;
+  const k = parseInt(k_input || "100"); // Provide a default if input not found or empty
   if (k < 50 || k > 500) {
     alert("Please select a size between 50 and 500.");
     return;
   }
 
   set_fontsize(k);
-  var s = document.formfonts.txtfontfamily.value;
+  const s_input = (document.getElementsByName("txtfontfamily")[0] as HTMLInputElement)?.value;
+  const s = s_input || ""; // Provide a default if input not found or empty
   if (s != "")
     DecafMUD.instances[0].ui.el_display.style.fontFamily = "'" + s + "', Consolas, "+
           "Courier, 'Courier New', 'Andale Mono', Monaco, monospace";
@@ -320,26 +338,26 @@ function change_font() {
 }
 
 function menu_macros() {
-  var pop = popup_textdiv(show_popup());
+  const pop = popup_textdiv(); // Removed show_popup() argument
 
   add_element(pop, "p", "Decafmud supports both F-key macro's "+
     "(you need to use the mud's alias system to use them, for "+
     "example <tt>alias f1 score</tt>), and numpad navigation (you "+
     "need to turn numlock on for this to work).");
-  var frm = document.createElement("form");
+  const frm = document.createElement("form");
   frm.name = "formmacros";
   pop.appendChild(frm);
   add_element(frm, "p", "<input type=\"checkbox\" name=\"cfkey\" " +
     (fkeymacros ? "checked" : "") + "/>Enable f-key macros.");
   add_element(frm, "p", "<input type=\"checkbox\" name=\"cnumpad\" "+
     (numpadwalking ? "checked" : "") + "/>Enable numpad navigation.");
-  var savebtn = document.createElement("a");
+  const savebtn = document.createElement("a");
   savebtn.className = "fakebutton";
   savebtn.href = "javascript:change_macros();";
   savebtn.innerHTML = "<big>Save</big>";
   frm.appendChild(savebtn);
   add_element(frm, "span", "&nbsp;&nbsp;&nbsp;");
-  var closebtn = document.createElement("a");
+  const closebtn = document.createElement("a");
   closebtn.className = "fakebutton";
   closebtn.href = "javascript:close_popup();";
   closebtn.innerHTML = "<big>Cancel</big>";
@@ -351,8 +369,10 @@ function menu_history_flush() {
 }
 
 function change_macros() {
-  var fkey = document.formmacros.cfkey.checked;
-  var nump = document.formmacros.cnumpad.checked;
+  const fkey_checkbox = document.getElementsByName("cfkey")[0] as HTMLInputElement;
+  const nump_checkbox = document.getElementsByName("cnumpad")[0] as HTMLInputElement;
+  const fkey = fkey_checkbox?.checked || false;
+  const nump = nump_checkbox?.checked || false;
   toggle_fkeys(fkey);
   toggle_numpad(nump);
   close_popup();
@@ -369,21 +389,23 @@ function menu_map() {
     alert("Warning: the map will automatically reappear when the "+
       "mud sends it.  To stop the side-map, change your settings "+
       "in options output map.");
-    var p = document.getElementById("submenu_options");
-    var c = document.getElementById("submenu_options_map");
-    p.removeChild(c);
+    const p = document.getElementById("submenu_options");
+    const c = document.getElementById("submenu_options_map");
+    if (p && c) { // Add null check
+        p.removeChild(c);
+    }
   }
 }
 
 function menu_features() {
   // create the popup
-  var pop = popup_textdiv(show_popup());
+  const pop = popup_textdiv(); // Removed show_popup() argument
   // show the necessary help
-  var el;
+  let el: HTMLElement; // Explicitly type el
   add_element(pop, "h2", "Client Features");
   add_element(pop, "p", "Decafmud is a basic mud client, "+
     "with just a few features.");
-  el = document.createElement("ul");
+  el = document.createElement("ul"); // el is assigned here
   pop.appendChild(el);
   add_element(el, "li", "To send multiple commands at once, separate "+
     "them by putting ;; in between.<br>For example: "+

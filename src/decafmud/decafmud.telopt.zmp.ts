@@ -1,4 +1,5 @@
-// SPDX-License-Identifier: MIT
+import { DecafMUD } from './decafmud';
+
 /*!
  * DecafMUD v0.9.0
  * http://decafmud.stendec.me
@@ -12,126 +13,124 @@
  * @version 0.9.0
  */
 
-(function(DecafMUD) {
-
 // Shortcut the TELNET constants for ease of use.
-var t = DecafMUD.TN;
+const t = DecafMUD.TN;
 
 /** Handles the TELNET option ZMP.
- * @name ZMP
+ * @name ZMPHandler
  * @class DecafMUD TELOPT Handler: ZMP
- * @exports ZMP as DecafMUD.plugins.Telopt.]
  * @param {DecafMUD} decaf The instance of DecafMUD using this plugin. */
-var ZMP = function(decaf) { this.decaf = decaf; this.decaf.zmp = this; }
+class ZMPHandler {
+    decaf: DecafMUD;
 
-/** Helper for sending ZMP messages. */
-ZMP.prototype.sendZMP = function(cmd, data) {
-	var out = '';
-	if ( data !== undefined ) {
-		out = '\x00' + data.join('\x00');
-	}
+    static commands: { [key: string]: any } = {
+        zmp: {
+            'check' : function(this: ZMPHandler, cmd: string, data: string[]) {
+                for(let i=0, l=data.length; i<l; i++) { // Changed var to let
+                    const c = data[i]; // Changed var to const
+                    if ( c.length > 0 ) {
+                        const func = this.getFunction((c.substr(-1) == '.' ? c.substr(0,c.length-1) : c), true); // Added const
+                        if ( func === undefined ) {
+                            this.sendZMP("zmp.no-support", [c]);
+                        } else {
+                            this.sendZMP("zmp.support", [c]);
+                        }
+                    }
+                }
+            },
 
-	this.decaf.sendIAC(t.IAC + t.SB + t.ZMP + cmd + out + '\x00' + t.IAC + t.SE);
-}
+            'ping' : function(this: ZMPHandler, cmd: string, data: string[]) {
+                const c = new Date(); // Changed var to const
+                let yr = c.getUTCFullYear().toString(), // Changed var to let
+                    mn = (c.getUTCMonth()+1).toString(),
+                    dy = c.getUTCDate().toString(),
+                    hr = c.getUTCHours().toString(),
+                    mi = c.getUTCMinutes().toString(),
+                    sc = c.getUTCSeconds().toString();
+                if (mn.length < 2 ) { mn = '0' + mn; }
+                if (dy.length < 2 ) { dy = '0' + dy; }
+                if (hr.length < 2 ) { hr = '0' + hr; }
+                if (mi.length < 2 ) { mi = '0' + mi; }
+                if (sc.length < 2 ) { sc = '0' + sc; }
+                this.sendZMP("zmp.time",[yr+'-'+mn+'-'+dy+' '+hr+':'+mi+':'+sc])
+            }
+        }
+    };
 
-/** Send the zmp.ident message upon connecting. */
-ZMP.prototype._will = function() {
-	var z = this;
-	setTimeout(function(){
-		z.sendZMP('zmp.ident', [
-			"DecafMUD",
-			DecafMUD.version.toString(),
-			"HTML5 MUD Client - keep Java out of your browser"]);
-	},0);
-}
+    constructor(decaf: DecafMUD) {
+        this.decaf = decaf;
+        (this.decaf as any).zmp = this; // Assign to decaf instance
+    }
 
-/** Handle an incoming ZMP command. */
-ZMP.prototype._sb = function(data) {
-	// If there's no NUL byte, or the first byte is NUL, return.
-	if ( data.indexOf('\x00') < 1 ) { return; }
-	var dat = data.split('\x00');
-	var cmd = dat.shift();
+    /** Helper for sending ZMP messages. */
+    sendZMP(cmd: string, data?: string[]) { // data is optional string array
+        let out = '';
+        if ( data !== undefined ) {
+            out = '\x00' + data.join('\x00');
+        }
+        this.decaf.sendIAC(t.IAC + t.SB + t.ZMP + cmd + out + '\x00' + t.IAC + t.SE);
+    }
 
-	// Debug it.
-	this.decaf.debugString('RCVD ' + DecafMUD.debugIAC(t.IAC + t.SB + t.ZMP + data + t.IAC + t.SE ));
+    /** Send the zmp.ident message upon connecting. */
+    _will() {
+        const z = this;
+        setTimeout(function(){
+            z.sendZMP('zmp.ident', [
+                "DecafMUD",
+                DecafMUD.version.toString(),
+                "HTML5 MUD Client - keep Java out of your browser"]);
+        },0);
+    }
 
-	// Get the function.
-	var func = this.getFunction(cmd);
-	if ( func ) { func.call(this, cmd, dat); }
+    /** Handle an incoming ZMP command. */
+    _sb(data: string): boolean { // data is string from telnet
+        if ( data.indexOf('\x00') < 1 ) { return true; } // Return true if no NUL or first byte is NUL
+        const dat = data.split('\x00'); // Changed var to const
+        const cmd = dat.shift(); // Changed var to const
 
-	// We debugged ourself.
-	return false;
-}
+        if (cmd === undefined) { return true; } // No command found
 
-/** Find a given command. */
-ZMP.prototype.getFunction = function(cmd, package_ok) {
-	var parts = cmd.split('.'), top = ZMP.commands;
-	while(parts.length > 0) {
-		var part = parts.shift();
-		if ( top[part] === undefined ) { return undefined; }
-		top = top[part];
-	}
+        this.decaf.debugString('RCVD ' + DecafMUD.debugIAC(t.IAC + t.SB + t.ZMP + data + t.IAC + t.SE ));
 
-	if (typeof top === 'function') { return top; }
-	if (package_ok === true ) { return top; }
-	return undefined;
-}
+        const func = this.getFunction(cmd);
+        if ( func ) { func.call(this, cmd, dat); }
 
-/** Add a new command. */
-ZMP.prototype.addFunction = function(cmd, func) {
-	var parts = cmd.split('.');
-	cmd = parts.pop();
+        return false; // We debugged ourself.
+    }
 
-	// Go through the path, adding arrays as necessary.
-	var top = ZMP.commands;
-	while(parts.length > 0) {
-		var part = parts.shift();
-		if ( top[part] === undefined ) {
-			top[part] = {};
-		}
-		top = top[part];
-	}
+    /** Find a given command. */
+    getFunction(cmd: string, package_ok?: boolean): Function | undefined { // package_ok is optional
+        const parts = cmd.split('.'); // Changed var to const
+        let top: any = ZMPHandler.commands; // Use static commands
+        while(parts.length > 0) {
+            const part = parts.shift(); // Changed var to const
+            if (part === undefined || top[part] === undefined ) { return undefined; }
+            top = top[part];
+        }
 
-	// Add our command.
-	top[cmd] = func;
-}
+        if (typeof top === 'function') { return top; }
+        if (package_ok === true && typeof top === 'object' ) { return top; } // Return package if ok
+        return undefined;
+    }
 
-/** The command structure. */
-ZMP.commands = {};
+    /** Add a new command. */
+    addFunction(cmd: string, func: Function) {
+        const parts = cmd.split('.'); // Changed var to const
+        let command_name = parts.pop(); // cmd is now command_name, changed var to let
+        if (command_name === undefined) return;
 
-/** The zmp.check Command */
-ZMP.commands.zmp = {
-	'check' : function(cmd, data) {
-		for(var i=0,l=data.length;i<l;i++) {
-			var c = data[i];
-			if ( c.length > 0 ) {
-				func = this.getFunction((c.substr(-1) == '.' ? c.substr(0,c.length-1) : c), true);
-				if ( func === undefined ) {
-					this.sendZMP("zmp.no-support", [c]);
-				} else {
-					this.sendZMP("zmp.support", [c]);
-				}
-			}
-		}
-	},
-
-	'ping' : function(cmd, data) {
-		var c = new Date();
-		var yr = c.getUTCFullYear().toString(),
-			mn = (c.getUTCMonth()+1).toString(),
-			dy = c.getUTCDate().toString(),
-			hr = c.getUTCHours().toString(),
-			mi = c.getUTCMinutes().toString(),
-			sc = c.getUTCSeconds().toString();
-		if (mn.length < 2 ) { mn = '0' + mn; }
-		if (dy.length < 2 ) { dy = '0' + dy; }
-		if (hr.length < 2 ) { hr = '0' + hr; }
-		if (mi.length < 2 ) { mi = '0' + mi; }
-		if (sc.length < 2 ) { sc = '0' + sc; }
-		this.sendZMP("zmp.time",[yr+'-'+mn+'-'+dy+' '+hr+':'+mi+':'+sc])
-	}
+        let top: any = ZMPHandler.commands; // Use static commands
+        while(parts.length > 0) {
+            const part = parts.shift(); // Changed var to const
+            if (part === undefined) return;
+            if ( top[part] === undefined ) {
+                top[part] = {};
+            }
+            top = top[part];
+        }
+        top[command_name] = func;
+    }
 }
 
 // Expose it to DecafMUD
-DecafMUD.plugins.Telopt[t.ZMP] = ZMP;
-})(DecafMUD);
+(DecafMUD.plugins as any).Telopt[t.ZMP] = ZMPHandler;

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { Inflate } from 'pako'; // Added pako import
 /*!
  * DecafMUD v0.9.0
  * http://decafmud.stendec.me
@@ -22,7 +23,7 @@ declare global {
      interface Navigator {
         userLanguage?: string;
     }
-    var Zlib: any; // For inflate_stream.min.js
+    // Removed: declare var Zlib: any;
 }
 
 
@@ -230,7 +231,7 @@ export class DecafMUD {
     options: any;
     settings: any;
     need: [string, () => boolean][];
-    inbuf: (string | Uint8Array)[];
+    inbuf: string[]; // Changed to string[] as pako will handle Uint8Array conversion
     telopt: any;
     id: number;
     loaded: boolean = false;
@@ -248,7 +249,8 @@ export class DecafMUD {
     conn_timer: any = null;
     display: any;
     textInputFilter: any;
-    decompressStream: any;
+    // decompressStream: any; // Removed old Zlib stream
+    private pakoInflator: Inflate | undefined; // Added pako inflator
     startCompressV2: boolean = false;
     cconnect_try: number = 0;
     loaded_plugs: any = {};
@@ -270,7 +272,7 @@ export class DecafMUD {
         extend_obj(this.settings, DecafMUD.settings);
 
         this.need = [];
-        this.inbuf = [];
+        this.inbuf = []; // Initialize as string array
         this.telopt = {};
 
         const initialEncoding = this.options.encoding || 'iso88591';
@@ -305,6 +307,52 @@ export class DecafMUD {
         this.require('decafmud.interface.' + this.options.interface);
 
         this.waitLoad(this.initSplash.bind(this), this.updateSplash.bind(this));
+    }
+
+    private initializePakoInflator(): void {
+        if (this.pakoInflator) {
+            this.pakoInflator.push(new Uint8Array(0), true); // Finalize existing one if any
+        }
+        this.pakoInflator = new Inflate({
+            to: 'string' // Ensure output is string
+        });
+
+        // Type for pako's Data, can be simplified to 'any' if not importing specific types
+        type PakoData = Uint8Array | Array<number> | ArrayBuffer | string;
+
+        this.pakoInflator.onData = (chunk: PakoData) => {
+            // Since { to: 'string' } is used, pako should provide a string.
+            // If it could still be Uint8Array, further checks are needed.
+            if (typeof chunk === 'string') {
+                this.inbuf.push(chunk);
+            } else {
+                // This case should ideally not be hit with { to: 'string' }
+                // but as a fallback, convert Uint8Array if received.
+                // Other types (Array<number>, ArrayBuffer) would need more complex handling.
+                let strChunk = "";
+                if (chunk instanceof Uint8Array) {
+                    for(let i = 0; i < chunk.length; i++) strChunk += String.fromCharCode(chunk[i]);
+                } else {
+                    this.debugString('Pako onData received unexpected non-string chunk type despite {to: "string"}', 'error');
+                    // Potentially handle Array<number> or ArrayBuffer if necessary, or simply ignore/error.
+                    // For now, only pushing if it was converted.
+                    return;
+                }
+                this.inbuf.push(strChunk);
+            }
+            this.processBuffer();
+        };
+
+        this.pakoInflator.onEnd = (status: number) => {
+            if (status !== 0) { // pako uses 0 for success
+                this.error('MCCP2 stream error: pako status ' + status);
+                this.disableMCCP2();
+            } else {
+                this.debugString('MCCP2 stream ended.', 'info');
+                // Optionally, could set this.pakoInflator = undefined here if stream is done
+                // but disableMCCP2 handles that if server signals end of compression.
+            }
+        };
     }
 
     about(): void {
@@ -433,7 +481,7 @@ export class DecafMUD {
         this.need.push([moduleName, check]);
     }
 
-    waitLoad(next: () => void, itemloaded?: (moduleName: string, nextModule?: string) => void, tr: number = 0): void {
+    waitLoad(next: () => void, itemloaded?: (moduleName: string | null | true | undefined, nextModule?: string, perc?: number) => void, tr: number = 0): void {
         clearTimeout(this.loadTimer);
 
         if (tr > this.options.wait_tries) {
@@ -648,7 +696,13 @@ export class DecafMUD {
             }
         }
         this.inbuf = [];
-        this.decompressStream = undefined;
+        // this.decompressStream = undefined; // Old Zlib
+        if (this.pakoInflator) { // Finalize pako stream
+            try {
+                this.pakoInflator.push(new Uint8Array(0), true);
+            } catch (e) { /* ignore errors on close */ }
+            this.pakoInflator = undefined;
+        }
         this.startCompressV2 = false;
 
         if (this.options.autoreconnect) {
@@ -682,23 +736,45 @@ export class DecafMUD {
     }
 
     socketData(data: string | Uint8Array): void {
-        if (this.decompressStream !== undefined) {
-            try {
-                let dataToDecompress: Uint8Array;
-                if (typeof data === 'string') {
-                    dataToDecompress = new Uint8Array(arrayFromPolyfill(data).map(char => char.charCodeAt(0)));
-                } else {
-                    dataToDecompress = data;
+        if (this.startCompressV2) {
+            if (!this.pakoInflator) {
+                this.initializePakoInflator();
+            }
+            if (this.pakoInflator) {
+                try {
+                    let dataToPush: Uint8Array;
+                    if (typeof data === 'string') {
+                        // Convert string to Uint8Array (assuming ISO-8859-1/latin1 for raw bytes)
+                        dataToPush = new Uint8Array(data.length);
+                        for (let i = 0; i < data.length; i++) {
+                            dataToPush[i] = data.charCodeAt(i) & 0xFF;
+                        }
+                    } else {
+                        dataToPush = data;
+                    }
+                    this.pakoInflator.push(dataToPush, false);
+                } catch (e: any) {
+                    this.error('MCCP2 stream error: ' + e.message);
+                    this.disableMCCP2();
                 }
-                const decompressedResult = this.decompressStream.decompress(dataToDecompress);
-                data = typeof decompressedResult === 'string' ? decompressedResult : new Uint8Array(decompressedResult);
-            } catch (e: any) {
-                this.error('MCCP2 compression disabled because ' + e);
-                this.disableMCCP2();
-                return;
+                return; // Data will be processed by pakoInflator.onData
             }
         }
-        this.inbuf.push(data);
+
+        // If not compressing or pakoInflator not active, handle as plain text
+        let stringData: string;
+        if (typeof data === 'string') {
+            stringData = data;
+        } else {
+            // Convert Uint8Array to string (assuming default/current encoding or simple char codes)
+            // This might need to use this.decode if the Uint8Array represents encoded text
+            stringData = "";
+            for(let k=0; k < data.length; k++) {
+                stringData += String.fromCharCode(data[k]);
+            }
+        }
+        this.inbuf.push(stringData);
+
         if (this.loaded) {
             this.processBuffer();
         }
@@ -742,21 +818,11 @@ export class DecafMUD {
         let ind: number;
         let out: string | false;
 
-        let joinedData: string = "";
-        for (let item of this.inbuf) {
-            if (typeof (item) == 'string') {
-                joinedData += item;
-            } else {
-                let tempStr = "";
-                for(let k=0; k < item.length; k++) {
-                    tempStr += String.fromCharCode(item[k]);
-                }
-                joinedData += tempStr;
-            }
-        }
-        data_str = joinedData;
+        // Consolidate inbuf to a single string
+        data_str = this.inbuf.join('');
+        this.inbuf = []; // Clear buffer after joining
+
         var IAC = DecafMUD.TN.IAC, left = '';
-        this.inbuf = [];
 
         while (data_str.length > 0) {
             ind = data_str.indexOf(IAC);
@@ -773,20 +839,8 @@ export class DecafMUD {
             }
 
             out = this.readIAC(data_str);
-            if (this.startCompressV2 && typeof out === 'string') {
-                try {
-                    this.startCompressV2 = false;
-                    this.decompressStream = new Zlib.InflateStream();
-                    var compressed_arr = new Uint8Array(arrayFromPolyfill(out).map(char => char.charCodeAt(0)));
-                    var decompressed_arr = this.decompressStream.decompress(compressed_arr);
-                    out = arrayFromPolyfill(decompressed_arr as any).map((byte:any) => String.fromCharCode(byte as number)).join('');
-
-                } catch (e: any) {
-                    this.error('MCCP2 compression disabled because ' + e);
-                    this.disableMCCP2();
-                }
-            }
-            if (out === false) {
+            // MCCP2 data is now handled by pako in socketData, direct Zlib processing removed here
+            if (out === false) { // Not enough data to process IAC sequence
                 if(left + data_str) this.inbuf.splice(0, 0, left + data_str);
                 break;
             }
@@ -940,9 +994,16 @@ export class DecafMUD {
 
     disableMCCP2(): void {
         this.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.DONT + DecafMUD.TN.COMPRESSv2);
+        if (this.pakoInflator) {
+            try {
+                this.pakoInflator.push(new Uint8Array(0), true); // Finalize the stream
+            } catch (e) {
+                this.debugString('Error finalizing pakoInflator: ' + (e as Error).message, 'warn');
+            }
+            this.pakoInflator = undefined;
+        }
         this.startCompressV2 = false;
-        this.decompressStream = undefined;
-        this.inbuf = [];
+        // this.inbuf = []; // Clearing inbuf might be too aggressive if there's uncompressed data pending
     }
 
     static debugIAC(seq: string): string {
@@ -1091,7 +1152,6 @@ if (typeof String.prototype.tr === 'undefined') {
             if (langPlugins && langPlugins[lang] && langPlugins[lang][this.toString()]) {
                 s = langPlugins[lang][this.toString()];
             } else {
-                // Removed console call from here
                 s = this.toString();
             }
         }
@@ -1209,22 +1269,19 @@ tCHARSET.prototype._sb = function(data: string) {
 var tCOMPRESSv2 = function(this: any, decaf: DecafMUD) {
     this.decaf = decaf;
     this.decaf.startCompressV2 = false;
-    if (typeof Zlib === 'undefined') {
-        this.decaf.loadScript('inflate_stream.min.js');
-    }
+    // Removed: this.decaf.loadScript('inflate_stream.min.js');
 } as any;
 tCOMPRESSv2.prototype._will = function() {
-    if (this.decaf.options.socket == 'flash') {
-        this.decaf.debugString('Flash COMPRESSv2 support has not been implemented'); return false;
+    if (this.decaf.options.socket == 'flash') { // Currently pako won't work with flash direct byte manipulation
+        this.decaf.debugString('Flash COMPRESSv2 support with pako has not been implemented/tested. Disabling.'); return false;
     }
-    if (typeof Zlib === 'undefined') {
-        this.decaf.debugString('Unable to load Zlib.js for COMPRESSv2 support'); return false;
-    }
+    // No Zlib check needed, pako is imported.
     return true;
 }
 tCOMPRESSv2.prototype._sb = function() {
     this.decaf.debugString('RCVD ' + DecafMUD.debugIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.COMPRESSv2 + DecafMUD.TN.IAC + DecafMUD.TN.SE ));
     this.decaf.startCompressV2 = true;
+    // Actual pakoInflator initialization is deferred to socketData when first compressed data arrives
 }
 
 var tMSDP = function(this: any, decaf: DecafMUD) { this.decaf = decaf; } as any;
@@ -1275,7 +1332,7 @@ DecafMUD.plugins.Telopt[DecafMUD.TN.CHARSET] = tCHARSET;
 DecafMUD.plugins.Telopt[DecafMUD.TN.COMPRESSv2] = tCOMPRESSv2;
 DecafMUD.plugins.Telopt[DecafMUD.TN.MSDP] = tMSDP;
 DecafMUD.plugins.Telopt[DecafMUD.TN.BINARY] = true;
-// Ensure Telopt is an object before assigning to its property
+
 if (DecafMUD.plugins.Telopt && typeof DecafMUD.plugins.Telopt === 'object') {
     (DecafMUD.plugins.Telopt as Record<string, any>)[DecafMUD.TN.MSSP] = (typeof window !== 'undefined' && 'console' in window);
 }
@@ -1310,14 +1367,4 @@ DecafMUD.plugins.Encoding.utf8 = {
     }
 };
 
-if (typeof Zlib === 'undefined') {
-    // if (typeof require === 'function') { // Commented out for browser focus
-    //     try { Zlib = require('zlib'); } catch (e) { /* ignore */ }
-    // }
-    if (typeof Zlib === 'undefined') {
-        Zlib = { InflateStream: function(this: any) {
-            if(typeof console !== 'undefined' && console.warn) console.warn("Zlib.InflateStream is not available. MCCP2 will not work.");
-            this.decompress = (data: any) => data;
-        }};
-    }
-}
+// Removed Zlib fallback definition

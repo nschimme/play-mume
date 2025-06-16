@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { DecafMUD } from './decafmud';
 /*!
  * DecafMUD v0.9.0
  * http://decafmud.stendec.me
@@ -14,47 +15,47 @@
  * This file has functionality to change DecafMud settings.
  */
 
-var fontpercentage = 100;
-var fkeymacros = true;
-var numpadwalking = true;
+export let fontpercentage = 100;
+export let fkeymacros = true;
+export let numpadwalking = true;
 
-var showprogressbars = false;
-var showmap = false;
+export let showprogressbars = false;
+export let showmap = false;
 
-function set_fontsize(k) {
+export function set_fontsize(k: number) {
   fontpercentage = k;
   DecafMUD.instances[0].ui.el_display.style.fontSize = (k*110/100) + "%";
 }
 
-function get_fontsize() {
+export function get_fontsize(): number {
   return fontpercentage;
 }
 
-function fkeys_enabled() {
+export function fkeys_enabled(): boolean {
   return fkeymacros;
 }
 
-function toggle_fkeys(value) {
+export function toggle_fkeys(value: boolean) {
   fkeymacros = value;
 }
 
-function numpad_enabled() {
+export function numpad_enabled(): boolean {
   return numpadwalking;
 }
 
-function toggle_numpad(value) {
+export function toggle_numpad(value: boolean) {
   numpadwalking = value;
 }
 
-function progress_visible() {
+export function progress_visible(): boolean {
   return showprogressbars;
 }
 
-function map_visible() {
+export function map_visible(): boolean {
   return showmap;
 }
 
-function toggle_progressbars(value) {
+export function toggle_progressbars(value: boolean) {
   showprogressbars = value;
   if (value) {
     DecafMUD.instances[0].ui.showSidebar();
@@ -66,7 +67,7 @@ function toggle_progressbars(value) {
   }
 }
 
-function toggle_map(value) {
+export function toggle_map(value: boolean) {
   showmap = value;
   if (value) DecafMUD.instances[0].ui.showMap();
   else DecafMUD.instances[0].ui.hideMap();
