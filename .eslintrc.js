@@ -19,7 +19,7 @@ module.exports = {
     es6: true, // Enables ES6 globals
   },
   ignorePatterns: [
-    "built/", // Ignore the output directory
+    "dist/", // Ignore the output directory
     "node_modules/",
     "DecafMUD/", // Ignoring submodule
     "resources/", // Ignoring resources

@@ -45,10 +45,19 @@ module.exports = {
       patterns: [
         { from: 'resources', to: 'resources' },
         { from: 'icons', to: 'icons' },
-        { from: 'DecafMUD', to: 'DecafMUD' }, // Copy entire DecafMUD directory
         { from: 'play.css', to: 'play.css' },
         { from: 'manifest.webmanifest', to: 'manifest.webmanifest' },
         { from: 'sw.js', to: 'sw.js' }, // Service worker
+        {
+          from: 'DecafMUD',
+          to: 'DecafMUD',
+          globOptions: {
+            ignore: [
+              '**/jsdoc-toolkit/**',
+              '**/test/**',
+            ],
+          },
+        },
         // Note on JavaScript dependencies:
         // External JavaScript libraries (like jQuery, PixiJS) and application-specific
         // JavaScript files (e.g., from DecafMUD/src/ SCRIPT_DIR or other subdirectories)
