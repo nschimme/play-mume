@@ -1,4 +1,4 @@
-import '../play.css';
+import '../play.scss';
 /*  Play MUME!, a modern web client for MUME using DecafMUD.
     Copyright (C) 2017, Waba.
 
