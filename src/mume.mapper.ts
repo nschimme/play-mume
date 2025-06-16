@@ -753,6 +753,10 @@ class MumeMapData
      */
     public getRoomsAt( coordinates: RoomCoords[] ): JQueryPromise<Room[]>
     {
+        if (currentMapDataRoot === null) {
+            console.error("MumeMapData.getRoomsAt: currentMapDataRoot is not set. Cannot fetch rooms.");
+            return $.Deferred<Room[]>().reject("currentMapDataRoot not set").promise();
+        }
         const result = $.Deferred<Room[]>();
         const downloads: { zone: string, dfr: JQueryXHR }[] = [];
         const downloadDeferreds: JQueryXHR[] = [];
@@ -783,7 +787,8 @@ class MumeMapData
                     roomsNotInCachePerZone.set( zone, roomsNotInCache );
 
                     console.log( "Downloading map zone %s for room %d,%d", zone, coords.x, coords.y );
-                    const url = MAP_DATA_PATH + "zone/" + zone + ".json";
+                    const url = currentMapDataRoot + "zone/" + zone + ".json";
+                    console.log("MumeMapData.getRoomsAt: Attempting to load zone for getRoomsAt from:", url);
                     const deferred = $.getJSON( url );
                     downloads.push( { zone, dfr: deferred } );
                     downloadDeferreds.push( deferred );
