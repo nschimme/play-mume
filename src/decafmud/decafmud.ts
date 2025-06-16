@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
+// SPDX-License-Identifier: MIT
 /*!
  * DecafMUD v0.9.0
  * http://decafmud.stendec.me
@@ -13,32 +13,29 @@
  * @version 0.9.0
  */
 
+declare global {
+    interface String {
+        endsWith(suffix: string): boolean;
+        substr_count(needle: string): number;
+        tr(decafOrObjOrString?: DecafMUD | any | string, ...args: any[]): string;
+    }
+     interface Navigator {
+        userLanguage?: string;
+    }
+    var Zlib: any; // For inflate_stream.min.js
+}
+
+
 // Extend the String prototype with endsWith and substr_count.
 if ( String.prototype.endsWith === undefined ) {
-        /** Determine if a string ends with the given suffix.
-         * @example
-         * if ( "some string".endsWith("ing") ) {
-         *   // Something Here!
-         * }
-         * @param {String} suffix The suffix to test.
-         * @returns {boolean} true if the string ends with the given suffix */
-        String.prototype.endsWith = function(suffix) {
+        String.prototype.endsWith = function(this: string, suffix: string): boolean {
                 var startPos = this.length - suffix.length;
-                return startPos < 0 ? false : this.lastIndexOf(suffix, startPos)
- === startPos;
+                return startPos < 0 ? false : this.lastIndexOf(suffix, startPos) === startPos;
         }
 }
 
 if ( String.prototype.substr_count === undefined ) {
-        /** Count the number of times a specific string occures within a larger
-         *  string.
-         * @example
-         * "This is a test of a fishy function for string counting.".substr_coun
-t("i");
-         * // Returns: 6
-         * @param {String} needle The text to search for.
-         * @returns {Number} The number of matches found. */
-        String.prototype.substr_count = function(needle) {
+        String.prototype.substr_count = function(this: string, needle: string): number {
                 var count = 0,
                         i = this.indexOf(needle);
                 while ( i !== -1 ) {
@@ -51,435 +48,910 @@ t("i");
 
 // Extend Array with indexOf if it doesn't exist, for IE8
 if ( Array.prototype.indexOf === undefined ) {
-        Array.prototype.indexOf = function(text,i) {
-                if ( i === undefined ) { i = 0; }
-                for(;i<this.length;i++){if(this[i]===text){return i;}}
+        Array.prototype.indexOf = function<T>(this: T[], searchElement: T, fromIndex?: number): number {
+                if (fromIndex === undefined) { fromIndex = 0; }
+                if (fromIndex < 0) { fromIndex = Math.max(0, this.length + fromIndex); }
+                for (let i = fromIndex; i < this.length; i++) {
+                    if (this[i] === searchElement) { return i; }
+                }
                 return -1;
-        }
+        };
 }
 
-// The obligatory, oh-so-popular wrapper function
-(function(window) {
+const arrayFromPolyfill = function<T>(arrayLike: ArrayLike<T>): T[] {
+    const arr: T[] = [];
+    if (arrayLike == null) {
+        return arr;
+    }
+    for (let i = 0; i < arrayLike.length; i++) {
+        arr.push(arrayLike[i]);
+    }
+    return arr;
+};
+
 
 // Create a function for extending Objects
-var extend_obj = function(base, obj) {
+const extend_obj = function(base: any, obj: any): any {
         for ( var key in obj ) {
+            if (obj.hasOwnProperty(key)) {
                 var o = obj[key];
-                if ( typeof o === 'object' && !('nodeType' in o) ) {
-                        if ( o.push !== undefined ) {
-                                if ( base[key] === undefined ) { base[key] = [];
- }
+                if ( typeof o === 'object' && o !== null && !('nodeType' in o) ) {
+                        if ( Array.isArray(o) ) {
+                                if ( base[key] === undefined || !Array.isArray(base[key]) ) { base[key] = []; }
                                 for(var i=0; i<o.length; i++) {
                                         base[key].push(o[i]);
                                 }
                         } else {
-                                if ( base[key] === undefined ) { base[key] = {};
- }
-                                if ( typeof base[key] === 'object' ) {
-                                        extend_obj(base[key], o);
-                                }
+                                if ( base[key] === undefined || typeof base[key] !== 'object' || base[key] === null ) { base[key] = {}; }
+                                extend_obj(base[key], o);
                         }
                 } else {
                         base[key] = o;
                 }
+            }
         }
         return base;
 }
 
-/**
- * Create a new instance of the DecafMUD client.
- * @name DecafMUD
- * @class The DecafMUD Core
- * @property {boolean} loaded This is true if DecafMUD has finished loading all
- *     the external files it requires. We won't start executing anything until
- *     this is true.
- * @property {boolean} connecting This is true while DecafMUD is trying to
- *     connect to a server and is still waiting for the socket to respond.
- * @property {boolean} connected This is true if DecafMUD is connected to a
- *     server. For internal use.
- * @property {number} id The id of the DecafMUD instance.
- * @param {Object} options Configuration settings for setting up DecafMUD.
- */
-var DecafMUD = function DecafMUD(options) {
-        // Store the options for later.
+const iac_reg = /\xFF/g;
+
+// Helper functions defined before DecafMUD class
+const iacToWord = function(c: string): string {
+    const t = DecafMUD.TN;
+    switch(c) {
+        case t.IAC: return 'IAC'; case t.DONT: return 'DONT'; case t.DO: return 'DO'; case t.WONT: return 'WONT'; case t.WILL: return 'WILL';
+        case t.SB: return 'SB'; case t.SE: return 'SE'; case t.BINARY: return 'TRANSMIT-BINARY'; case t.ECHO: return 'ECHO';
+        case t.SUPGA: return 'SUPPRESS-GO-AHEAD'; case t.STATUS: return 'STATUS'; case t.SENDLOC: return 'SEND-LOCATION';
+        case t.TTYPE: return 'TERMINAL-TYPE'; case t.EOR: return 'END-OF-RECORD'; case t.NAWS: return 'NEGOTIATE-ABOUT-WINDOW-SIZE';
+        case t.TSPEED: return 'TERMINAL-SPEED'; case t.RFLOW: return 'REMOTE-FLOW-CONTROL'; case t.AUTH: return 'AUTH';
+        case t.LINEMODE: return 'LINEMODE'; case t.NEWENV: return 'NEW-ENVIRON'; case t.CHARSET: return 'CHARSET';
+        case t.MSDP: return 'MSDP'; case t.MSSP: return 'MSSP'; case t.COMPRESS: return 'COMPRESS'; case t.COMPRESSv2: return 'COMPRESSv2';
+        case t.MSP: return 'MSP'; case t.MXP: return 'MXP'; case t.ZMP: return 'ZMP'; case t.CONQUEST: return 'CONQUEST-PROPRIETARY';
+        case t.ATCP: return 'ATCP'; case t.GMCP: return 'GMCP';
+    }
+    let code = c.charCodeAt(0);
+    return code > 15 ? code.toString(16) : '0' + code.toString(16);
+};
+
+const readMSDP = function(data: string): [any, string] {
+    var out: any = {};
+    var variable: string | undefined = undefined;
+    const msdp_ctrl = /[\x01\x02\x03\x04]/;
+
+    while ( data.length > 0 ) {
+        var c_code = data.charCodeAt(0);
+        if ( c_code === 1 ) {
+            var ind = data.substr(1).search(msdp_ctrl);
+            if ( ind === -1 ) { variable = data.substr(1); data = ''; }
+            else { variable = data.substr(1, ind); data = data.substr(ind+1); }
+            out[variable] = undefined; continue;
+        } else if ( c_code === 4 ) { data = data.substr(1); break; }
+        if ( variable === undefined ) { return [out, '']; }
+        if ( c_code === 2 ) {
+            let val: any;
+            if ( data.charCodeAt(1) === 3 ) {
+                var o = readMSDP(data.substr(2)); val = o[0]; data = o[1];
+            } else {
+                var ind = data.substr(1).search(msdp_ctrl);
+                if ( ind === -1 ) { val = data.substr(1); data = ''; }
+                else { val = data.substr(1, ind); data = data.substr(ind+1); }
+            }
+            if ( out[variable] === undefined ) { out[variable] = val; }
+            else if ( Array.isArray(out[variable]) ) { out[variable].push(val); }
+            else { out[variable] = [out[variable], val]; }
+            continue;
+        }
+        break;
+    }
+    return [out, data];
+};
+
+const writeMSDP = function(obj: any): string {
+    const t = typeof obj;
+    if ( t === 'string' || t === 'number' ) { return obj.toString(); }
+    else if ( t === 'boolean' ) { return obj ? '1' : '0'; }
+    else if ( t === 'undefined' || obj === null ) { return ''; }
+    else if ( t === 'object' ) {
+        let out_str = '';
+        for(const k in obj) {
+            if (obj.hasOwnProperty(k)) {
+                if ( obj[k] === undefined || obj[k] === null || typeof obj[k] === 'function' ) { continue; }
+                out_str += '\x01' + k;
+                if ( typeof obj[k] === 'object' && obj[k] !== null) {
+                    if ( Array.isArray(obj[k]) ) {
+                        const v = obj[k];
+                        for(let i=0; i < v.length; i++) { out_str += '\x02' + writeMSDP(v[i]); }
+                    } else if ( obj[k].nodeType === undefined ) {
+                        out_str += '\x02\x03' + writeMSDP(obj[k]) + '\x04';
+                    }
+                } else {
+                    out_str += '\x02' + writeMSDP(obj[k]);
+                }
+            }
+        }
+        return out_str;
+    }
+    return obj.toString();
+};
+
+
+export class DecafMUD {
+    static instances: DecafMUD[] = [];
+    static last_id: number = -1;
+
+    static version: {major: number, minor: number, micro: number, flag: string, toString: () => string} = {
+        major: 0, minor: 10, micro: 0, flag: 'beta',
+        toString: function(this: {major: number, minor: number, micro: number, flag: string}){ return this.major+'.'+this.minor+'.'+this.micro+(this.flag ? '-' + this.flag : ''); }
+    };
+
+    static ESC: string = "\x1B";
+    static BEL: string = "\x07";
+
+    static TN: any = {
+        IAC: "\xFF", DONT: "\xFE", DO: "\xFD", WONT: "\xFC", WILL: "\xFB", SB: "\xFA", SE: "\xF0", IS: "\x00", EORc: "\xEF", GA: "\xF9",
+        BINARY: "\x00", ECHO: "\x01", SUPGA: "\x03", STATUS: "\x05", SENDLOC: "\x17", TTYPE: "\x18", EOR: "\x19", NAWS: "\x1F", TSPEED: "\x20",
+        RFLOW: "\x21", LINEMODE: "\x22", AUTH: "\x23", NEWENV: "\x27", CHARSET: "\x2A", MSDP: "E", MSSP: "F", COMPRESS: "U", COMPRESSv2: "V",
+        MSP: "Z", MXP: "[", ZMP: "]", CONQUEST: "^", ATCP: "\xC8", GMCP: "\xC9",
+    };
+
+    static plugins: {
+        Display: Record<string, any>, Encoding: Record<string, any>, Extra: Record<string, any>, Interface: Record<string, any>,
+        Language: Record<string, any>, Socket: Record<string, any>, Storage: Record<string, any>,
+        Telopt: Record<string, any>, TextInputFilter: Record<string, any>
+    } = {
+        Display: {}, Encoding: {}, Extra: {}, Interface: {}, Language: {}, Socket: {}, Storage: {},
+        Telopt: {},
+        TextInputFilter: {}
+    };
+
+    static settings: any = {
+        'startup': { '_path': "/", '_desc': "Control what happens when DecafMUD is opened.",
+            'autoconnect': { '_type': 'boolean', '_desc': 'Automatically connect to the server.'},
+            'autoreconnect': { '_type': 'boolean', '_desc': 'Automatically reconnect when the connection is lost.'}
+        },
+        'appearance': { '_path': "display/", '_desc': "Control the appearance of the client.",
+            'font': { '_type': 'font', '_desc': 'The font to display MUD output in.' }
+        }
+    };
+
+    static options: any = {
+        host: undefined, port: 4000, autoconnect: true, connectonsend: true, autoreconnect: true, connect_timeout: 5000, reconnect_delay: 5000, reconnect_tries: 3,
+        storage: 'standard', display: 'standard', encoding: 'utf8', socket: 'flash', interface: 'simple', language: 'autodetect', textinputfilter: '',
+        jslocation: undefined, wait_delay: 25, wait_tries: 1000, load_language: true, plugins: [], set_storage: {},
+        set_display: { maxscreens: 100, minelements: 10, handlecolor: true, fgclass: 'c', bgclass: 'b', fntclass: 'fnt', inputfg: '-7', inputbg: '-0' },
+        set_socket: { policyport: undefined, swf: '/media/DecafMUDFlashSocket.swf', wsport: undefined, wspath: '' },
+        set_interface: { container: undefined, start_full: false, mru: true, mru_size: 15, multiline: true, clearonsend: false, focusinput: true, repeat_input: true, blurclass: 'mud-input-blur',
+            msg_connect: 'Press Enter to connect and type here...', msg_connecting: 'DecafMUD is attempting to connect...', msg_empty: 'Type commands here, or use the Up and Down arrows to browse your recently used commands.', connect_hint: true
+        },
+        ttypes: ['decafmud-' + DecafMUD.version.toString(), 'decafmud', 'xterm', 'unknown'],
+        environ: {}, encoding_order: ['utf8'], plugin_order: []
+    };
+
+    options: any;
+    settings: any;
+    need: [string, () => boolean][];
+    inbuf: (string | Uint8Array)[];
+    telopt: any;
+    id: number;
+    loaded: boolean = false;
+    connecting: boolean = false;
+    connected: boolean = false;
+    loadTimer: any = null;
+    timer: any = null;
+    connect_try: number = 0;
+    required: number = 0;
+    ui: any;
+    socket: any;
+    store: any;
+    storage: any;
+    socket_ready: boolean = false;
+    conn_timer: any = null;
+    display: any;
+    textInputFilter: any;
+    decompressStream: any;
+    startCompressV2: boolean = false;
+    cconnect_try: number = 0;
+    loaded_plugs: any = {};
+
+    decode: (data: string) => [string, string];
+    encode: (data: string) => string;
+
+
+    constructor(options?: any) {
         this.options = {};
         extend_obj(this.options, DecafMUD.options);
 
-        if ( options !== undefined ) {
-                if ( typeof options !== 'object' ) { throw "The DecafMUD options
- argument must be an object!"; }
-                extend_obj(this.options, options);
+        if (options !== undefined) {
+            if (typeof options !== 'object' || options === null) { throw "The DecafMUD options argument must be an object!"; }
+            extend_obj(this.options, options);
         }
 
-        // Store the settings for later.
         this.settings = {};
         extend_obj(this.settings, DecafMUD.settings);
 
-        // Set up the objects that'd be shared.
         this.need = [];
         this.inbuf = [];
         this.telopt = {};
 
-        // If language is set to autodetect, then detect it.
-        if ( this.options.language === 'autodetect' ) {
-                var lang = navigator.language ? navigator.language : navigator.u
-serLanguage;
-                this.options.language =lang.split('-',1)[0];
+        const initialEncoding = this.options.encoding || 'iso88591';
+        const defaultEncoding = DecafMUD.plugins.Encoding[initialEncoding] || DecafMUD.plugins.Encoding.iso88591;
+        this.decode = defaultEncoding.decode;
+        this.encode = defaultEncoding.encode;
+        if (!DecafMUD.plugins.Encoding[initialEncoding]) {
+             this.debugString(`Warning: Encoding ${initialEncoding} not found, defaulting to iso88591.`, 'warn');
+        }
+        this.setEncoding(initialEncoding);
+
+
+        if (this.options.language === 'autodetect') {
+            var lang = typeof navigator !== 'undefined' ? (navigator.language ? navigator.language : (navigator as any).userLanguage) : 'en';
+            this.options.language = lang.split('-', 1)[0];
         }
 
-        // Increment DecafMUD.last_id and use that as this instance's ID.
-        this.id = ( ++DecafMUD.last_id );
-
-        // Store this instance for easy retrieval.
+        this.id = (++DecafMUD.last_id);
         DecafMUD.instances.push(this);
 
-        // Start doing debug stuff.
         this.debugString('Created new instance.', 'info');
 
-        // If we have console grouping, log the options.
-        if ( 'console' in window && console.groupCollapsed ) {
-                console.groupCollapsed('DecafMUD['+this.id+'] Provided Options')
-;
-                console.dir(this.options);
-                console.groupEnd();
+        if (typeof window !== 'undefined' && 'console' in window && (console as any).groupCollapsed) {
+            (console as any).groupCollapsed('DecafMUD[' + this.id + '] Provided Options');
+            console.dir(this.options);
+            console.groupEnd();
         }
 
-        // Require the language first, then the UI.
-        if ( this.options.language !== 'en' && this.options.load_language  ) {
-                this.require('decafmud.language.'+this.options.language); }
-        this.require('decafmud.interface.'+this.options.interface);
+        if (this.options.language !== 'en' && this.options.load_language) {
+            this.require('decafmud.language.' + this.options.language);
+        }
+        this.require('decafmud.interface.' + this.options.interface);
 
-        // Load those. After that, chain to the initSplash function.
-        this.waitLoad(this.initSplash);
+        this.waitLoad(this.initSplash.bind(this), this.updateSplash.bind(this));
+    }
 
-        return this;
-};
+    about(): void {
+        var abt = ["DecafMUD v{0} \u00A9 2010 Stendec"];
+        abt.push("Updated and improved by Pit from Discworld.");
+        abt.push("Further bugfixes and improvements by Waba from MUME.");
+        abt.push("https://github.com/MUME/DecafMUD\n");
+        abt.push("DecafMUD is a web-based MUD client written in JavaScript, rather" +
+                " than a plugin like Flash or Java, making it load faster and react as" +
+                " you'd expect a website to.\n");
+        abt.push("It's easy to customize as well, using simple CSS and JavaScript," +
+                " and free to use and modify, so long as your MU* is free to play!");
 
-// Instance Information
-/** <p>An array with references to all the created instances of DecafMUD.</p>
- *  <p>Generally, each DecafMUD's id is the instance's index in
- *  this array.</p>
- * @type DecafMUD[] */
-DecafMUD.instances      = [];
+        const message = abt.join('\n').tr(this, DecafMUD.version.toString());
+        if (typeof alert !== 'undefined') {
+            alert(message);
+        } else {
+            if (typeof console !== 'undefined') console.log(message);
+        }
+    }
 
-/** The ID of the latest instance of DecafMUD.
- * @type number */
-DecafMUD.last_id        = -1;
+    debugString(text: string, type?: string, obj?: any): void {
+        if (typeof window === 'undefined' || !('console' in window) ) { return; }
+        if (type === undefined) { type = 'debug'; }
 
-/** DecafMUD's version. This can be used to check plugin compatability.
- * @example
- * if ( DecafMUD.version.major >= 1 ) {
- *   // Some Code Here
- * }
- * @example
- * alert("You're using DecafMUD v" + DecafMUD.version.toString() + "!");
- * // You're using DecafMUD v0.9.0alpha!
- * @type Object */
-DecafMUD.version = {major: 0, minor: 10, micro: 0, flag: 'beta',
-        toString: function(){ return this.major+'.'+this.minor+'.'+this.micro+(
-this.flag ? '-' + this.flag : ''); } };
+        let processedText = text;
+        if (obj !== undefined && text.tr) {
+             processedText = text.tr(this, obj);
+        }
 
-// Default Values
-DecafMUD.prototype.loaded               = false;
-DecafMUD.prototype.connecting   = false;
-DecafMUD.prototype.connected    = false;
+        var st = 'DecafMUD[' + this.id + ']: %s';
+        if (typeof console !== 'undefined') {
+            if (type === 'info' && console.info) { console.info(st, processedText); }
+            else if (type === 'warn' && console.warn) { console.warn(st, processedText); }
+            else if (type === 'error' && console.error) { console.error(st, processedText); }
+            else if (type === 'debug' && (console as any).debug) { (console as any).debug(st, processedText); }
+            else if (console.log) { console.log(st, processedText); }
+        }
+    }
 
-DecafMUD.prototype.loadTimer    = null;
-DecafMUD.prototype.timer                = null;
-DecafMUD.prototype.connect_try  = 0;
-DecafMUD.prototype.required             = 0;
+    error(text: string): void {
+        this.debugString(text, 'error');
+        if (typeof window !== 'undefined' && 'console' in window && (console as any).groupCollapsed !== undefined) {
+            (console as any).groupCollapsed('DecafMUD[' + this.id + '] Instance State');
+            console.dir(this);
+            console.groupEnd();
+        }
 
-///////////////////////////////////////////////////////////////////////////////
-// Plugins System
-///////////////////////////////////////////////////////////////////////////////
-/** This object stores all the available plugins for DecafMUD using a simple
- *  hierarchy. Every plugin should register itself in this tree once it's done
- *  loading.
- * @example
- * // Add the plugin MyPluginClass to DecafMUD as my_plugin.
- * DecafMUD.plugins.Extra.my_plugin = MyPluginClass;
- * @namespace All the available plugins for {@link DecafMUD}, in one easy-to-acc
-ess
-                          tree. */
-DecafMUD.plugins = {
-        /** These plugins provide support for MUD output.
-         * @type Object */
-        Display         : {},
+        if (this.ui && this.ui.splashError && this.ui.splashError(text)) { return; }
 
-        /** These plugins provide support for different text encodings.
-         * @type Object */
-        Encoding        : {},
+        const message = "DecafMUD Error\n\n" + (text.tr ? text.tr(this) : text);
+        if (typeof alert !== 'undefined') {
+            alert(message);
+        } else {
+            if (typeof console !== 'undefined') console.error(message);
+        }
+    }
 
-        /** These plugins don't fit into any other categories.
-         * @type Object */
-        Extra           : {},
+    loadScript(filename: string, path?: string): void {
+        if (path === undefined) {
+            if (this.options.jslocation !== undefined) { path = this.options.jslocation; }
+            if (path === undefined || typeof path === 'string' && path.length === 0) {
+                if (typeof document !== 'undefined') {
+                    var obj = document.querySelector('script[src*="decafmud.js"]') as HTMLScriptElement | null;
+                    if (obj === null) {
+                        obj = document.querySelector('script[src*="decafmud.min.js"]') as HTMLScriptElement | null;
+                    }
+                    if (obj !== null && obj.src) {
+                        path = obj.src.substr(0, obj.src.lastIndexOf('/') + 1);
+                    }
+                }
+            }
+        }
 
-        /** These plugins provide user interfaces for the client.
-         * @type Object */
-        Interface       : {},
+        if (typeof document !== 'undefined' && path !== undefined) {
+            var script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.src = path + filename;
+            document.getElementsByTagName('head')[0].appendChild(script);
+            this.debugString('Loading script: ' + filename);
+        } else {
+            this.debugString('Cannot load script: ' + filename + ' (document or path undefined)', 'warn');
+        }
+    }
 
-        /** These plugins provide translations to other languages.
-         * @type Object */
-        Language        : {},
+    require(moduleName: string, check?: () => boolean): void {
+        if (this.options.load_language && this.options.language !== 'en' &&
+            moduleName.indexOf('language') === -1 && moduleName.indexOf('decafmud') !== -1) {
+            var parts = moduleName.split('.');
+            parts.splice(1, 0, "language", this.options.language);
+            this.require(parts.join('.'));
+        }
 
-        /** These plugins provide sockets for network connectivity, a must for a
-         *  mud client.
-         * @type Object */
-        Socket          : {},
+        if (check === undefined) {
+            if (moduleName.toLowerCase().indexOf('decafmud') === 0) {
+                var parts = moduleName.split('.');
+                if (parts.length < 2) { return; }
+                parts.shift();
+                parts[0] = parts[0][0].toUpperCase() + parts[0].substr(1);
 
-        /** These plugins provide persistent storage for the client, letting the
-         *  client remember user settings across browser sessions.
-         * @type Object */
-        Storage         : {},
-
-        /** These plugins provide extra telnet options for adding more sophistic
-ated
-         *  client/server interaction to DecafMUD.
-         * @type Object */
-        Telopt          : {},
-
-                /** These plugins filter text sent by the MUD after the Telnet
-                 * sequences are interpreted and removed, but it still contains
-the
-                 * ANSI escape sequences (colors etc).
-                 *
-                 * These plugins must provide the following functions:
-                 * - filterInputText( text ), returns the modified text.
-                 * - connected(), for clearing any internal state upon (re)conne
-cting.
-                 *
-                 * You can enable the registered plugin to use with the
-                 * "textinputfilter" DecafMUD instance option.
-                 *
-                 * Example usage:  MUME makes it easier to parse its output by a
-dding
-                 * pseudo-XML tags. They need to be parsed and removed from what
-'s
-                 * shown to the user.
-                 */
-                TextInputFilter : {}
-};
-
-/** This plugin handles conversion between raw data and iso-8859-1 encoded
- *  text, somewhat unimpressively as they're effectively the same thing.
- * @type Object */
-/** This provides support for iso-8859-1 encoded data to DecafMUD, which isn't
- *  saying much as you realize that iso-8859-1 is simple, unencoded binary
- *  strings. We just have this so that the encoding system can work with a
- *  default encoder.
- * @example
- * alert(DecafMUD.plugins.Encoding.iso88591.decode("This is some text!"));
- * @namespace DecafMUD Character Encoding: iso-8859-1 */
-DecafMUD.plugins.Encoding.iso88591 = {
-        proper : 'ISO-8859-1',
-
-        /** Convert iso-8859-1 encoded text to unicode, by doing nothing.
-         * @example
-         * DecafMUD.plugins.Encoding.iso88591.decode("\xE2\x96\x93");
-         * // Becomes: "\xE2\x96\x93"
-         * @param {String} data The text to decode. */
-        decode : function(data) { return [data,'']; },
-        /** Convert unicode characters to iso-8859-1 encoded text, by doing
-         *  nothing. Should probably add some sanity checks in later, but I
-         *  don't really care for now.
-         * @example
-         * DecafMUD.plugins.Encoding.iso88591.encode("\xE2\x96\x93");
-         * // Becomes: "\xE2\x96\x93"
-         * @param {String} data The text to encode. */
-        encode : function(data) { return data; }
-};
-
-/** This provides support for UTF-8 encoded data to DecafMUD, using built-in
- *  functions in a slightly hack-ish way to convert between UTF-8 and unicode.
- * @example
- * alert(DecafMUD.plugins.Encoding.utf8.decode("This is some text!"));
- * @namespace DecafMUD Character Encoding: UTF-8 */
-DecafMUD.plugins.Encoding.utf8 = {
-        proper : 'UTF-8',
-
-        /** Convert UTF-8 sequences to unicode characters.
-         * @example
-         * DecafMUD.plugins.Encoding.utf8.decode("\xE2\x96\x93");
-         * // Becomes: "\u2593"
-         * @param {String} data The text to decode. */
-        decode : function(data) {
-                try { return [decodeURIComponent( escape( data ) ), '']; }
-                catch(err) {
-                        // Decode manually so we can catch what's left.
-                        var out = '', i=0, l=data.length,
-                                c = c2 = c3 = c4 = 0;
-                        while ( i < l ) {
-                                c = data.charCodeAt(i++);
-                                if ( c < 0x80) {
-                                        // Normal Character
-                                        out += String.fromCharCode(c); }
-
-                                else if ( (c > 0xBF) && (c < 0xE0) ) {
-                                        // Two-Byte Sequence
-                                        if ( i+1 >= l ) { break; }
-                                        out += String.fromCharCode(((c & 31) <<
-6) | (data.charCodeAt(i++) & 63)); }
-
-                                else if ( (c > 0xDF) && (c < 0xF0) ) {
-                                        // Three-Byte Sequence
-                                        if ( i+2 >= l ) { break; }
-                                        out += String.fromCharCode(((c & 15) <<
-12) | ((data.charCodeAt(i++) & 63) << 6) | (data.charCodeAt(i++) & 63)); }
-
-                                else if ( (c > 0xEF) && (c < 0xF5) ) {
-                                        // Four-Byte Sequence
-                                        if ( i+3 >= l ) { break; }
-                                        out += String.fromCharCode(((c & 10) <<
-18) | ((data.charCodeAt(i++) & 63) << 12) | ((data.charCodeAt(i++) & 63) << 6) |
- (data.charCodeAt(i++) & 63)); }
-
-                                else {
-                                        // Bad Character.
-                                        out += String.fromCharCode(c); }
+                if (parts[0] === 'Telopt') {
+                    for (var k in DecafMUD.TN) {
+                        if (parts[1].toUpperCase() === k.toUpperCase()) {
+                            parts[1] = DecafMUD.TN[k];
+                            break;
                         }
-                        return [out, data.substr(i)];
-                } },
-
-        /** Encode unicode characters into UTF-8 sequences.
-         * @example
-         * DecafMUD.plugins.Encoding.utf8.encode("\u2593");
-         * // Becomes: "\xE2\x96\x93"
-         * @param {String} data The text to encode. */
-        encode : function(data) {
-                try { return unescape( encodeURIComponent( data ) ); }
-                catch(err) {
-                        console.dir(err); return data; } }
-};
-
-/** The variable storing instances of plugins is called loaded_plugs to avoid
- *  any unnecessary confusion created by {@link DecafMUD.plugins}.
- * @type Object */
-DecafMUD.prototype.loaded_plugs = {};
-
-// Create a function for class inheritence
-var inherit = function(subclass, superclass) {
-        var f = function() {};
-        f.prototype = superclass.prototype;
-        subclass.prototype = new f();
-        subclass.superclass = superclass.prototype;
-        if ( superclass.prototype.constructor == Object.prototype.constructor )
-{
-                superclass.prototype.constructor = superclass; }
-};
-
-///////////////////////////////////////////////////////////////////////////////
-// TELNET Internals
-///////////////////////////////////////////////////////////////////////////////
-// Extra Constants
-DecafMUD.ESC = "\x1B";
-DecafMUD.BEL = "\x07";
-
-// TELNET Constants
-DecafMUD.TN = {
-        // Negotiation Bytes
-        IAC                     : "\xFF", // 255
-        DONT            : "\xFE", // 254
-        DO                      : "\xFD", // 253
-        WONT            : "\xFC", // 252
-        WILL            : "\xFB", // 251
-        SB                      : "\xFA", // 250
-        SE                      : "\xF0", // 240
-
-        IS                      : "\x00", // 0
-
-        // END-OF-RECORD Marker / GO-AHEAD
-        EORc            : "\xEF", // 239
-        GA                      : "\xF9", // 249
-
-        // TELNET Options
-        BINARY          : "\x00", // 0
-        ECHO            : "\x01", // 1
-        SUPGA           : "\x03", // 3
-        STATUS          : "\x05", // 5
-        SENDLOC         : "\x17", // 23
-        TTYPE           : "\x18", // 24
-        EOR                     : "\x19", // 25
-        NAWS            : "\x1F", // 31
-        TSPEED          : "\x20", // 32
-        RFLOW           : "\x21", // 33
-        LINEMODE        : "\x22", // 34
-        AUTH            : "\x23", // 35
-        NEWENV          : "\x27", // 39
-        CHARSET         : "\x2A", // 42
-
-        MSDP            : "E", // 69
-        MSSP            : "F", // 70
-        COMPRESS        : "U", // 85
-        COMPRESSv2      : "V", // 86
-        MSP                     : "Z", // 90
-        MXP                     : "[", // 91
-        ZMP                     : "]", // 93
-        CONQUEST        : "^", // 94
-        ATCP            : "\xC8", // 200
-        GMCP            : "\xC9", // 201
-}
-var t = DecafMUD.TN;
-
-var iacToWord = function(c) {
-        var t = DecafMUD.TN;
-        switch(c) {
-                case t.IAC                      : return 'IAC';
-                case t.DONT                     : return 'DONT';
-                case t.DO                       : return 'DO';
-                case t.WONT                     : return 'WONT';
-                case t.WILL                     : return 'WILL';
-                case t.SB                       : return 'SB';
-                case t.SE                       : return 'SE';
-
-                case t.BINARY           : return 'TRANSMIT-BINARY';
-                case t.ECHO                     : return 'ECHO';
-                case t.SUPGA            : return 'SUPPRESS-GO-AHEAD';
-                case t.STATUS           : return 'STATUS';
-                case t.SENDLOC          : return 'SEND-LOCATION';
-                case t.TTYPE            : return 'TERMINAL-TYPE';
-                case t.EOR                      : return 'END-OF-RECORD';
-                case t.NAWS                     : return 'NEGOTIATE-ABOUT-WINDOW
--SIZE';
-                case t.TSPEED           : return 'TERMINAL-SPEED';
-                case t.RFLOW            : return 'REMOTE-FLOW-CONTROL';
-                case t.AUTH                     : return 'AUTH';
-                case t.LINEMODE         : return 'LINEMODE';
-                case t.NEWENV           : return 'NEW-ENVIRON';
-                case t.CHARSET          : return 'CHARSET';
-
-                case t.MSDP                     : return 'MSDP';
-                case t.MSSP                     : return 'MSSP';
-                case t.COMPRESS         : return 'COMPRESS';
-                case t.COMPRESSv2       : return 'COMPRESSv2';
-                case t.MSP                      : return 'MSP';
-                case t.MXP                      : return 'MXP';
-                case t.ZMP                      : return 'ZMP';
-                case t.CONQUEST         : return 'CONQUEST-PROPRIETARY';
-                case t.ATCP                     : return 'ATCP';
-                case t.GMCP                     : return 'GMCP';
+                    }
+                }
+                check = () => {
+                    if ((DecafMUD.plugins as any)[parts[0]] !== undefined) {
+                        if (parts.length > 1) {
+                            return (DecafMUD.plugins as any)[parts[0]][parts[1]] !== undefined;
+                        } else { return true; }
+                    }
+                    return false;
+                };
+            } else {
+                throw "Can't build checker for non-DecafMUD module!";
+            }
         }
-        c = c.charCodeAt(0);
-        if ( c > 15 ) { return c.toString(16); }
-        else { return '0' + c.toString(16); }
-}
 
-/** Convert a telnet IAC sequence from raw bytes to a human readable format that
- *  can be output for debugging purposes.
- * @example
- * var IAC = "\xFF", DO = "\xFD", TTYPE = "\x18";
- * DecafMUD.debugIAC(IAC + DO + TTYPE);
- * // Returns: "IAC DO TERMINAL-TYPE"
- * @param {String} seq The sequence to convert.
- * @returns {String} The human readable description of the IAC sequence. */
-DecafMUD.debugIAC = function(seq) {
-        var out = '', t = DecafMUD.TN, state = 0, st = false, l = seq.length,
-                i2w = iacToWord;
+        this.required++;
+        if (check.call(this)) { this.required--; return; }
+
+        this.loadScript(moduleName + '.js');
+        this.need.push([moduleName, check]);
+    }
+
+    waitLoad(next: () => void, itemloaded?: (moduleName: string, nextModule?: string) => void, tr: number = 0): void {
+        clearTimeout(this.loadTimer);
+
+        if (tr > this.options.wait_tries) {
+            if (this.need[0] && this.need[0][0].indexOf('language') === -1) {
+                this.error("Timed out attempting to load the module: " + this.need[0][0]);
+                this.required -= this.need.length;
+                this.need = [];
+                return;
+            } else {
+                if (itemloaded && this.need[0]) {
+                    itemloaded.call(this, this.need[0][0], this.need.length > 1 ? this.need[1][0] : undefined);
+                }
+                if (this.need.length > 0) {this.required--; this.need.shift();}
+                tr = 0;
+            }
+        }
+
+        while (this.need.length) {
+             if (this.need[0][1].call(this)) {
+                if (itemloaded) {
+                    itemloaded.call(this, this.need[0][0], this.need.length > 1 ? this.need[1][0] : undefined);
+                }
+                this.required--;
+                this.need.shift();
+                tr = 0;
+            } else { break; }
+        }
+
+        if (this.need.length === 0) {
+            next.call(this);
+        } else {
+            this.loadTimer = setTimeout(() => { this.waitLoad(next, itemloaded, tr + 1); }, this.options.wait_delay);
+        }
+    }
+
+    initSplash(): void {
+        if (this.options.interface !== undefined) {
+            this.debugString('Attempting to initialize the interface plugin "' + this.options.interface + '".');
+            this.ui = new (DecafMUD.plugins as any).Interface[this.options.interface](this);
+            if (this.ui.initSplash) this.ui.initSplash();
+        }
+
+        (this as any).extra = 3;
+
+        this.require('decafmud.storage.' + this.options.storage);
+        this.require('decafmud.socket.' + this.options.socket);
+        this.require('decafmud.encoding.' + this.options.encoding);
+
+        if (this.ui && this.need.length > 0) { this.updateSplash(this.need[0][0], this.need.length > 1 ? this.need[1][0] : undefined, 0); }
+        this.waitLoad(this.initSocket.bind(this), this.updateSplash.bind(this));
+    }
+
+    updateSplash(moduleName: string | null | true | undefined, nextModule?: string, perc?: number): void {
+        if (!this.ui || !this.ui.updateSplash) { return; }
+        let current_required_count = this.required + (this as any).extra;
+        let current_need_count = this.need.length;
+
+        if (perc === undefined) {
+            perc = current_required_count > 0 ? Math.min(100, Math.floor(100 * (current_required_count - current_need_count) / current_required_count )) : 0;
+        }
+
+        let message: string | undefined;
+        if (moduleName === true) {
+            message = nextModule;
+        } else if (nextModule !== undefined) {
+            if (nextModule.indexOf('decafmud') === 0) {
+                const parts = nextModule.split('.');
+                message = 'Loading the {0} module "{1}"...'.tr(this, parts[1], parts[2]);
+            } else {
+                message = 'Loading: {0}'.tr(this, nextModule);
+            }
+        } else if (perc === 100) {
+            message = "Loading complete.".tr(this);
+        }
+        this.ui.updateSplash(perc, message);
+    }
+
+    initSocket(): void {
+        (this as any).extra = 1;
+        this.store = new (DecafMUD.plugins as any).Storage[this.options.storage](this);
+        this.storage = this.store;
+
+        if (this.ui) {
+            this.updateSplash(true, "Initializing the user interface...".tr(this));
+            if (this.ui.load) this.ui.load();
+        }
+
+        this.debugString('Creating a socket using the "' + this.options.socket + '" plugin.');
+        this.socket = new (DecafMUD.plugins as any).Socket[this.options.socket](this);
+        if (this.socket.setup) this.socket.setup();
+
+        this.waitLoad(this.initUI.bind(this), this.updateSplash.bind(this));
+    }
+
+    initUI(): void {
+        if (this.ui && this.ui.setup) {
+            this.ui.setup();
+        }
+
+        for (var i = 0; i < this.options.plugins.length; i++) {
+            this.require('decafmud.' + this.options.plugins[i]);
+        }
+        this.waitLoad(this.initFinal.bind(this), this.updateSplash.bind(this));
+    }
+
+    initFinal(): void {
+        this.updateSplash(true, "Initializing triggers system...".tr(this));
+        this.updateSplash(true, "Initializing TELNET extensions...".tr(this));
+
+        for (var k in DecafMUD.plugins.Telopt) {
+            if (DecafMUD.plugins.Telopt.hasOwnProperty(k)) {
+                const o = (DecafMUD.plugins as any).Telopt[k];
+                if (typeof o === 'function') {
+                    this.telopt[k] = new o(this);
+                } else {
+                    this.telopt[k] = o;
+                }
+            }
+        }
+
+        this.updateSplash(true, "Initializing filters...".tr(this));
+
+        const textInputFilterCtor = (DecafMUD.plugins as any).TextInputFilter[this.options.textinputfilter];
+        if (textInputFilterCtor) {
+            this.textInputFilter = new textInputFilterCtor(this);
+        }
+
+        this.loaded = true;
+        if (this.ui && this.ui.endSplash) this.ui.endSplash();
+
+        if ((!this.options.autoconnect) || (!this.socket || !this.socket.ready)) { return; }
+        this.connect();
+    }
+
+    connect(): void {
+        if (this.connecting || this.connected) { return; }
+        if (this.socket_ready !== true) {
+            this.error("The socket isn't ready yet.");
+            return;
+        }
+
+        this.connecting = true;
+        this.connect_try = 0;
+        this.debugString("Attempting to connect...", "info");
+
+        if (this.ui && this.ui.connecting) {
+            this.ui.connecting();
+        }
+
+        this.conn_timer = setTimeout(() => { this.connectFail(); }, this.options.connect_timeout);
+        if (this.socket && this.socket.connect) this.socket.connect();
+    }
+
+    connectFail(): void {
+        clearTimeout(this.conn_timer);
+        this.connect_try++;
+
+        if (this.connect_try > this.options.reconnect_tries) { return; }
+
+        if (this.socket && this.socket.close) this.socket.close();
+        if (this.socket && this.socket.connect) this.socket.connect();
+
+        this.conn_timer = setTimeout(() => { this.connectFail(); }, this.options.connect_timeout);
+    }
+
+    reconnect(): void {
+        this.connect_try++;
+        if (this.ui && this.ui.connecting) {
+            this.ui.connecting();
+        }
+        if (this.socket && this.socket.connect) this.socket.connect();
+    }
+
+    socketReady(): void {
+        this.debugString("The socket is ready.");
+        this.socket_ready = true;
+        if (this.loaded && this.options.autoconnect) {
+            this.connect();
+        }
+    }
+
+    socketConnected(): void {
+        this.connecting = false; this.connected = true; this.connect_try = 0;
+        clearTimeout(this.conn_timer);
+
+        var host = this.socket.host, port = this.socket.port;
+        this.debugString("The socket has connected successfully to {0}:{1}.".tr(this, host, port), "info");
+
+        for (var k in this.telopt) {
+            if (this.telopt.hasOwnProperty(k) && this.telopt[k] && this.telopt[k].connect) {
+                this.telopt[k].connect();
+            }
+        }
+
+        if (this.textInputFilter && this.textInputFilter.connected) {
+            this.textInputFilter.connected();
+        }
+
+        if (this.ui && this.ui.connected) {
+            this.ui.connected();
+        }
+    }
+
+    socketClosed(): void {
+        clearTimeout(this.conn_timer);
+        this.connecting = false; this.connected = false;
+        this.debugString("The socket has disconnected.", "info");
+
+        for (var k in this.telopt) {
+             if (this.telopt.hasOwnProperty(k) && this.telopt[k] && this.telopt[k].disconnect) {
+                this.telopt[k].disconnect();
+            }
+        }
+        this.inbuf = [];
+        this.decompressStream = undefined;
+        this.startCompressV2 = false;
+
+        if (this.options.autoreconnect) {
+            this.connect_try++;
+            if (this.connect_try < this.options.reconnect_tries) {
+                if (this.ui && this.ui.disconnected) {
+                    this.ui.disconnected(true);
+                }
+                var s = this.options.reconnect_delay / 1000;
+                if (this.ui && this.ui.immediateInfoBar && s >= 0.25) {
+                    this.ui.immediateInfoBar("You have been disconnected. Reconnecting in {0} second{1}...".tr(this, s, (s === 1 ? '' : 's')),
+                        'reconnecting',
+                        s,
+                        undefined,
+                        [['Reconnect Now'.tr(this), () => { clearTimeout(this.timer); if (this.socket && this.socket.connect) this.socket.connect(); }]],
+                        undefined,
+                        () => { clearTimeout(this.timer); }
+                    );
+                }
+                this.timer = setTimeout(() => {
+                    this.debugString('Attempting to connect...', 'info');
+                    if (this.ui && this.ui.connecting) { this.ui.connecting(); }
+                    if (this.socket && this.socket.connect) this.socket.connect();
+                }, this.options.reconnect_delay);
+                return;
+            }
+        }
+        if (this.ui && this.ui.disconnected) {
+            this.ui.disconnected(false);
+        }
+    }
+
+    socketData(data: string | Uint8Array): void {
+        if (this.decompressStream !== undefined) {
+            try {
+                let dataToDecompress: Uint8Array;
+                if (typeof data === 'string') {
+                    dataToDecompress = new Uint8Array(arrayFromPolyfill(data).map(char => char.charCodeAt(0)));
+                } else {
+                    dataToDecompress = data;
+                }
+                const decompressedResult = this.decompressStream.decompress(dataToDecompress);
+                data = typeof decompressedResult === 'string' ? decompressedResult : new Uint8Array(decompressedResult);
+            } catch (e: any) {
+                this.error('MCCP2 compression disabled because ' + e);
+                this.disableMCCP2();
+                return;
+            }
+        }
+        this.inbuf.push(data);
+        if (this.loaded) {
+            this.processBuffer();
+        }
+    }
+
+    socketError(data: any, data2?: any): void {
+        this.debugString('Socket Err: {0}  d2="{1}"'.tr(this, data, data2), 'error');
+    }
+
+    getEnc(enc: string): string {
+        enc = enc.replace(/-/g, '').toLowerCase();
+        return enc;
+    }
+
+    setEncoding(enc: string): void {
+        enc = this.getEnc(enc);
+        if (DecafMUD.plugins.Encoding[enc] === undefined) {
+            this.error(`Encoding '${enc}' isn't a valid encoding scheme, or it isn't loaded. Defaulting to iso88591.`);
+            enc = 'iso88591';
+        }
+        this.debugString("Switching to character encoding: " + enc);
+        this.options.encoding = enc;
+        this.decode = DecafMUD.plugins.Encoding[enc].decode;
+        this.encode = DecafMUD.plugins.Encoding[enc].encode;
+    }
+
+    sendInput(input: string): void {
+        if (!this.socket || !this.socket.connected) {
+            this.debugString("Cannot send input: not connected");
+            return;
+        }
+        this.socket.write(this.encode(input + '\r\n').replace(iac_reg, '\xFF\xFF'));
+        if (this.ui && this.ui.displayInput) {
+            this.ui.displayInput(input);
+        }
+    }
+
+    processBuffer(): void {
+        let enc: [string, string];
+        let data_str: string;
+        let ind: number;
+        let out: string | false;
+
+        let joinedData: string = "";
+        for (let item of this.inbuf) {
+            if (typeof (item) == 'string') {
+                joinedData += item;
+            } else {
+                let tempStr = "";
+                for(let k=0; k < item.length; k++) {
+                    tempStr += String.fromCharCode(item[k]);
+                }
+                joinedData += tempStr;
+            }
+        }
+        data_str = joinedData;
+        var IAC = DecafMUD.TN.IAC, left = '';
+        this.inbuf = [];
+
+        while (data_str.length > 0) {
+            ind = data_str.indexOf(IAC);
+            if (ind === -1) {
+                enc = this.decode(data_str);
+                this.handleInputText(enc[0]);
+                if(enc[1]) this.inbuf.splice(0, 0, enc[1]);
+                break;
+            } else if (ind > 0) {
+                enc = this.decode(data_str.substr(0, ind));
+                this.handleInputText(enc[0]);
+                left = enc[1];
+                data_str = data_str.substr(ind);
+            }
+
+            out = this.readIAC(data_str);
+            if (this.startCompressV2 && typeof out === 'string') {
+                try {
+                    this.startCompressV2 = false;
+                    this.decompressStream = new Zlib.InflateStream();
+                    var compressed_arr = new Uint8Array(arrayFromPolyfill(out).map(char => char.charCodeAt(0)));
+                    var decompressed_arr = this.decompressStream.decompress(compressed_arr);
+                    out = arrayFromPolyfill(decompressed_arr as any).map((byte:any) => String.fromCharCode(byte as number)).join('');
+
+                } catch (e: any) {
+                    this.error('MCCP2 compression disabled because ' + e);
+                    this.disableMCCP2();
+                }
+            }
+            if (out === false) {
+                if(left + data_str) this.inbuf.splice(0, 0, left + data_str);
+                break;
+            }
+            data_str = left + (out as string);
+            left = '';
+        }
+    }
+
+    handleInputText(text: string): void {
+        if (this.textInputFilter && this.textInputFilter.filterInputText) {
+            text = this.textInputFilter.filterInputText(text);
+        }
+        if (this.display && this.display.handleData) {
+            this.display.handleData(text);
+        }
+    }
+
+    readIAC(data: string): string | false {
+        if (data.length < 2) { return false; }
+        const t_IAC = DecafMUD.TN.IAC;
+        const t_SB = DecafMUD.TN.SB;
+        const t_SE = DecafMUD.TN.SE;
+
+        if (data.charCodeAt(1) === 255) {
+            if (this.display && this.display.handleData) this.display.handleData('\xFF');
+            return data.substr(2);
+        } else if (data.charCodeAt(1) === 249 || data.charCodeAt(1) === 241) {
+            return data.substr(2);
+        } else if ("\xFB\xFC\xFD\xFE".indexOf(data.charAt(1)) !== -1) {
+            if (data.length < 3) { return false; }
+            var seq = data.substr(0, 3);
+            this.debugString('RCVD ' + DecafMUD.debugIAC(seq));
+            this.handleIACSimple(seq);
+            return data.substr(3);
+        } else if (data.charAt(1) === t_SB) {
+            var seq_data = '', l_seq = t_IAC + t_SE;
+            var code = data.charAt(2);
+            let current_data = data.substr(3);
+            if (current_data.length === 0) { return false; }
+            while (current_data.length > 0) {
+                var ind = current_data.indexOf(l_seq);
+                if (ind === -1) { return false; }
+                if (ind > 0 && current_data.charAt(ind - 1) === t_IAC) {
+                    seq_data += current_data.substr(0, ind + 1);
+                    current_data = current_data.substr(ind + 1);
+                    continue;
+                }
+                seq_data += current_data.substr(0, ind);
+                current_data = current_data.substr(ind + l_seq.length);
+                break;
+            }
+
+            var dbg = true;
+            const teloptHandler = this.telopt[code];
+            if (teloptHandler !== undefined && typeof teloptHandler === 'object' && teloptHandler._sb !== undefined) {
+                if (teloptHandler._sb.call(teloptHandler, seq_data) === false) { dbg = false; }
+            }
+
+            if (dbg) {
+                 if (code === DecafMUD.TN.MSSP && typeof window !== 'undefined' && 'console' in window && (console as any).groupCollapsed !== undefined ) {
+                    (console as any).groupCollapsed('DecafMUD['+this.id+']: RCVD IAC SB MSSP ... IAC SE');
+                    console.dir(readMSDP(seq_data)[0]);
+                    console.groupEnd();
+                } else {
+                    this.debugString('RCVD ' + DecafMUD.debugIAC(t_IAC + t_SB + code + seq_data + t_IAC + t_SE));
+                }
+            }
+            return current_data;
+        }
+        return data.substr(1);
+    }
+
+    sendIAC(seq: string): void {
+        this.debugString('SENT ' + DecafMUD.debugIAC(seq));
+        if (this.socket && this.socket.write) { this.socket.write(seq); }
+    }
+
+    handleIACSimple(seq: string): void {
+        var t_tn = DecafMUD.TN;
+        var option_char = seq.charAt(2);
+        var telopt_handler = this.telopt[option_char];
+
+        if (telopt_handler === undefined || (typeof telopt_handler !== 'object' && typeof telopt_handler !== 'boolean')) {
+            if (seq.charAt(1) === t_tn.DO) {
+                this.sendIAC(t_tn.IAC + t_tn.WONT + option_char);
+            } else if (seq.charAt(1) === t_tn.WILL) {
+                this.sendIAC(t_tn.IAC + t_tn.DONT + option_char);
+            }
+            return;
+        }
+
+        if (typeof telopt_handler === 'boolean' && telopt_handler === true) {
+            if (seq.charAt(1) === t_tn.DO) this.sendIAC(t_tn.IAC + t_tn.WILL + option_char);
+            else if (seq.charAt(1) === t_tn.WILL) this.sendIAC(t_tn.IAC + t_tn.DO + option_char);
+            return;
+        }
+
+        if (typeof telopt_handler !== 'object' || telopt_handler === null) return;
+
+        switch (seq.charAt(1)) {
+            case t_tn.DO:
+                if (!(telopt_handler._do && telopt_handler._do.call(telopt_handler) === false)) {
+                    this.sendIAC(t_tn.IAC + t_tn.WILL + option_char);
+                }
+                return;
+            case t_tn.DONT:
+                if (!(telopt_handler._dont && telopt_handler._dont.call(telopt_handler) === false)) {
+                    this.sendIAC(t_tn.IAC + t_tn.WONT + option_char);
+                }
+                return;
+            case t_tn.WILL:
+                if (!(telopt_handler._will && telopt_handler._will.call(telopt_handler) === false)) {
+                    this.sendIAC(t_tn.IAC + t_tn.DO + option_char);
+                }
+                return;
+            case t_tn.WONT:
+                if (!(telopt_handler._wont && telopt_handler._wont.call(telopt_handler) === false)) {
+                    this.sendIAC(t_tn.IAC + t_tn.DONT + option_char);
+                }
+                return;
+        }
+    }
+
+    requestPermission(option: string, promptText: string, callback: (result: boolean) => void): void {
+        if (!this.store) { callback(false); return; }
+        var cur = this.store.get(option);
+        if (cur !== undefined && cur !== null) {
+            callback.call(this, !!(cur));
+            return;
+        }
+
+        var closer = () => {
+            callback.call(this, false);
+        };
+        var help_allow = () => {
+            if (this.store) this.store.set(option, true);
+            callback.call(this, true);
+        };
+        var help_deny = () => {
+            if (this.store) this.store.set(option, false);
+            callback.call(this, false);
+        };
+
+        if (this.ui && this.ui.infoBar) {
+            this.ui.infoBar(promptText, 'permission', 0, undefined,
+                [['Allow'.tr(this), help_allow], ['Deny'.tr(this), help_deny]], undefined, closer);
+            return;
+        }
+        callback.call(this, false);
+    }
+
+    disableMCCP2(): void {
+        this.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.DONT + DecafMUD.TN.COMPRESSv2);
+        this.startCompressV2 = false;
+        this.decompressStream = undefined;
+        this.inbuf = [];
+    }
+
+    static debugIAC(seq: string): string {
+        var out = '', t = DecafMUD.TN, state = 0, st: number | boolean = false, l = seq.length;
 
         for( var i = 0; i < l; i++ ) {
                 var c = seq.charAt(i),
                         cc = c.charCodeAt(0);
 
-                // TTYPE Sequence
                 if ( state === 2 ) {
                         if ( c === t.ECHO ) { out += 'SEND '; }
                         else if ( c === t.IS ) { out += 'IS '; }
@@ -493,8 +965,6 @@ DecafMUD.debugIAC = function(seq) {
                         }
                         continue;
                 }
-
-                // MSSP / MSDP Sequence
                 else if ( state === 3 || state === 4 ) {
                         if ( c === t.IAC || (cc >= 1 && cc <= 4) ) {
                                 if ( st ) { st = false; out += '" '; }
@@ -515,8 +985,6 @@ DecafMUD.debugIAC = function(seq) {
                         }
                         continue;
                 }
-
-                // NAWS Sequence
                 else if ( state === 5 ) {
                         if ( c === t.IAC ) {
                                 st = false; out += 'IAC ';
@@ -524,14 +992,12 @@ DecafMUD.debugIAC = function(seq) {
                         } else {
                                 if ( st === false ) { st = cc * 255; }
                                 else {
-                                        out += (cc + st).toString() + ' ';
+                                        out += (cc + (st as number)).toString() + ' ';
                                         st = false;
                                 }
                         }
                         continue;
                 }
-
-                // CHARSET Sequence
                 else if ( state === 6 ) {
                         if ( c === t.IAC || (cc > 0 && cc < 8) ) {
                                 if ( st ) { st = false; out += '" '; }
@@ -542,8 +1008,7 @@ DecafMUD.debugIAC = function(seq) {
                                 else if ( cc === 2 ) { out += 'ACCEPTED '; }
                                 else if ( cc === 3 ) { out += 'REJECTED '; }
                                 else if ( cc === 4 ) { out += 'TTABLE-IS '; }
-                                else if ( cc === 5 ) { out += 'TTABLE-REJECTED '
-; }
+                                else if ( cc === 5 ) { out += 'TTABLE-REJECTED '; }
                                 else if ( cc === 6 ) { out += 'TTABLE-ACK '; }
                                 else if ( cc === 7 ) { out += 'TTABLE-NAK '; }
                         } else {
@@ -551,9 +1016,7 @@ DecafMUD.debugIAC = function(seq) {
                                 out += c;
                         }
                 }
-
-                // ZMP Sequence
-                else if ( state === 7 ) {
+                 else if ( state === 7 ) {
                         if ( c === t.IAC || cc === 0 ) {
                                 if ( st ) { st = false; out += '" '; }
                                 if ( c === t.IAC ) {
@@ -565,10 +1028,8 @@ DecafMUD.debugIAC = function(seq) {
                                 out += c;
                         }
                 }
-
-                // Normal Sequence
                 else if ( state < 2 ) {
-                        out += i2w(c) + ' '; }
+                        out += iacToWord(c) + ' '; }
 
                 if ( state === 0 ) {
                         if ( c === t.SB ) { state = 1; }
@@ -584,1560 +1045,279 @@ DecafMUD.debugIAC = function(seq) {
                         else { state = 0; }
                 }
         }
-
         return out.substr(0, out.length-1);
+    }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-// TELOPTS
-///////////////////////////////////////////////////////////////////////////////
 
-/** Handles the telopt TTYPE. */
-var tTTYPE = function(decaf) { this.decaf = decaf; }
-tTTYPE.prototype.current = -1
-tTTYPE.prototype._dont = tTTYPE.prototype.disconnect = function() { this.current
- = -1; }
-tTTYPE.prototype._sb = function(data) {
-        if ( data !== t.ECHO ) { return; }
-        this.current = (this.current + 1) % this.decaf.options.ttypes.length;
-        this.decaf.debugString('RCVD ' + DecafMUD.debugIAC(t.IAC + t.SB + t.TTYP
-E + t.ECHO + t.IAC + t.SE));
-        this.decaf.sendIAC(t.IAC + t.SB + t.TTYPE + t.IS + this.decaf.options.tt
-ypes[this.current] + t.IAC + t.SE);
+if (typeof String.prototype.tr === 'undefined') {
+    (String as any).logNonTranslated = true && typeof window !== 'undefined' && typeof console !== 'undefined' && console.warn;
+    String.prototype.tr = function (this: string, ...args: any[]): string {
+        let decaf: DecafMUD | undefined;
+        let off: number;
+        let s: string = this.toString();
+        let lang: string;
 
-        return false; // We print our own debug info.
+        if (args.length > 0 && args[0] instanceof DecafMUD) {
+            decaf = args[0];
+            off = 1;
+        } else if (DecafMUD.instances && DecafMUD.instances.length > 0) {
+            decaf = DecafMUD.instances[DecafMUD.instances.length - 1];
+            off = 0;
+        } else {
+            off = 0;
+            if (args.length - off === 1 && typeof args[off] === 'object' && args[off] !== null && !(args[off] instanceof DecafMUD)) {
+                const obj = args[off];
+                for (const i in obj) {
+                    if (obj.hasOwnProperty(i)) {
+                        s = s.replace('{' + i + '}', obj[i]);
+                    }
+                }
+            } else {
+                const replacements = args.slice(off);
+                s = s.replace(/{(\d+)}/g, function (m, p1) {
+                    const p = parseInt(p1);
+                    return p < replacements.length ? replacements[p] : '';
+                });
+            }
+            return s;
+        }
+
+        lang = decaf.options.language;
+        if (lang === 'en') {
+            s = this.toString();
+        } else {
+            const langPlugins = (DecafMUD.plugins as any).Language;
+            if (langPlugins && langPlugins[lang] && langPlugins[lang][this.toString()]) {
+                s = langPlugins[lang][this.toString()];
+            } else {
+                // Removed console call from here
+                s = this.toString();
+            }
+        }
+
+        if (args.length - off === 1 && typeof args[off] === 'object' && args[off] !== null && !(args[off] instanceof DecafMUD)) {
+            const obj = args[off];
+            for (const i in obj) {
+                if (obj.hasOwnProperty(i)) {
+                    s = s.replace('{' + i + '}', obj[i]);
+                }
+            }
+        } else {
+            const replacements = args.slice(off);
+            s = s.replace(/{(\d+)}/g, function (m, p1) {
+                const p = parseInt(p1);
+                return p < replacements.length ? replacements[p] : '';
+            });
+        }
+        return s;
+    };
 }
-DecafMUD.plugins.Telopt[t.TTYPE] = tTTYPE;
 
-/** Handles the telopt ECHO. */
-var tECHO = function(decaf) { this.decaf = decaf; }
-tECHO.prototype._will = function() {
-        if ( this.decaf.ui ) { this.decaf.ui.localEcho(false); } }
-tECHO.prototype._wont = tECHO.prototype.disconnect = function() {
-        if ( this.decaf.ui ) { this.decaf.ui.localEcho(true); } }
-DecafMUD.plugins.Telopt[t.ECHO] = tECHO;
+var tTTYPE = function(this: any, decaf: DecafMUD) { this.decaf = decaf; this.current = -1; } as any;
+tTTYPE.prototype._dont = tTTYPE.prototype.disconnect = function() { this.current = -1; }
+tTTYPE.prototype._sb = function(data: string) {
+    if ( data !== DecafMUD.TN.ECHO ) { return; }
+    this.current = (this.current + 1) % this.decaf.options.ttypes.length;
+    this.decaf.debugString('RCVD ' + DecafMUD.debugIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.TTYPE + DecafMUD.TN.ECHO + DecafMUD.TN.IAC + DecafMUD.TN.SE));
+    this.decaf.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.TTYPE + DecafMUD.TN.IS + this.decaf.options.ttypes[this.current] + DecafMUD.TN.IAC + DecafMUD.TN.SE);
+    return false;
+}
 
+var tECHO = function(this: any, decaf: DecafMUD) { this.decaf = decaf; } as any;
+tECHO.prototype._will = function() { if ( this.decaf.ui ) { this.decaf.ui.localEcho(false); } }
+tECHO.prototype._wont = tECHO.prototype.disconnect = function() { if ( this.decaf.ui ) { this.decaf.ui.localEcho(true); } }
 
-/** Handles the telopt NAWS. */
-var tNAWS = function(decaf) { this.decaf = decaf; }
-tNAWS.prototype.enabled = false;
-tNAWS.prototype.last = undefined;
-tNAWS.prototype._do = function() { this.last = undefined; this.enabled = true;
-        var n=this; setTimeout(function(){n.send();},0); }
-tNAWS.prototype._dont = tNAWS.prototype.disconnect = function() { this.enabled =
- false; }
+var tNAWS = function(this: any, decaf: DecafMUD) { this.decaf = decaf; this.enabled = false; this.last = undefined; } as any;
+tNAWS.prototype._do = function() { this.last = undefined; this.enabled = true; var n=this; setTimeout(function(){n.send();},0); }
+tNAWS.prototype._dont = tNAWS.prototype.disconnect = function() { this.enabled = false; }
 tNAWS.prototype.send = function() {
-        if ((!this.decaf.display) || (!this.enabled)) { return; }
-        var sz = this.decaf.display.getSize();
-        if ( this.last !== undefined && this.last[0] == sz[0] && this.last[1] ==
- sz[1] ) { return; }
-        this.last = sz;
-        var data = String.fromCharCode(Math.floor(sz[0] / 255));
-        data += String.fromCharCode(sz[0] % 255);
-        data += String.fromCharCode(Math.floor(sz[1] / 255));
-        data += String.fromCharCode(sz[1] % 255);
-        data = t.IAC + t.SB + t.NAWS + data.replace(/\xFF/g,'\xFF\xFF') + t.IAC
-+ t.SE;
-        this.decaf.sendIAC(data);
+    if ((!this.decaf.display) || (!this.enabled)) { return; }
+    var sz = this.decaf.display.getSize();
+    if ( this.last !== undefined && this.last[0] == sz[0] && this.last[1] == sz[1] ) { return; }
+    this.last = sz;
+    var data = String.fromCharCode(Math.floor(sz[0] / 255));
+    data += String.fromCharCode(sz[0] % 255);
+    data += String.fromCharCode(Math.floor(sz[1] / 255));
+    data += String.fromCharCode(sz[1] % 255);
+    data = DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.NAWS + data.replace(/\xFF/g,'\xFF\xFF') + DecafMUD.TN.IAC + DecafMUD.TN.SE;
+    this.decaf.sendIAC(data);
 }
-DecafMUD.plugins.Telopt[t.NAWS] = tNAWS;
 
-
-/** Handles the telopt CHARSET. */
-var tCHARSET = function(decaf) { this.decaf = decaf; }
-//tCHARSET.prototype.connect = function() { this.decaf.sendIAC(t.IAC + t.WILL +
-t.CHARSET); }
+var tCHARSET = function(this: any, decaf: DecafMUD) { this.decaf = decaf; } as any;
 tCHARSET.prototype._dont = function() { return false; }
 tCHARSET.prototype._will = function() { var c = this; setTimeout(function() {
-        var cs = [], done = [];
-
-        // Add the current encoding first if not ISO-8859-1
-        var e = this.decaf.options.encoding;
-        if ( e !== 'iso88591' && DecafMUD.plugins.Encoding[e] !== undefined && D
-ecafMUD.plugins.Encoding[e].proper !== undefined ) {
-                cs.push(DecafMUD.plugins.Encoding[e].proper);
-                done.push(e);
-        }
-
-        // Add the encodings in the order we want.
-        for(var i=0;i<this.decaf.options.encoding_order.length;i++) {
-                var e = this.decaf.options.encoding_order[i];
-                if ( DecafMUD.plugins.Encoding[e] === undefined || DecafMUD.plug
-ins.Encoding[e].proper === undefined || done.indexOf(e) !== -1 ) { continue; }
-                cs.push(DecafMUD.plugins.Encoding[e].proper);
-                done.push(e);
-        }
-
-        // Add the rest now.
-        for(var k in DecafMUD.plugins.Encoding) {
-                if ( done.indexOf(k) !== -1 || DecafMUD.plugins.Encoding[k].prop
-er === undefined ) { continue; }
-                cs.push(DecafMUD.plugins.Encoding[k].proper);
-        }
-
-        c.decaf.sendIAC(t.IAC + t.SB + t.CHARSET + t.ECHO + ' ' + cs.join(' ') +
- t.IAC + t.SE);
+    var cs = [], done: string[] = [];
+    var e = c.decaf.options.encoding;
+    if ( e !== 'iso88591' && (DecafMUD.plugins as any).Encoding[e] !== undefined && (DecafMUD.plugins as any).Encoding[e].proper !== undefined ) {
+        cs.push((DecafMUD.plugins as any).Encoding[e].proper);
+        done.push(e);
+    }
+    for(var i=0;i<c.decaf.options.encoding_order.length;i++) {
+        var e_loop = c.decaf.options.encoding_order[i];
+        if ( (DecafMUD.plugins as any).Encoding[e_loop] === undefined || (DecafMUD.plugins as any).Encoding[e_loop].proper === undefined || done.indexOf(e_loop) !== -1 ) { continue; }
+        cs.push((DecafMUD.plugins as any).Encoding[e_loop].proper);
+        done.push(e_loop);
+    }
+    for(var k in (DecafMUD.plugins as any).Encoding) {
+        if ( done.indexOf(k) !== -1 || (DecafMUD.plugins as any).Encoding[k].proper === undefined ) { continue; }
+        cs.push((DecafMUD.plugins as any).Encoding[k].proper);
+    }
+    c.decaf.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.CHARSET + DecafMUD.TN.ECHO + ' ' + cs.join(' ') + DecafMUD.TN.IAC + DecafMUD.TN.SE);
 },0); }
-tCHARSET.prototype._sb = function(data) {
-        // Print debug.
-        this.decaf.debugString('RCVD ' + DecafMUD.debugIAC(t.IAC + t.SB + t.CHAR
-SET + data + t.IAC + t.SE));
-
-        // Is it REQUEST?
-        if ( data.charCodeAt(0) === 1 ) {
-                data = data.substr(1);
-
-                // Is there a TTABLE? We don't support that, so ignore.
-                if ( data.indexOf('TTABLE ') === 0 ) {
-                        data = data.substr(8); }
-
-                // The first character is the separator.
-                var sep = data.charAt(0);
-                data = data.substr(1).split(sep);
-
-                // Check if the preferred encoding is in data
-                var e, o;
-                for (var i of this.decaf.options.encoding_order) {
-                        e = DecafMUD.plugins.Encoding[i];
-                        if (e === undefined || e.proper === undefined)
-                                continue;
-                        if (data.includes(i)) {
-                                o = i;
-                                e = i;
-                                break;
-                        }
-                        if (data.includes(e.proper)) {
-                                o = e.proper;
-                                e = i;
-                                break;
-                        }
-                }
-
-                // Find the first one we accept.
-                if (e === undefined) {
-                        for(var i=0;i < data.length; i++) {
-                                o = data[i];
-                                for(var k in DecafMUD.plugins.Encoding) {
-                                        if ( o === k || o === DecafMUD.plugins.E
-ncoding[k].proper ) {
-                                                e = k;
-                                                break; }
-                                }
-                                if ( e ) { break; }
-                        }
-                }
-                if ( e !== undefined ) {
-                        this.decaf.setEncoding(e);
-                        this.decaf.sendIAC(t.IAC + t.SB + t.CHARSET + '\x02' + o
- + t.IAC + t.SE);
-                } else {
-                        // Reject it.
-                        this.decaf.debugString("No encoder for: " + data.join(se
-p));
-                        this.decaf.sendIAC(t.IAC + t.SB + t.CHARSET + '\x03' + t
-.IAC + t.SE);
-                }
+tCHARSET.prototype._sb = function(data: string) {
+    this.decaf.debugString('RCVD ' + DecafMUD.debugIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.CHARSET + data + DecafMUD.TN.IAC + DecafMUD.TN.SE));
+    if ( data.charCodeAt(0) === 1 ) {
+        data = data.substr(1);
+        if ( data.indexOf('TTABLE ') === 0 ) { data = data.substr(8); }
+        var sep = data.charAt(0);
+        var data_arr = data.substr(1).split(sep);
+        var e_enc: string | undefined, o_opt: string | undefined;
+        for (let enc_opt of this.decaf.options.encoding_order) {
+            const enc_plugin = (DecafMUD.plugins as any).Encoding[enc_opt];
+            if (enc_plugin === undefined || enc_plugin.proper === undefined) continue;
+            if (data_arr.indexOf(enc_opt) !== -1) { o_opt = enc_opt; e_enc = enc_opt; break; }
+            if (data_arr.indexOf(enc_plugin.proper) !== -1) { o_opt = enc_plugin.proper; e_enc = enc_opt; break; }
         }
-
-        // Is it ACCEPTED?
-        else if ( data.charCodeAt(0) === 2 ) {
-                data = data.substr(1);
-
-                // Get the character set.
-                var e = undefined;
-                for(var k in DecafMUD.plugins.Encoding) {
-                        if ( DecafMUD.plugins.Encoding[k].proper === data ) {
-                                e = k;
-                                break;
-                        }
+        if (e_enc === undefined) {
+            for(var i=0;i < data_arr.length; i++) {
+                o_opt = data_arr[i];
+                for(var k in (DecafMUD.plugins as any).Encoding) {
+                    if ( o_opt === k || o_opt === (DecafMUD.plugins as any).Encoding[k].proper ) { e_enc = k; break; }
                 }
-
-                // If we have e, use it.
-                if ( e !== undefined ) { this.decaf.setEncoding(e); }
+                if ( e_enc ) { break; }
+            }
         }
-
-        return false; // We print our own debug.
+        if ( e_enc !== undefined && o_opt !== undefined) {
+            this.decaf.setEncoding(e_enc);
+            this.decaf.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.CHARSET + '\x02' + o_opt + DecafMUD.TN.IAC + DecafMUD.TN.SE);
+        } else {
+            this.decaf.debugString("No encoder for: " + data_arr.join(sep));
+            this.decaf.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.CHARSET + '\x03' + DecafMUD.TN.IAC + DecafMUD.TN.SE);
+        }
+    } else if ( data.charCodeAt(0) === 2 ) {
+        data = data.substr(1);
+        var e_enc: string | undefined = undefined;
+        for(var k in (DecafMUD.plugins as any).Encoding) {
+            if ( (DecafMUD.plugins as any).Encoding[k].proper === data ) { e_enc = k; break; }
+        }
+        if ( e_enc !== undefined ) { this.decaf.setEncoding(e_enc); }
+    }
+    return false;
 }
-DecafMUD.plugins.Telopt[t.CHARSET] = tCHARSET;
 
-
-/** Handles the telopt COMPRESSv2 (MCCP2) */
-var tCOMPRESSv2 = function(decaf) {
-        // Thanks, https://mudhalla.net/tintin/protocols/mccp/
-        this.decaf = decaf;
-        this.decaf.startCompressV2 = false;
-        this.decaf.loadScript('inflate_stream.min.js'); // https://github.com/im
-aya/zlib.js/blob/develop/bin/inflate_stream.min.js
-}
+var tCOMPRESSv2 = function(this: any, decaf: DecafMUD) {
+    this.decaf = decaf;
+    this.decaf.startCompressV2 = false;
+    if (typeof Zlib === 'undefined') {
+        this.decaf.loadScript('inflate_stream.min.js');
+    }
+} as any;
 tCOMPRESSv2.prototype._will = function() {
-        if (this.decaf.options.socket == 'flash') {
-                this.decaf.debugString('Flash COMPRESSv2 support has not been im
-plemented');
-                return false;
-        }
-        if (Zlib === undefined) {
-                this.decaf.debugString('Unable to load Zlib.js for COMPRESSv2 su
-pport');
-                return false;
-        }
-        return true;
+    if (this.decaf.options.socket == 'flash') {
+        this.decaf.debugString('Flash COMPRESSv2 support has not been implemented'); return false;
+    }
+    if (typeof Zlib === 'undefined') {
+        this.decaf.debugString('Unable to load Zlib.js for COMPRESSv2 support'); return false;
+    }
+    return true;
 }
 tCOMPRESSv2.prototype._sb = function() {
-        this.decaf.debugString('RCVD ' + DecafMUD.debugIAC(t.IAC + t.SB + t.COMP
-RESSv2 + t.IAC + t.SE ));
-        this.decaf.startCompressV2 = true;
- }
-DecafMUD.plugins.Telopt[t.COMPRESSv2] = tCOMPRESSv2;
-
-DecafMUD.prototype.disableMCCP2 = function() {
-        this.sendIAC(t.IAC + t.DONT + t.COMPRESSv2);
-        this.startCompressV2 = false;
-        this.decompressStream = undefined;
-        this.inbuf = [];
+    this.decaf.debugString('RCVD ' + DecafMUD.debugIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.COMPRESSv2 + DecafMUD.TN.IAC + DecafMUD.TN.SE ));
+    this.decaf.startCompressV2 = true;
 }
 
-/** Read a string of MSDP-formatted variables and return an object with those
- *  variables in an easy-to-use format. This calls itself recursively, and
- *  returns an array. The first item being the object, and the second being
- *  any left over string.
- * @param {String} data The MSDP-formatted data to read.
- * @returns {Array} */
-var msdp = /[\x01\x02\x03\x04]/;
-var readMSDP = function(data) {
-        var out = {};
-        var variable = undefined;
-
-        // Loop through data
-        while ( data.length > 0 ) {
-                // Attempt to read a control character.
-                var c = data.charCodeAt(0);
-
-                if ( c === 1 ) {
-                        // MSDP_VAR. Read a variable name from data and reset th
-e variable
-                        // in out.
-                        var ind = data.substr(1).search(msdp);
-                        if ( ind === -1 ) {
-                                variable = data.substr(1);
-                                data = '';
-                        } else {
-                                variable = data.substr(1, ind);
-                                data = data.substr(ind+1);
-                        }
-
-                        // Reset the variable, and continue.
-                        out[variable] = undefined;
-                        continue;
-                }
-
-                else if ( c === 4 ) {
-                        // MSDP_CLOSE. Return what we have.
-                        data = data.substr(1);
-                        break;
-                }
-
-                // Make sure we have a variable name. If not, quit.
-                if ( variable === undefined ) {
-                        return [out, ''];
-                }
-
-                if ( c === 2 ) {
-                        // MSDP_VAL. Read a value. If variable isn't undefined,
-turn it into
-                        // an array if it isn't one.
-
-                        // Is this a MSDP_OPEN?
-                        if ( data.charCodeAt(1) === 3 ) {
-                                var o = readMSDP(data.substr(2));
-                                val = o[0];
-                                data = o[1];
-                        } else {
-                                var ind = data.substr(1).search(msdp), val = '';
-                                if ( ind === -1 ) {
-                                        val = data.substr(1);
-                                        data = '';
-                                } else {
-                                        val = data.substr(1, ind);
-                                        data = data.substr(ind+1);
-                                }
-                        }
-
-                        // Check the existing variable.
-                        if ( out[variable] === undefined ) {
-                                out[variable] = val;
-                        } else if ( typeof out[variable] === 'object' && out[var
-iable].push !== undefined ) {
-                                out[variable].push(val);
-                        } else {
-                                out[variable] = [out[variable], val];
-                        }
-
-                        continue;
-                }
-
-                // Still here? No command. Break then.
-                break;
-        }
-
-        return [out, data];
-};
-
-/** Convert a variable to a string of valid MSDP-formatted data.
- * @param {any} obj The variable to convert. */
-var writeMSDP = function(obj) {
-        var t = typeof obj;
-        if ( t === 'string' || t === 'number' ) { return obj.toString(); }
-        else if ( t === 'boolean' ) { return obj ? '1' : '0'; }
-        else if ( t === 'undefined' ) { return ''; }
-
-        // Must be an object.
-        else if ( t === 'object' ) {
-                var out = '';
-                for(var k in obj) {
-                        // Don't write out undefineds and nulls.
-                        if ( obj[k] === undefined || obj[k] === null || typeof o
-bj[k] === 'function' ) { continue; }
-
-                        out += '\x01' + k;
-                        if ( typeof obj[k] === 'object' ) {
-                                if ( obj[k].push !== undefined ) {
-                                        // Handle arrays differently than normal
- objects.
-                                        var v = obj[k], l = obj[k].length;
-                                        for(var i=0;i<l;i++) {
-                                                out += '\x02' + writeMSDP(v[i]);
- }
-                                } else if ( obj[k].nodeType === undefined ) {
-                                        // Make sure we don't get caught up in t
-he DOM.
-                                        out += '\x02\x03' + writeMSDP(obj[k]) +
-'\x04';
-                                }
-                        } else {
-                                out += '\x02' + writeMSDP(obj[k]);
-                        }
-                }
-
-                return out;
-        }
-
-        // Last ditch effort. toString it.
-        return obj.toString();
-};
-
-/** Handles the telopt MSDP. */
-var tMSDP = function(decaf) { this.decaf = decaf; }
-tMSDP.prototype.connect = function() {
-        this.commands = ['LIST'];
-        this.variables = [];
-        this.reportable = [];
-}
-
+var tMSDP = function(this: any, decaf: DecafMUD) { this.decaf = decaf; } as any;
+tMSDP.prototype.connect = function() { this.commands = ['LIST']; this.variables = []; this.reportable = []; }
 tMSDP.config_vars = {
-        'CLIENT_NAME'           : 'decafmud',
-        'CLIENT_VERSION'        : DecafMUD.version.toString(),
-        'PLUGIN_ID'                     : '0',
-        'ANSI_COLORS'           : '1',
-        'UTF_8'                         : '1',
-        'XTERM_256_COLORS'      : '1'
+    'CLIENT_NAME'           : 'decafmud',
+    'CLIENT_VERSION'        : DecafMUD.version.toString(),
+    'PLUGIN_ID'                     : '0',
+    'ANSI_COLORS'           : '1',
+    'UTF_8'                         : '1',
+    'XTERM_256_COLORS'      : '1'
 }
-
-/** Request a lot of different information from the server. */
 tMSDP.prototype._will = function() { var m = this; setTimeout(function() {
-        m.decaf.sendIAC(t.IAC + t.SB + t.MSDP + '\x01LIST\x02COMMANDS' + t.IAC +
- t.SE);
-        m.decaf.sendIAC(t.IAC + t.SB + t.MSDP + '\x01LIST\x02VARIABLES' + t.IAC
-+ t.SE);
-        m.decaf.sendIAC(t.IAC + t.SB + t.MSDP + '\x01LIST\x02CONFIGURABLE_VARIAB
-LES' + t.IAC + t.SE);
-        m.decaf.sendIAC(t.IAC + t.SB + t.MSDP + '\x01LIST\x02REPORTABLE_VARIABLE
-S' + t.IAC + t.SE);
+    m.decaf.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.MSDP + '\x01LIST\x02COMMANDS' + DecafMUD.TN.IAC + DecafMUD.TN.SE);
+    m.decaf.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.MSDP + '\x01LIST\x02VARIABLES' + DecafMUD.TN.IAC + DecafMUD.TN.SE);
+    m.decaf.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.MSDP + '\x01LIST\x02CONFIGURABLE_VARIABLES' + DecafMUD.TN.IAC + DecafMUD.TN.SE);
+    m.decaf.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.MSDP + '\x01LIST\x02REPORTABLE_VARIABLES' + DecafMUD.TN.IAC + DecafMUD.TN.SE);
 },0); }
+tMSDP.prototype._sb = function(data: string) {
+    var out = readMSDP(data)[0], ret = false;
+    if ( typeof window !== 'undefined' && 'console' in window && (console as any).groupCollapsed ) {
+        (console as any).groupCollapsed('DecafMUD['+this.decaf.id+']: RCVD IAC SB MSDP ... IAC SE');
+        console.dir(out);
+        console.groupEnd();
+    } else { ret = true; }
 
-tMSDP.prototype._sb = function(data) {
-        var out = readMSDP(data)[0], ret = false; // We don't care about the lef
-t over string.
-
-        // Debug it before we do anything potentially destructive.
-        if ( 'console' in window && console.groupCollapsed ) {
-                console.groupCollapsed('DecafMUD['+this.decaf.id+']: RCVD IAC SB
- MSDP ... IAC SE');
-                console.dir(out);
-                console.groupEnd('DecafMUD['+this.decaf.id+']: RCVD IAC SB MSDP
-... IAC SE');
-        } else { ret = true; }
-
-        // Check out for things we care about.
-        if ( out['COMMANDS'] !== undefined ) {
-                for(var i=0; i<out['COMMANDS'].length;i++) {
-                        this.commands.push(out['COMMANDS'][i]); }
+    if ( out['COMMANDS'] !== undefined ) {
+        for(var i=0; i<out['COMMANDS'].length;i++) { this.commands.push(out['COMMANDS'][i]); }
+    }
+    if ( out['VARIABLES'] !== undefined ) {
+        for(var i=0; i<out['VARIABLES'].length;i++) { this.variables.push(out['VARIABLES'][i]); }
+    }
+    if ( out['CONFIGURABLE_VARIABLES'] !== undefined ) {
+        var o = out['CONFIGURABLE_VARIABLES'];
+        var ot: any = {};
+        for(var i=0;i<o.length;i++) {
+            if ( (tMSDP as any).config_vars[o[i]] !== undefined ) { ot[o[i]] = (tMSDP as any).config_vars[o[i]]; }
         }
-
-        if ( out['VARIABLES'] !== undefined ) {
-                for(var i=0; i<out['VARIABLES'].length;i++) {
-                        this.variables.push(out['VARIABLES'][i]); }
-        }
-
-        if ( out['CONFIGURABLE_VARIABLES'] !== undefined ) {
-                var o = out['CONFIGURABLE_VARIABLES'];
-                var ot = {};
-                // Built an array of stuff to send.
-                for(var i=0;i<o.length;i++) {
-                        if ( tMSDP.config_vars[o[i]] !== undefined ) {
-                                ot[o[i]] = tMSDP.config_vars[o[i]]; }
-                }
-                // Send it.
-                this.decaf.sendIAC(t.IAC + t.SB + t.MSDP + writeMSDP(ot) + t.IAC
- + t.SE);
-        }
-
-        return ret; // We handled our own debug output.
-}
-DecafMUD.plugins.Telopt[t.MSDP] = tMSDP;
-
-/** We always transmit binary. What else would we transmit? */
-DecafMUD.plugins.Telopt[t.BINARY] = true;
-
-/** Only use MSSP for debugging purposes. */
-DecafMUD.plugins.Telopt[t.MSSP] = 'console' in window;
-
-///////////////////////////////////////////////////////////////////////////////
-// Localization
-///////////////////////////////////////////////////////////////////////////////
-// Extend the string prototype with a new function for easy localization of
-// our strings. Usage: alert( "This is an example.".tr(decaf_instance) );
-if ( String.prototype.tr === undefined ) {
-        // Set this to true if you want to write to the debugging log every time
-        // we try translating a string with no available translation.
-        /** If this is true, debugging messages will be written to the console
-         *  every time .tr() is called on a string with no available translation
-         *  in the target language.
-         * @default "false"
-         * @constant */
-        String.logNonTranslated = true && 'console' in window;
-        /** Translate a string from English to a different language, optionally
-         *  replacing special character sequences with the provided variables.
-         *
-         * @example
-         * alert( "This is a {0}.".tr(decaf, "test") );
-         *
-         * @param {DecafMUD} [decaf] Use the language set in this instance of
-         *    DecafMUD if set. If not set, use the language of the most recently
-         *    created DecafMUD instance.
-         * @param {Object} [obj] If an object is provided, variables will be
-         *    replaced in the string based upon the object's keys.
-         * @example
-         * // Example variable replacement using obj.
-         * "{name} broke his {bone}!".tr({name: "Fred", bone: "tibia"});
-         * // Becomes: "Fred broke his tibia!"
-         *
-         * @param {String|Number} [*args] If an object isn't provided, but addit
-onal
-         *    arguments are present, variables will be replaced in the string
-         *    based upon the argument's index. Note that if the first argument
-         *    is an Object, index-based replacements won't be made.
-         * @example
-         * // Example variable replacement using multiple arguments.
-         * "{0} broke his {1}!".tr("Fred", "tibia");
-         * // Becomes: "Fred broke his tibia!"
-         * @returns {String} The translated text.
-         */
-        String.prototype.tr = function() {
-                var decaf, off, s, lang;
-                if ( arguments.length > 0 && arguments[0] instanceof DecafMUD )
-{
-                        decaf = arguments[0];
-                        off = 1;
-                } else {
-                        // Since an instance wasn't specified, assume the latest
- instance.
-                        decaf = DecafMUD.instances[DecafMUD.instances.length - 1
-];
-                        off = 0;
-                }
-
-                // Get the language from our DecafMUD instance, then try getting
- the
-                // translated string.
-                lang = decaf.options.language;
-                if ( lang === 'en' ) { s = this; }
-                else {
-                        if (!( DecafMUD.plugins.Language[lang] && (s = DecafMUD.
-plugins.Language[lang][this]) )) {
-                                if ( String.logNonTranslated ) {
-                                        var l = DecafMUD.plugins.Language[lang]
-&& DecafMUD.plugins.Language[lang]['English'] !== undefined ?
-                                                DecafMUD.plugins.Language[lang][
-'English'] : '"' + lang + '"';
-                                        console.warn('DecafMUD[' + decaf.id + ']
- i18n: No ' + l + ' translation for: ' +
-                                                this.replace(/\n/g,'\\n'));
-                                }
-                                s = this;
-                        }
-                }
-
-                // Do replacements to make this even more useful.
-                if ( arguments.length - off === 1 && typeof arguments[off] === '
-object' ) {
-                        var obj = arguments[off];
-                        for ( var i in obj ) {
-                                s = s.replace('{'+i+'}', obj[i]);
-                        }
-                } else {
-                        var obj = arguments;
-                        s = s.replace(/{(\d+)}/g, function(m) {
-                                var p = parseInt(m[1]) + off;
-                                return p < obj.length ? obj[p] : '';
-                        });
-                }
-
-                // Return the fancy, translated, replaced string.
-                return s;
-        }
+        this.decaf.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.MSDP + writeMSDP(ot) + DecafMUD.TN.IAC + DecafMUD.TN.SE);
+    }
+    return ret;
 }
 
-/** Display a dialog with About information for DecafMUD. */
-DecafMUD.prototype.about = function() {
-        var abt = ["DecafMUD v{0} \u00A9 2010 Stendec"];
-
-        abt.push("Updated and improved by Pit from Discworld.");
-        abt.push("Further bugfixes and improvements by Waba from MUME.");
-        abt.push("https://github.com/MUME/DecafMUD\n");
-
-        abt.push("DecafMUD is a web-based MUD client written in JavaScript, rath
-er" +
-                " than a plugin like Flash or Java, making it load faster and re
-act as" +
-                " you'd expect a website to.\n");
-
-        abt.push("It's easy to customize as well, using simple CSS and JavaScrip
-t," +
-                " and free to use and modify, so long as your MU* is free to pla
-y!");
-
-        // Show the about dialog with a simple alert.
-        alert(abt.join('\n').tr(this, DecafMUD.version.toString()));
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Debugging
-///////////////////////////////////////////////////////////////////////////////
-
-/** Write a string to the debug console. The type can be one of: debug, info,
-  * error, or warn, and defaults to debug. This does nothing if the console
-  * doesn't exist.
-  * @param {String} text The text to write to the debug console.
-  * @param {String} [type="debug"] The type of message. One of: debug, info, err
-or, warn
-  * @param {Object} [obj]  An object with extra details for use in the provided
-text.
-  * @example
-  * var details = {name: "Fred", bone: "tibia"};
-  * decaf.debugString("{name} broke their {bone}!", 'info', details);
-  */
-DecafMUD.prototype.debugString = function(text, type, obj) {
-        // Return if we don't have the console or a debug pane.
-        if (! 'console' in window ) { return; }
-
-        // Set the type to debug by default
-        if ( type === undefined ) { type = 'debug'; }
-
-        // Prepare the string. It's almost certain it won't be translatable, but
-        // the variable replacement is nice.
-        if ( obj !== undefined ) { text = text.tr(this, obj); }
-
-        // Firebug / Console Logging
-        if (!( 'console' in window )) { return; }
-        var st = 'DecafMUD[%d]: %s';
-        switch(type) {
-                case 'info':    console.info(st, this.id, text); return;
-                case 'warn':    console.warn(st, this.id, text); return;
-                case 'error':   console.error(st, this.id, text); return;
-                default:
-                        if ( 'debug' in console ) {
-                                console.debug(st, this.id, text);
-                                return;
-                        }
-                        console.log(st, this.id, text);
-        }
-}
-
-/** Show an error to the user, either via the interface if it's loaded or,
- *  failing that, a call to alert().
- * @param {String} text The error message to display.
- * @example
- * decaf.error("My pants are on fire!");
- */
-DecafMUD.prototype.error = function(text) {
-        // Print to debug
-        this.debugString(text, 'error');
-
-        // If we have console grouping, log the options.
-        if ( 'console' in window && console.groupCollapsed !== undefined ) {
-                console.groupCollapsed('DecafMUD['+this.id+'] Instance State');
-                console.dir(this);
-                console.groupEnd();
-        }
-
-        // If we have a UI, try splashError.
-        if ( this.ui && this.ui.splashError(text) ) { return; }
-
-        // TODO: Check the Interface and stuff
-        alert("DecafMUD Error\n\n{0}".tr(this,text));
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Module Loading
-///////////////////////////////////////////////////////////////////////////////
-
-/** Load a script from an external file, using the given path. If a path isn't
- *  provided, find the path to decafmud.js and use that.
- * @param {string} filename The name of the script file to load.
- * @param {string} [path] The path to load the script from.
- * @example
- * decaf.loadScript("my-plugin-stuff.js");
- */
-DecafMUD.prototype.loadScript = function(filename, path) {
-        if ( path === undefined ) {
-                if ( this.options.jslocation !== undefined ) { path = this.optio
-ns.jslocation; }
-                if ( path === undefined || typeof path === 'string' && path.leng
-th === 0 ) {
-                        // Attempt to discover the path.
-                        var obj = document.querySelector('script[src*="decafmud.
-js"]');
-                        if ( obj === null ) {
-                                obj = document.querySelector('script[src*="decaf
-mud.min.js"]'); }
-                        if ( obj !== null ) {
-                                path = obj.src.substr(0,obj.src.lastIndexOf('/')
-+1); }
-                }
-        }
-
-        // Now that we have a path, create a script element to load our script
-        // and add it to the header so that it's loaded.
-        var script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.src = path + filename;
-        document.getElementsByTagName('head')[0].appendChild(script);
-
-        // Debug that we've loaded it.
-        this.debugString('Loading script: ' + filename); // + ' (' + script.src
-+ ')');
-}
-
-/** Require a moddule to be loaded. Plugins can call this function to ensure
- *  that their dependencies are loaded. Be sure to use this along with waitLoad
- *  to ensure the modules are loaded before calling code that uses them.
- * @param {String} module The module that has to be loaded.
- * @param {function} [check] If specified, this function will be used to check
- *    that the module is loaded. Otherwise, it will be looked for in the
- *    DecafMUD plugin tree.
- * @example
- * decaf.require('decafmud.encoding.cp437');
- * @example
- * // External module
- * decaf.require('my-module', function() {
- *    return 'SomeRequirement' in window;
- * }); */
-DecafMUD.prototype.require = function(module, check) {
-        // If we're loading language files, try it.
-        if ( this.options.load_language && this.options.language !== 'en' &&
-                 module.indexOf('language') === -1 && module.indexOf('decafmud')
- !== -1 ) {
-                var parts = module.split('.');
-                parts.splice(1,0,"language",this.options.language);
-                this.require(parts.join('.'));
-        }
-
-        if ( check === undefined ) {
-                // Build a checker
-                if ( module.toLowerCase().indexOf('decafmud') === 0 ) {
-                        var parts = module.split('.');
-                        if ( parts.length < 2 ) { return; } // Already have Deca
-fMUD, duh.
-                        parts.shift();
-                        parts[0] = parts[0][0].toUpperCase() + parts[0].substr(1
-);
-
-                        // If it's a telopt, search DecafMUD.TN for it.
-                        if ( parts[0] === 'Telopt' ) {
-                                for(var k in DecafMUD.TN) {
-                                        if ( parts[1].toUpperCase() === k.toUppe
-rCase() ) {
-                                                parts[1] = DecafMUD.TN[k];
-                                                break; }
-                                }
-                        }
-
-                        check = function() {
-                                if ( DecafMUD.plugins[parts[0]] !== undefined )
-{
-                                        if ( parts.length > 1 ) {
-                                                return DecafMUD.plugins[parts[0]
-][parts[1]] !== undefined;
-                                        } else { return true; }
-                                }
-                                return false;
-                        };
-                } else {
-                        throw "Can't build checker for non-DecafMUD module!"
-                }
-        }
-
-        // Increment required.
-        this.required++;
-
-        // Call the checker. If we already have it, return now.
-        if ( check.call(this) ) { return; }
-
-        // Load the script.
-        /*var decaf = this;
-        setTimeout(function() {
-                decaf.loadScript(module+'.js');
-        },this.required*500);*/
-        this.loadScript(module+'.js');
-
-        // Finally, push to need for waitLoad to work.
-        this.need.push([module,check]);
-}
-
-/** Wait for all the currently required modules to load. Then, after everything
- *  has loaded, call the supplied function to continue execution. This function
- *  calls itself on a timer to work without having to block. Since blocking is
- *  evil.
- * @param {function} next The function to call when everything has loaded.
- * @param {function} [itemloaded] If provided, this function will be called
- *    each time a new item has been loaded. Useful for splash screens.
- */
-DecafMUD.prototype.waitLoad = function(next, itemloaded, tr) {
-        clearTimeout(this.loadTimer);
-
-        if ( tr === undefined ) { tr = 0; }
-        else if ( tr > this.options.wait_tries ) {
-                if ( this.need[0][0].indexOf('language') === -1 ) {
-                        this.error("Timed out attempting to load the module: {0}
-".tr(this, this.need[0][0]));
-                        return;
-                } else {
-                        if ( itemloaded !== undefined ) {
-                                if ( this.need.length > 1 ) {
-                                        itemloaded.call(this,this.need[0][0], th
-is.need[1][0]);
-                                } else {
-                                        itemloaded.call(this,this.need[0][0]);
-                                }
-                        }
-                        this.need.shift();
-                        tr = 0;
-                }
-        }
-
-        while( this.need.length ) {
-                if ( typeof this.need[0] === 'string' ) {
-                        this.need.shift();
-                } else {
-                        if ( this.need[0][1].call(this) ) {
-                                if ( itemloaded !== undefined ) {
-                                        if ( this.need.length > 1 ) {
-                                                itemloaded.call(this,this.need[0
-][0], this.need[1][0]);
-                                        } else {
-                                                itemloaded.call(this,this.need[0
-][0]);
-                                        }
-                                }
-                                this.need.shift();
-                                tr = 0;
-                        } else { break; }
-                }
-        }
-
-        // If this.need is empty, call next. If not, call it again in a bit.
-        if ( this.need.length === 0 ) {
-                next.call(this);
-        } else {
-                var decaf = this;
-                this.loadTimer = setTimeout(function(){decaf.waitLoad(next,iteml
-oaded,tr+1)},this.options.wait_delay);
-        }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Initialization
-///////////////////////////////////////////////////////////////////////////////
-
-/** The first step of initialization after loading the user interface. Here, we
- *  create a new instance of the user interface and tell it to show a basic
- *  splash. Then, we start loading the other plugins.
- */
-DecafMUD.prototype.initSplash = function() {
-        // Create the UI if we're using one. Which we always should be.
-        if ( this.options.interface !== undefined ) {
-                this.debugString('Attempting to initialize the interface plugin
-"{0}".'.tr(this,this.options.interface));
-                this.ui = new DecafMUD.plugins.Interface[this.options.interface]
-(this);
-                this.ui.initSplash();
-        }
-
-        // Set the number of extra steps predicted after this step of loading fo
-r
-        // the sake of updating the progress bar.
-        this.extra = 3;
-
-        // Require plugins for: storage, socket, encoding, triggers, telopt
-        this.require('decafmud.storage.'+this.options.storage);
-        this.require('decafmud.socket.'+this.options.socket);
-        this.require('decafmud.encoding.'+this.options.encoding);
-
-        // Load them. This is the total number of required things thus far.
-        if ( this.ui && this.need.length > 0 ) { this.updateSplash(null,this.nee
-d[0][0],0); }
-        this.waitLoad(this.initSocket, this.updateSplash);
-}
-
-/** Update the splash screen as we load. */
-DecafMUD.prototype.updateSplash = function(module,next_mod,perc) {
-        if ( ! this.ui ) { return; }
-
-        // Calculate the percentage.
-        if ( perc === undefined ) {
-                perc = Math.min(100,Math.floor(100*(((this.extra+this.required)-
-this.need.length)/(this.required+this.extra)))); }
-
-        if ( module === true ) {
-                // Don't do anything.
-        } else if ( next_mod !== undefined ) {
-                if ( next_mod.indexOf('decafmud') === 0 ) {
-                        var parts = next_mod.split('.');
-                        next_mod = 'Loading the {0} module "{1}"...'.tr(this, pa
-rts[1],parts[2]);
-                } else {
-                        next_mod = 'Loading: {0}'.tr(this,next_mod);
-                }
-        } else if ( perc == 100 ) {
-                next_mod = "Loading complete.".tr(this);
-        }
-
-        this.ui.updateSplash(perc, next_mod);
-
-}
-
-/** The second step of initialization. */
-DecafMUD.prototype.initSocket = function() {
-        this.extra = 1;
-        // Create the master storage object.
-        this.store = new DecafMUD.plugins.Storage[this.options.storage](this);
-        this.storage = this.store;
-
-        if ( this.ui ) {
-                // Push a junk element to need so the status bar shows properly.
-                this.need.push('.');
-                this.updateSplash(true,"Initializing the user interface...".tr(t
-his));
-
-                // Set up the UI.
-                this.ui.load();
-        }
-
-        // Attempt to create the socket.
-        this.debugString('Creating a socket using the "{0}" plugin.'.tr(this,thi
-s.options.socket));
-        this.socket = new DecafMUD.plugins.Socket[this.options.socket](this);
-        this.socket.setup(0);
-
-        // Load the latest round.
-        this.waitLoad(this.initUI, this.updateSplash);
-}
-
-/** The third step. Now we're creating the UI. */
-DecafMUD.prototype.initUI = function() {
-        // Finish setting up the UI.
-        if ( this.ui ) {
-                this.ui.setup(); }
-
-        // Now, require all our plugins.
-        for(var i=0; i<this.options.plugins.length; i++) {
-                this.require('decafmud.'+this.options.plugins[i]); }
-
-        this.waitLoad(this.initFinal, this.updateSplash);
-}
-
-/** The final step. Instantiate all our plugins. */
-DecafMUD.prototype.initFinal = function() {
-
-        var textInputFilterCtor, o;
-
-        this.need.push('.');
-        this.updateSplash(true,"Initializing triggers system...");
-        this.need.shift();
-
-        this.need.push('.');
-        this.updateSplash(true,"Initializing TELNET extensions...");
-
-        for(var k in DecafMUD.plugins.Telopt) {
-                o = DecafMUD.plugins.Telopt[k];
-                if ( typeof o === 'function' ) {
-                        this.telopt[k] = new o(this);
-                } else {
-                        this.telopt[k] = o;
-                }
-        }
-
-        this.need.push('.');
-        this.updateSplash(true,"Initializing filters...");
-
-        textInputFilterCtor = DecafMUD.plugins.TextInputFilter[this.options.text
-inputfilter];
-        if ( textInputFilterCtor )
-                this.textInputFilter = new textInputFilterCtor(this);
-
-        // We're loaded. Try to connect.
-        this.loaded = true;
-        this.ui.endSplash();
-
-                /*
-        // If this is IE, show a warning.
-        if ( /MSIE/.test(navigator.userAgent) && this.ui.infoBar ) {
-                var msg = 'You may experience poor performance and UI glitches u
-sing ' +
-                        'DecafMUD with Microsoft Internet Explorer. We recommend
- switching ' +
-                        'to <a href="http://www.google.com/chrome">Google Chrome
-</a> or ' +
-                        '<a href="http://www.getfirefox.com">Mozilla Firefox</a>
- for ' +
-                        'the best experience.';
-                this.ui.infoBar(msg.tr(this));
-        }*/
-
-        if ( (!this.options.autoconnect) || (!this.socket.ready)) { return; }
-        this.connect();
-}
-
-/** Attempt to connect to the server if we aren't. */
-DecafMUD.prototype.connect = function() {
-        if ( this.connecting || this.connected ) { return; }
-        if ( this.socket_ready !== true ) { throw "The socket isn't ready yet.";
- }
-
-        this.connecting = true;
-        this.connect_try = 0;
-        this.debugString("Attempting to connect...","info");
-
-        // Show that we're connecting
-        if ( this.ui && this.ui.connecting ) {
-                this.ui.connecting(); }
-
-        // Set a timer so we can try again.
-        var decaf = this;
-        this.conn_timer = setTimeout(function(){decaf.connectFail();},this.optio
-ns.connect_timeout);
-
-        this.socket.connect();
-}
-
-/** Called when the socket doesn't connect in a reasonable time. Resets the
- *  socket to try again. */
-DecafMUD.prototype.connectFail = function() {
-        clearTimeout(this.conn_timer);
-
-        this.cconnect_try += 1;
-        // On the last one, just ride it out.
-        if ( this.connect_try > this.options.reconnect_tries ) { return; }
-
-        // Retry.
-        this.socket.close();
-        this.socket.connect();
-
-        // Set the timer.
-        var decaf = this;
-        this.conn_timer = setTimeout(function(){decaf.connectFail();},this.optio
-ns.connect_timeout);
+DecafMUD.plugins.Telopt[DecafMUD.TN.TTYPE] = tTTYPE;
+DecafMUD.plugins.Telopt[DecafMUD.TN.ECHO] = tECHO;
+DecafMUD.plugins.Telopt[DecafMUD.TN.NAWS] = tNAWS;
+DecafMUD.plugins.Telopt[DecafMUD.TN.CHARSET] = tCHARSET;
+DecafMUD.plugins.Telopt[DecafMUD.TN.COMPRESSv2] = tCOMPRESSv2;
+DecafMUD.plugins.Telopt[DecafMUD.TN.MSDP] = tMSDP;
+DecafMUD.plugins.Telopt[DecafMUD.TN.BINARY] = true;
+// Ensure Telopt is an object before assigning to its property
+if (DecafMUD.plugins.Telopt && typeof DecafMUD.plugins.Telopt === 'object') {
+    (DecafMUD.plugins.Telopt as Record<string, any>)[DecafMUD.TN.MSSP] = (typeof window !== 'undefined' && 'console' in window);
 }
 
 
-DecafMUD.prototype.reconnect = function() {
-  this.connect_try++;
-  //if ( this.connect_try < this.options.reconnect_tries ) {
-        var d = this;
-        if ( d.ui && d.ui.connecting ) {
-          d.ui.connecting();
-        }
-        d.socket.connect();
-  //}
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Socket Events
-///////////////////////////////////////////////////////////////////////////////
-
-/** Called by the socket when the socket is ready. Make note that the socket is
- *  available, and if desired start trying to connect. */
-DecafMUD.prototype.socketReady = function() {
-        this.debugString("The socket is ready.");
-        this.socket_ready = true;
-
-        // If we've loaded, and autoconnect is on, try connecting.
-        if ( this.loaded && this.options.autoconnect ) {
-                this.connect();
-        }
-}
-
-/** Called by the socket when the socket connects. */
-DecafMUD.prototype.socketConnected = function() {
-        this.connecting = false; this.connected = true; this.connect_try = 0;
-        clearTimeout(this.conn_timer);
-
-        // Get the host and stuff.
-        var host = this.socket.host, port = this.socket.port;
-
-        this.debugString("The socket has connected successfully to {0}:{1}.".tr(
-this,host,port),"info");
-
-        // Call telopt connected code.
-        for(var k in this.telopt) {
-                if ( this.telopt[k] && this.telopt[k].connect ) {
-                        this.telopt[k].connect(); }
-        }
-
-        if ( this.textInputFilter )
-                this.textInputFilter.connected();
-
-        // Show that we're connected.
-        if ( this.ui && this.ui.connected ) {
-                this.ui.connected(); }
-
-        //if ( this.display ) {
-        //      this.display.message('<b>Connected.</b>'.tr(this,host,port),'dec
-afmud socket status'); }
-}
-
-/** Called by the socket when the socket disconnects. */
-DecafMUD.prototype.socketClosed = function() {
-        clearTimeout(this.conn_timer);
-        this.connecting = false; this.connected = false;
-        this.debugString("The socket has disconnected.","info");
-
-        // Call telopt disconnected code.
-        for(var k in this.telopt) {
-                if ( this.telopt[k] && this.telopt[k].disconnect ) {
-                        this.telopt[k].disconnect(); }
-        }
-
-        // Clear the buffer to ensure we don't enter into a bad state on reconne
-ct.
-        this.inbuf = [];
-
-        // Disable MCCP2 compression, for the same reason
-        this.decompressStream = undefined;
-        this.startCompressV2 = false;
-
-        // Should we be reconnecting?
-        if ( this.options.autoreconnect ) {
-                this.connect_try++;
-                if ( this.connect_try < this.options.reconnect_tries ) {
-                        // Show the message, along with a 'reconnecting...' bit
-if possible.
-                        if ( this.ui && this.ui.disconnected ) {
-                                this.ui.disconnected(true); }
-
-                        var d = this;
-
-                        // Show a reconnect infobar
-                        var s = this.options.reconnect_delay / 1000;
-                        if ( this.ui && this.ui.immediateInfoBar && s >= 0.25 )
-{
-                                this.ui.immediateInfoBar("You have been disconne
-cted. Reconnecting in {0} second{1}...".tr(this, s, (s === 1 ? '' : 's')),
-                                        'reconnecting',
-                                        s,
-                                        undefined,
-                                        [['Reconnect Now'.tr(this),function(){ c
-learTimeout(d.timer); d.socket.connect(); }]],
-                                        undefined,
-                                        function(){ clearTimeout(d.timer);  }
-                                ); }
-
-                        this.timer = setTimeout(function(){
-                                d.debugString('Attempting to connect...','info')
-;
-                                if ( d.ui && d.ui.connecting ) {
-                                        d.ui.connecting(); }
-                                d.socket.connect();
-                        }, this.options.reconnect_delay);
-                        return;
-                }
-        }
-
-        // Show that we disconnected.
-        if ( this.ui && this.ui.disconnected ) {
-                this.ui.disconnected(false); }
-}
-
-/** Called by the socket when data arrives. */
-DecafMUD.prototype.socketData = function(data) {
-        // Push the text onto the inbuf.
-
-        if (this.decompressStream !== undefined) {
-                // Decompress it first!
-                try {
-                        data = this.decompressStream.decompress(data);
-                } catch (e) {
-                        this.error('MCCP2 compression disabled because ' + e);
-                        this.disableMCCP2();
-                        return;
-                }
-        }
-
-        this.inbuf.push(data);
-
-        // If we've finished loading, handle it.
-        if ( this.loaded ) {
-                this.processBuffer();
-        }
-}
-
-/** Called by the socket when there's an error. */
-DecafMUD.prototype.socketError = function(data,data2) {
-        this.debugString('Socket Err: {0}  d2="{1}"'.tr(this,data,data2),'error'
-);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Data Processing
-///////////////////////////////////////////////////////////////////////////////
-
-/** Get an internal incoder from a formatted name. */
-DecafMUD.prototype.getEnc = function(enc) {
-        enc = enc.replace(/-/g,'').toLowerCase();
-        return enc;
-}
-
-/** Change the active encoding scheme to the provided scheme.
- * @param {String} enc The encoding scheme to use. */
-DecafMUD.prototype.setEncoding = function(enc) {
-        enc = this.getEnc(enc);
-
-        if ( DecafMUD.plugins.Encoding[enc] === undefined ) {
-                throw '"'+enc+"' isn't a valid encoding scheme, or it isn't load
-ed."; }
-
-        this.debugString("Switching to character encoding: " + enc);
-        this.options.encoding = enc;
-
-        // Now, reroute functions for speed.
-        this.decode = DecafMUD.plugins.Encoding[enc].decode;
-        this.encode = DecafMUD.plugins.Encoding[enc].encode;
-}
-
-var iac_reg = /\xFF/g;
-/** Send input to the MUD, as if typed by a player. This means it also goes out
- *  to the display and stuff. Escape any IAC bytes.
- * @param {String} input The input to send to the server. */
-DecafMUD.prototype.sendInput = function(input) {
-        if ( !this.socket || !this.socket.connected ) {
-                this.debugString("Cannot send input: not connected");
-                return;
-        }
-
-        this.socket.write(this.encode(input + '\r\n').replace(iac_reg, '\xFF\xFF
-'));
-
-        if ( this.ui ) {
-                this.ui.displayInput(input); }
-}
-
-/** This function is a mere helper for decoding. It'll be overwritten. */
-DecafMUD.prototype.decode = function(data) {
-        return DecafMUD.plugins.Encoding[this.options.encoding].decode(data); }
-
-/** This function is a mere helper for encoding. It'll be overwritten. */
-DecafMUD.prototype.encode = function(data) {
-        return DecafMUD.plugins.Encoding[this.options.encoding].encode(data); }
-
-/** Read through data, only stopping for TELNET sequences. Pass data through
- *  towards the display handler. */
-DecafMUD.prototype.processBuffer = function() {
-        var enc, data, ind, out;
-        data = [];
-        // Each element from inbuf can be either a string (from a Flash socket,
-for example) or a Uint8Array from a websocket. Either way, each element will be
-concatenated together as a string
-        for (i of this.inbuf) {
-                if (typeof(i) == 'string') { // If it's a string, just keep it.
-No need to convert
-                        data.push(i);
-                        continue;
-                }
-                // Converts a Uint8Array to a string
-                data.push(Array.from(i).map(charCode=>String.fromCharCode(charCo
-de)).join(''));
-        }
-        data = data.join('');
-        var IAC = DecafMUD.TN.IAC, left='';
-        this.inbuf = [];
-        // Loop through the string.
-        while ( data.length > 0 ) {
-                ind = data.indexOf(IAC);
-                if ( ind === -1 ) {
-                        enc = this.decode(data);
-                        this.handleInputText(enc[0]);
-                        this.inbuf.splice(1,0,enc[1]);
-                        break;
-                }
-
-                else if ( ind > 0 ) {
-                        enc = this.decode(data.substr(0,ind));
-                        this.handleInputText(enc[0]);
-                        // left is data that comes before the IAC
-                        left = enc[1];
-                        data = data.substr(ind);
-                }
-
-                // out is data after the IAC
-                out = this.readIAC(data);
-                if (this.startCompressV2) {
-                        try {
-                                // start decompressing the rest of the stream
-                                this.startCompressV2 = false;
-                                this.decompressStream = new Zlib.InflateStream()
-;
-                                var compressed = out.split('').map(char=>char.ch
-arCodeAt(0));
-                                var decompressed = Array.from(this.decompressStr
-eam.decompress(compressed));
-                                out = decompressed.map(charCode=>String.fromChar
-Code(charCode)).join('');
-                        } catch(e) {
-                                this.error('MCCP2 compression disabled because '
- + e);
-                                this.disableMCCP2();
-                        }
-                }
-                if ( out === false ) {
-                        // Ensure old data goes to the very beginning.
-                        this.inbuf.splice(1,0,left + data);
-                        break;
-                }
-                data = left + out;
-
-        }
-}
-
-/** Filters text (if a filter is installed) and sends it to the display
- *  handler. */
-DecafMUD.prototype.handleInputText = function(text) {
-
-        if ( this.textInputFilter )
-                text = this.textInputFilter.filterInputText(text);
-
-        if ( this.display )
-                this.display.handleData(text);
-}
-
-/** Read an IAC sequence from the supplied data. Then return either the remainin
-g
- *  data, or if a full sequence can't be read, return false.
- * @param {String} data The data to read a sequence from.
- * @returns {String|boolean} False if we can't read a sequence, else the
- *    remaining data. */
-DecafMUD.prototype.readIAC = function(data) {
-        if ( data.length < 2 ) { return false; }
-
-        // If the second character is IAC, push an IAC to the display and return
-.
-        else if ( data.charCodeAt(1) === 255 ) {
-                this.display.handleData('\xFF');
-                return data.substr(2);
-        }
-
-        // If the second character is a GA or NOP, ignore it.
-        else if ( data.charCodeAt(1) === 249 || data.charCodeAt(1) === 241 ) {
-                return data.substr(2);
-        }
-
-        // If the second character is one of WILL,WONT,DO,DONT, read it, debug,
-        // and handle it.
-        else if ( "\xFB\xFC\xFD\xFE".indexOf(data.charAt(1)) !== -1 ) {
-                if ( data.length < 3 ) { return false; }
-                var seq = data.substr(0,3);
-                this.debugString('RCVD ' + DecafMUD.debugIAC(seq));
-                this.handleIACSimple(seq);
-                return data.substr(3);
-        }
-
-        // If it's an IAC SB, read as much as we can to get it all.
-        else if ( data.charAt(1) === t.SB ) {
-                //this.debugString('RCVD ' + DecafMUD.debugIAC(data.substr(0,10)
-));
-                var seq = '', l = t.IAC + t.SE;
-                var code = data.charAt(2);
-                data = data.substr(3);
-                if ( data.length === 0 ) { return false; }
-                while(data.length > 0) {
-                        var ind = data.indexOf(l);
-                        if ( ind === -1 ) { return false; }
-                        if ( ind > 0 && data.charAt(ind-1) === t.IAC ) {
-                                // Escaped. Continue
-                                seq += data.substr(0,ind+1);
-                                data = data.substr(ind+1);
-                                continue;
-                        }
-
-                        seq += data.substr(0,ind);
-                        data = data.substr(ind+1);
-                        break;
-                }
-
-                var dbg = true;
-
-                if ( this.telopt[code] !== undefined && this.telopt[code]._sb !=
-= undefined ) {
-                        if ( this.telopt[code]._sb(seq) === false ) { dbg = fals
-e; }
-                }
-
-                if ( dbg ) {
-                        if ( code === t.MSSP && console.groupCollapsed !== undef
-ined ) {
-                                console.groupCollapsed('DecafMUD['+this.id+']: R
-CVD IAC SB MSSP ... IAC SE');
-                                console.dir(readMSDP(seq)[0]);
-                                console.groupEnd('DecafMUD['+this.id+']: RCVD IA
-C SB MSSP ... IAC SE');
-                        } else {
-                                this.debugString('RCVD ' + DecafMUD.debugIAC(t.I
-AC + t.SB + code + seq + t.IAC + t.SE));
-                        }
-                }
-        }
-
-        // Just push the IAC off the stack since it's obviously bad.
-        return data.substr(1);
-}
-
-/** Send a telnet sequence, writing it to debug as well.
- * @param {String} seq The sequence to write out. */
-DecafMUD.prototype.sendIAC = function(seq) {
-        this.debugString('SENT ' + DecafMUD.debugIAC(seq));
-        if ( this.socket ) { this.socket.write(seq); }
-}
-
-/** Handle a simple (DO/DONT/WILL/WONT) IAC sequence.
- * @param {String} seq The sequence to handle. */
-DecafMUD.prototype.handleIACSimple = function(seq) {
-        var t = DecafMUD.TN, o = this.telopt[seq.charAt(2)],
-                c = seq.charAt(2);
-        // Ensure we actually have this option to deal with.
-        if ( o === undefined ) {
-                if ( seq.charAt(1) === t.DO ) {
-                        this.sendIAC(t.IAC + t.WONT + c); }
-                else if ( seq.charAt(1) === t.WILL ) {
-                        this.sendIAC(t.IAC + t.DONT + c); }
-                return;
-        }
-
-        switch(seq.charAt(1)) {
-                case t.DO:
-                        if (!( o._do && o._do() === false )) {
-                                this.sendIAC(t.IAC + t.WILL + c); }
-                        return;
-
-                case t.DONT:
-                        if (!( o._dont && o._dont() === false )) {
-                                this.sendIAC(t.IAC + t.WONT + c); }
-                        return;
-
-                case t.WILL:
-                        if (!( o._will && o._will() === false )) {
-                                this.sendIAC(t.IAC + t.DO + c); }
-                        return;
-
-                case t.WONT:
-                        if (!( o._wont && o._wont() === false )) {
-                                this.sendIAC(t.IAC + t.DONT + c); }
-                        return;
-        }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Basic Permissions
-///////////////////////////////////////////////////////////////////////////////
-
-/** Request permission for a given option, as stored in the global settings
- *  object at the given path. This will ask the user if they want to allow
- *  an action or not, provided they haven't given an answer in the past.
- *
- *  Since the user input may take some time, this will call the provided
- *  callback function with the result when the user makes a decision.
- *
- * @param {String} option The path to the option to check.
- * @param {String} prompt The question to show to the user, asking them if it's
- *    alright to do whatever it is you're doing.
- * @param {function} callback The function to call when we have an answer. */
-DecafMUD.prototype.requestPermission = function(option, prompt, callback) {
-        var cur = this.store.get(option);
-        if ( cur !== undefined && cur !== null ) {
-                callback.call(this, !!(cur));
-                return; }
-
-        var decaf = this;
-        var closer = function(e) {
-                        // Don't store a setting for next time, but return false
- for now.
-                        callback.call(decaf, false);
-                },
-                help_allow = function() {
-                        decaf.store.set(option, true);
-                        callback.call(decaf, true);
-                },
-                help_deny = function() {
-                        decaf.store.set(option, false);
-                        callback.call(decaf, false);
-                };
-
-        // First, check for infobars in the UI. That's preferred.
-        if ( this.ui && this.ui.infoBar ) {
-                this.ui.infoBar(prompt, 'permission', 0, undefined,
-                        [['Allow'.tr(this), help_allow], ['Deny'.tr(this), help_
-deny]], undefined, closer);
-                return; }
-
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Default Settings
-///////////////////////////////////////////////////////////////////////////////
-DecafMUD.settings = {
-        // Absolute Basics
-        'startup': {
-                '_path': "/",
-                '_desc': "Control what happens when DecafMUD is opened.",
-
-                'autoconnect': {
-                        '_type': 'boolean',
-                        '_desc': 'Automatically connect to the server.'
-                },
-
-                'autoreconnect': {
-                        '_type': 'boolean',
-                        '_desc': 'Automatically reconnect when the connection is
- lost.'
-                }
-        },
-
-        'appearance': {
-                '_path': "display/",
-                '_desc': "Control the appearance of the client.",
-
-                'font': {
-                        '_type': 'font',
-                        '_desc': 'The font to display MUD output in.'
-                }
-        }
+DecafMUD.plugins.Encoding.iso88591 = {
+    proper : 'ISO-8859-1',
+    decode : function(data: string): [string, string] { return [data,'']; },
+    encode : function(data: string): string { return data; }
 };
 
-///////////////////////////////////////////////////////////////////////////////
-// Default Options
-///////////////////////////////////////////////////////////////////////////////
-DecafMUD.options = {
-        // Connection Basics
-        host                    : undefined, // undefined = Website's Host
-        port                    : 4000,
-        autoconnect             : true,
-        connectonsend   : true,
-        autoreconnect   : true,
-        connect_timeout : 5000,
-        reconnect_delay : 5000,
-        reconnect_tries : 3,
-
-        // Plugins to use
-        storage                 : 'standard',
-        display                 : 'standard',
-        encoding                : 'utf8',
-        socket                  : 'flash',
-        interface               : 'simple',
-        language                : 'autodetect',
-        textinputfilter         : '',
-
-        // Loading Settings
-        jslocation              : undefined, // undefined = This script's locati
-on
-        wait_delay              : 25,
-        wait_tries              : 1000,
-        load_language   : true,
-        plugins                 : [],
-
-        // Storage Settings
-        set_storage             : {
-                // There are no settings. Yet.
-        },
-
-        // Display Settings
-        set_display             : {
-                maxscreens  : 100, // Once the height of all the text gets to th
-is many times the innerHeight, reduce it
-                minelements : 10, // If there are only this many elements, do no
-t truncate it (prevents immediate removal of longer sections of text)
-                handlecolor     : true,
-                fgclass         : 'c',
-                bgclass         : 'b',
-                fntclass        : 'fnt',
-                inputfg         : '-7',
-                inputbg         : '-0'
-        },
-
-        // Socket Settings
-        set_socket              : {
-                // Flash Specific
-                policyport      : undefined, // Undefined = 843
-                swf                     : '/media/DecafMUDFlashSocket.swf',
-
-                // WebSocket Specific
-                wsport          : undefined, // Undefined = Flash policy port
-                wspath          : '',
-        },
-
-        // Interface Settings
-        set_interface   : {
-                // Elements
-                container       : undefined,
-
-                // Fullscreen
-                start_full      : false,
-
-                // Input Specific
-                mru                     : true,
-                mru_size        : 15,
-                multiline       : true,
-                clearonsend     : false,
-                focusinput      : true,
-                repeat_input    : true,
-                blurclass       : 'mud-input-blur',
-
-                msg_connect             : 'Press Enter to connect and type here.
-..',
-                msg_connecting  : 'DecafMUD is attempting to connect...',
-                msg_empty               : 'Type commands here, or use the Up and
- Down arrows to browse your recently used commands.',
-
-                connect_hint    : true
-        },
-
-        // Telnet Settings
-        ttypes                  : ['decafmud-'+DecafMUD.version,'decafmud','xter
-m','unknown'],
-        environ                 : {},
-        encoding_order  : ['utf8'],
-
-        // Plugin Settings
-        plugin_order    : []
+DecafMUD.plugins.Encoding.utf8 = {
+    proper : 'UTF-8',
+    decode : function(data: string): [string, string] {
+        try { return [decodeURIComponent( escape( data ) ), '']; }
+        catch(err) {
+            var out = '', i=0, l=data.length, c = 0;
+            while ( i < l ) {
+                c = data.charCodeAt(i++);
+                if ( c < 0x80) { out += String.fromCharCode(c); }
+                else if ( (c > 0xBF) && (c < 0xE0) ) { if ( i >= l ) { break; } out += String.fromCharCode(((c & 31) << 6) | (data.charCodeAt(i++) & 63)); }
+                else if ( (c > 0xDF) && (c < 0xF0) ) { if ( i+1 >= l ) { break; } out += String.fromCharCode(((c & 15) << 12) | ((data.charCodeAt(i++) & 63) << 6) | (data.charCodeAt(i++) & 63)); }
+                else if ( (c > 0xEF) && (c < 0xF5) ) { if ( i+2 >= l ) { break; } out += String.fromCharCode(((c & 7) << 18) | ((data.charCodeAt(i++) & 63) << 12) | ((data.charCodeAt(i++) & 63) << 6) | (data.charCodeAt(i++) & 63)); }
+                else { out += String.fromCharCode(c); }
+            }
+            return [out, data.substr(i)];
+        }
+    },
+    encode : function(data: string): string {
+        try { return unescape( encodeURIComponent( data ) ); }
+        catch(err) { if(typeof console !== 'undefined') console.dir(err); return data; }
+    }
 };
 
-// Expose DecafMUD to the outside world
-window.DecafMUD = DecafMUD;
-})(window);
+if (typeof Zlib === 'undefined') {
+    // if (typeof require === 'function') { // Commented out for browser focus
+    //     try { Zlib = require('zlib'); } catch (e) { /* ignore */ }
+    // }
+    if (typeof Zlib === 'undefined') {
+        Zlib = { InflateStream: function(this: any) {
+            if(typeof console !== 'undefined' && console.warn) console.warn("Zlib.InflateStream is not available. MCCP2 will not work.");
+            this.decompress = (data: any) => data;
+        }};
+    }
+}

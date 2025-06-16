@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 /* code stolen from http://www.switchonthecode.com/tutorials/javascript-draggable-elements */
 
 function hookEvent(element, eventName, callback)
