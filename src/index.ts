@@ -36,8 +36,8 @@ import '../DecafMUD/src/js/decafmud.encoding.iso885915.js';
 import '../DecafMUD/src/js/decafmud.socket.websocket.js';
 import '../DecafMUD/src/js/decafmud.storage.standard.js';
 import '../DecafMUD/src/js/decafmud.telopt.gmcp.js';
-import '../DecafMUD/src/js/decafmud.interface.panels.js';
 import '../DecafMUD/src/js/decafmud.interface.panels.menu.js';
+import '../DecafMUD/src/js/decafmud.interface.panels.js';
 import '../DecafMUD/src/js/decafmud.interface.panels.settings.js';
 import '../DecafMUD/src/js/dragelement.js';
 
