@@ -38,6 +38,9 @@ declare global {
 
   interface Window {
     toolbar_menus: ToolbarMenus;
+    Zlib?: {
+      Inflate?: any; // Using 'any' for now for pako.Inflate compatibility
+    };
   }
 
   interface OpenerWindow extends Window {
