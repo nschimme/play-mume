@@ -113,3 +113,10 @@ function _open_mume_map_window(): void
         canvasFitParent();
     }
 }
+
+(window as any)._open_mume_map_window = _open_mume_map_window;
+(window as any)._mume_menu_new = _mume_menu_new;
+(window as any)._mume_menu_help = _mume_menu_help;
+(window as any)._mume_menu_rules = _mume_menu_rules;
+(window as any)._mume_menu_about_map = _mume_menu_about_map;
+(window as any)._mume_menu_map_bug = _mume_menu_map_bug;

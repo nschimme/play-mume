@@ -15,6 +15,8 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
+declare var $: any;
+declare var jQuery: any;
 import $ from 'jquery';
 // Assuming jquery-throttle-debounce is loaded via main import or extends jQuery prototype
 import { MumeMap, MumeXmlParser, RoomCoords, MumeXmlParserTag } from './mume.mapper';

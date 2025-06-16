@@ -42,6 +42,12 @@ declare global {
       InflateStream?: any; // Changed from Inflate to InflateStream
     };
     jQuery?: JQueryStatic;
+    _open_mume_map_window?: () => void;
+    _mume_menu_new?: () => void;
+    _mume_menu_help?: () => void;
+    _mume_menu_rules?: () => void;
+    _mume_menu_about_map?: () => void;
+    _mume_menu_map_bug?: () => void;
   }
 
   interface OpenerWindow extends Window {
