@@ -1395,15 +1395,15 @@ class MumeMapDisplay
 
         const stub = document.getElementById( containerElementName );
         if ( stub == null || stub.parentElement == null ) {
-            document.body.appendChild(this.pixi.view as HTMLCanvasElement);
+            document.body.appendChild(this.pixi.canvas as HTMLCanvasElement);
         } else {
-            stub.parentElement.replaceChild(this.pixi.view as HTMLCanvasElement, stub);
+            stub.parentElement.replaceChild(this.pixi.canvas as HTMLCanvasElement, stub);
         }
     }
 
     public fitParent(): boolean
     {
-        const parentElement = (this.pixi.view as HTMLCanvasElement).parentElement;
+        const parentElement = (this.pixi.canvas as HTMLCanvasElement).parentElement;
         if (parentElement === null)
         {
             console.warn( "PIXI canvas parentElement is null." );
