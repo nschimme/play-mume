@@ -37,6 +37,7 @@ import '../DecafMUD/src/js/decafmud.socket.websocket.js';
 import '../DecafMUD/src/js/decafmud.storage.standard.js';
 import '../DecafMUD/src/js/decafmud.telopt.gmcp.js';
 import '../DecafMUD/src/js/decafmud.interface.panels.menu.js';
+console.log('Diag: After decafmud.interface.panels.menu.js import - typeof get_menus:', typeof get_menus, 'typeof MENU_HELP:', typeof MENU_HELP);
 import '../DecafMUD/src/js/decafmud.interface.panels.js';
 import '../DecafMUD/src/js/decafmud.interface.panels.settings.js';
 import '../DecafMUD/src/js/dragelement.js';
@@ -82,6 +83,7 @@ $(window).on('load', function () {
 
   DecafMUD.plugins.TextInputFilter.mumexml = MumeXmlParser;
 
+  console.log('Diag: Before new DecafMUD() - typeof get_menus:', typeof get_menus, 'typeof MENU_HELP:', typeof MENU_HELP);
   new DecafMUD({
     host: 'mume.org',
     port: 443,
