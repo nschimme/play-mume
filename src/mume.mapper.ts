@@ -1299,7 +1299,7 @@ namespace Mm2Gfx
         /*console.log( "MumeMapDisplay added room %s (%d,%d) in PIXI at local:%O, global:%O",
             room.data.name, room.data.x, room.data.y, display.position, display.getGlobalPosition() );*/
 
-        display.cacheAsBitmap = true;
+        display.updateCacheTexture();
         return display;
     }
 
@@ -1361,12 +1361,6 @@ class MumeMapDisplay
     {
         this.mapData = mapData;
         this.roomDisplays = new SpatialIndex( this.mapData.metaData );
-
-        // Await installMap to ensure PIXI application and renderer are initialized
-        this.installMap( containerElementName ).then(() => {
-            this.buildMapDisplay();
-        });
-
     }
 
     // Async factory function. Returns a Display when the prerequisites are loaded.
@@ -1383,6 +1377,8 @@ class MumeMapDisplay
         }
 
         const display = new MumeMapDisplay( containerElementName, mapData );
+        await display.installMap( containerElementName ); // Await installMap here
+        display.buildMapDisplay(); // Build display after installMap is complete
         return display;
     }
 
