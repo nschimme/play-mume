@@ -19,11 +19,7 @@ import $ from 'jquery'; // Assuming jQuery will be installed as a module
 import 'jquery-throttle-debounce'; // Assuming this is a jQuery plugin, it might need to be imported like this
 // For Split.js, ensure it's installed via npm if not already, then import
 import Split from 'split.js';
-import pako from 'pako'; // New import
 // For SparkMD5, ensure it's installed via npm, then import // Or: import * as SparkMD5 from 'spark-md5'; depending on its export structure
-
-// Setup global Zlib for DecafMUD
-window.Zlib = { Inflate: pako.Inflate }; // New line
 
 // Import DecafMUD related components. This is a placeholder and might need significant adjustment
 // depending on how DecafMUD's JS files are structured (ES modules, UMD, or global scripts).
@@ -35,6 +31,7 @@ window.Zlib = { Inflate: pako.Inflate }; // New line
 // This is a common pattern for older libraries with plugin architectures.
 // We'll need to verify this. If they don't export modules, they might need to be concatenated or loaded sequentially.
 import 'script-loader!../DecafMUD/src/js/decafmud.js'; // Main script for side effects (sets up global DecafMUD)
+import 'script-loader!../DecafMUD/src/js/inflate_stream.min.js'; // Restored this line
 import 'script-loader!../DecafMUD/src/js/decafmud.display.standard.js';
 import 'script-loader!../DecafMUD/src/js/decafmud.encoding.iso885915.js';
 import 'script-loader!../DecafMUD/src/js/decafmud.socket.websocket.js';

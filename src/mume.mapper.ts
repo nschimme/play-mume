@@ -17,6 +17,7 @@
 
 import $ from 'jquery';
 import * as PIXI from 'pixi.js';
+import SparkMD5 from 'spark-md5';
 
 const ROOM_PIXELS = 48;
 const MAP_DATA_PATH = "mapdata/v1/";
@@ -36,7 +37,7 @@ enum Dir { // Must match MM2's defs.
  * promises are resolved or rejected, not at the first rejection. */
 const whenAll = function<T>( deferreds: JQueryPromise<T>[] )
 {
-    const master: JQueryDeferred<T> = jQuery.Deferred();
+    const master: JQueryDeferred<T> = $.Deferred();
 
     if ( deferreds.length === 0 )
         return master.resolve();
@@ -113,7 +114,7 @@ export class MumeMap
 
     public static load( containerElementName: string ): JQueryPromise<MumeMap>
     {
-        const result = jQuery.Deferred();
+        const result = $.Deferred<MumeMap>();
 
         MumeMapData.load().done( ( mapData: MumeMapData ) =>
         {
@@ -323,7 +324,7 @@ class MumeMapIndex
     public findPosByNameDesc( name: string, desc: string ): JQueryDeferred<RoomCoords[]>
     {
         const hash = MumeMapIndex.hashNameDesc( name, desc );
-        const result = jQuery.Deferred();
+        const result = $.Deferred<RoomCoords[]>();
 
         // Shortcut if we already have that index chunk in cache
         const chunk = hash.substr( 0, 2 );
@@ -332,7 +333,7 @@ class MumeMapIndex
 
         console.log( "Downloading map index chunk " + chunk );
         const url = MAP_DATA_PATH + "roomindex/" + chunk + ".json";
-        jQuery.getJSON( url )
+        $.getJSON( url )
             .done( ( json: IndexChunk ) =>
             {
                 this.cachedChunks.add( chunk );
@@ -542,9 +543,9 @@ class MumeMapData
      */
     public static load(): JQueryPromise<MumeMapData>
     {
-        const result = jQuery.Deferred();
+        const result = $.Deferred<MumeMapData>();
 
-        jQuery.getJSON( MAP_DATA_PATH + "arda.json" )
+        $.getJSON( MAP_DATA_PATH + "arda.json" )
             .done( ( json: MapMetaData ) =>
             {
                 try {
@@ -664,11 +665,11 @@ class MumeMapData
     /* Private. */
     private downloadAndCacheZone( zone: string ): JQueryDeferred<void>
     {
-        const result = jQuery.Deferred();
+        const result = $.Deferred<void>();
 
         console.log( "Downloading map zone %s", zone );
         const url = MAP_DATA_PATH + "zone/" + zone + ".json";
-        jQuery.getJSON( url )
+        $.getJSON( url )
             .done( (json: RoomData[]) => // Typed json here
             {
                 this.cacheZone( zone, json );
@@ -690,7 +691,7 @@ class MumeMapData
     /* Fetches a room from the cache or the server. Returns a jQuery Deferred. */
     public getRoomAt( c: RoomCoords ): JQueryDeferred<Room>
     {
-        const result = jQuery.Deferred();
+        const result = $.Deferred<Room>();
 
         const zone = this.getRoomZone( c.x, c.y );
         if ( zone === null || this.nonExistentZones.has( zone ) )
@@ -716,7 +717,7 @@ class MumeMapData
      */
     public getRoomsAt( coordinates: RoomCoords[] ): JQueryPromise<Room[]>
     {
-        const result = jQuery.Deferred();
+        const result = $.Deferred<Room[]>();
         const downloads: { zone: string, dfr: JQueryXHR }[] = [];
         const downloadDeferreds: JQueryXHR[] = [];
         const roomsNotInCachePerZone = new Map<string, Set<RoomCoords>>();
@@ -747,7 +748,7 @@ class MumeMapData
 
                     console.log( "Downloading map zone %s for room %d,%d", zone, coords.x, coords.y );
                     const url = MAP_DATA_PATH + "zone/" + zone + ".json";
-                    const deferred = jQuery.getJSON( url );
+                    const deferred = $.getJSON( url );
                     downloads.push( { zone, dfr: deferred } );
                     downloadDeferreds.push( deferred );
                 }
