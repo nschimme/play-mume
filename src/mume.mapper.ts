@@ -483,13 +483,13 @@ type RoomId = number & {
 type IndexChunk = {[hash: string]: number[][]};
 
 // This is what we load from the server, inside RoomData.
-class RoomExit
+interface RoomExit
 {
-    name: string = "";
-    dflags: number = 0;
-    flags: number = 0;
-    in: RoomId[] = [];
-    out: RoomId[] = [];
+    name: string;
+    dflags: number;
+    flags: number;
+    in: RoomId[];
+    out: RoomId[];
 }
 
 class RoomData
