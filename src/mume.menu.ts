@@ -40,7 +40,6 @@ declare function canvasFitParent(): void;
 declare let globalMapWindow: Window | null; // For the popup window
 
 $(document).ready(function() {
-    console.log('Diag: mume.menu.ts $(document).ready - typeof MENU_HELP:', typeof MENU_HELP);
     window.toolbar_menus[MENU_HELP][MI_SUBMENU].unshift(
         'New to MUME?', 'mume_menu_new();',
         'MUME Help',    'mume_menu_help();',

@@ -53,4 +53,3 @@ declare const MENU_OPTIONS: number;
 
 declare function fkeys_enabled(): boolean;
 declare function numpad_enabled(): boolean;
-declare function get_menus(): any; // Added for diagnostics

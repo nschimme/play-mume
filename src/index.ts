@@ -30,17 +30,16 @@ import Split from 'split.js';
 // Their direct import might not be necessary if DecafMUD itself handles their registration when it's imported/run.
 // This is a common pattern for older libraries with plugin architectures.
 // We'll need to verify this. If they don't export modules, they might need to be concatenated or loaded sequentially.
-import '../DecafMUD/src/js/decafmud.js'; // Main script for side effects (sets up global DecafMUD)
-import '../DecafMUD/src/js/decafmud.display.standard.js';
-import '../DecafMUD/src/js/decafmud.encoding.iso885915.js';
-import '../DecafMUD/src/js/decafmud.socket.websocket.js';
-import '../DecafMUD/src/js/decafmud.storage.standard.js';
-import '../DecafMUD/src/js/decafmud.telopt.gmcp.js';
-import '../DecafMUD/src/js/decafmud.interface.panels.menu.js';
-console.log('Diag: After decafmud.interface.panels.menu.js import - typeof get_menus:', typeof get_menus, 'typeof MENU_HELP:', typeof MENU_HELP);
-import '../DecafMUD/src/js/decafmud.interface.panels.js';
-import '../DecafMUD/src/js/decafmud.interface.panels.settings.js';
-import '../DecafMUD/src/js/dragelement.js';
+import 'script-loader!../DecafMUD/src/js/decafmud.js'; // Main script for side effects (sets up global DecafMUD)
+import 'script-loader!../DecafMUD/src/js/decafmud.display.standard.js';
+import 'script-loader!../DecafMUD/src/js/decafmud.encoding.iso885915.js';
+import 'script-loader!../DecafMUD/src/js/decafmud.socket.websocket.js';
+import 'script-loader!../DecafMUD/src/js/decafmud.storage.standard.js';
+import 'script-loader!../DecafMUD/src/js/decafmud.telopt.gmcp.js';
+import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.menu.js';
+import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.js';
+import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.settings.js';
+import 'script-loader!../DecafMUD/src/js/dragelement.js';
 
 
 // Import project's own TypeScript modules
@@ -83,7 +82,6 @@ $(window).on('load', function () {
 
   DecafMUD.plugins.TextInputFilter.mumexml = MumeXmlParser;
 
-  console.log('Diag: Before new DecafMUD() - typeof get_menus:', typeof get_menus, 'typeof MENU_HELP:', typeof MENU_HELP);
   new DecafMUD({
     host: 'mume.org',
     port: 443,
