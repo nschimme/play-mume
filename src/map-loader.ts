@@ -30,7 +30,7 @@ import { throttle } from './utils';
       let parser: MumeXmlParser | undefined; // Can be undefined if opener setup fails
       let matches: RegExpExecArray | null;
 
-      const opener = window.opener as OpenerWindow; // Cast once
+      const opener = window.opener as Window; // Cast once
 
       if (opener && opener.DecafMUD && opener.DecafMUD.instances && opener.DecafMUD.instances[0]) {
         // Assuming textInputFilter is on the instance. If DecafMUDInstance type is correct, this should be fine.
@@ -78,7 +78,7 @@ import { throttle } from './utils';
   });
 
   $(window).on("unload", function (_e: JQuery.Event) {
-    const opener = window.opener as OpenerWindow; // Cast once
+    const opener = window.opener as Window; // Cast once
     if (opener && opener.DecafMUD && opener.DecafMUD.instances && opener.DecafMUD.instances[0] && opener.$) {
       const decafInstance = opener.DecafMUD.instances[0];
       if (decafInstance) {

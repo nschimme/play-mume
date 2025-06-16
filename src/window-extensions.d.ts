@@ -41,6 +41,7 @@ declare global {
     Zlib?: {
       InflateStream?: any; // Changed from Inflate to InflateStream
     };
+    $?: JQueryStatic;
     jQuery?: JQueryStatic;
     DecafMUD?: DecafMUDStatic;
     open_mume_map_window?: () => void;
@@ -51,11 +52,7 @@ declare global {
     mume_menu_map_bug?: () => void;
   }
 
-  interface OpenerWindow extends Window {
-    // DecafMUD is now in the base Window interface
-    $?: JQueryStatic;          // Optional jQuery static
-    // Add any other properties that scripts in map-loader.ts expect on window.opener
-  }
+  type OpenerWindow = Window;
 }
 
 // Export an empty object to make this file a module if necessary,
