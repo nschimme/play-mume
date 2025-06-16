@@ -43,6 +43,7 @@ module.exports = {
     }),
     new CopyWebpackPlugin({
       patterns: [
+        { from: 'mapdata', to: 'mapdata' },
         { from: 'resources', to: 'resources' },
         { from: 'icons', to: 'icons' },
         { from: 'play.css', to: 'play.css' },
@@ -53,8 +54,9 @@ module.exports = {
           to: 'DecafMUD',
           globOptions: {
             ignore: [
-              '**/jsdoc-toolkit/**',
-              '**/test/**',
+              '**/build/**',
+              '**/docs/**',
+              '**/flash/**',
             ],
           },
         },

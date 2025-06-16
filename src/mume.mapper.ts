@@ -1180,7 +1180,7 @@ namespace Mm2Gfx
     const buildRoomBorders = function( room: Room ) : PIXI.Graphics
     {
         const borders = new PIXI.Graphics();
-        borders.lineStyle( 2, 0x000000, 1 );
+        borders.setStrokeStyle( { width: 2, color: 0x000000, alpha: 1 } );
 
         const borderSpec = [
             { dir: Dir.NORTH, x0: 0,           y0: 0,           x1: ROOM_PIXELS, y1: 0           },
@@ -1207,13 +1207,13 @@ namespace Mm2Gfx
             return null;
 
         const exit = new PIXI.Graphics();
-        exit.lineStyle( 1, 0x000000, 1 );
+        exit.setStrokeStyle( { width: 1, color: 0x000000, alpha: 1 } );
 
-        exit.beginFill( 0xffffff, 1 );
-        exit.drawCircle( ROOM_PIXELS * 0.75, ROOM_PIXELS * 0.25, ROOM_PIXELS / 8 );
-        exit.endFill();
+        exit.fill( 0xffffff );
+        exit.circle( ROOM_PIXELS * 0.75, ROOM_PIXELS * 0.25, ROOM_PIXELS / 8 );
+        exit.fill(); // End fill
 
-        exit.drawCircle( ROOM_PIXELS * 0.75, ROOM_PIXELS * 0.25, 1 );
+        exit.circle( ROOM_PIXELS * 0.75, ROOM_PIXELS * 0.25, 1 );
 
         return exit;
     };
@@ -1229,11 +1229,11 @@ namespace Mm2Gfx
         const centerY = ROOM_PIXELS * 0.75;
 
         const exit = new PIXI.Graphics();
-        exit.lineStyle( 1, 0x000000, 1 );
+        exit.setStrokeStyle( { width: 1, color: 0x000000, alpha: 1 } );
 
-        exit.beginFill( 0xffffff, 1 );
-        exit.drawCircle( centerX, centerY, radius );
-        exit.endFill();
+        exit.fill( 0xffffff );
+        exit.circle( centerX, centerY, radius );
+        exit.fill(); // End fill
 
         exit.moveTo( centerX - crossCoord, centerY - crossCoord );
         exit.lineTo( centerX + crossCoord, centerY + crossCoord );
@@ -1386,12 +1386,18 @@ class MumeMapDisplay
     /* Installs the viewport into the DOM. */
     public installMap( containerElementName: string ): void
     {
-        this.pixi = new PIXI.Application({
+        this.pixi = new PIXI.Application();
+        await this.pixi.init({
             autoStart: false,
             backgroundColor: 0x6e6e6e,
             resolution: window.devicePixelRatio || 1, // Added fallback for devicePixelRatio
             autoDensity: true, // Manages resolution and density
         });
+
+        // Check if PIXI Application and its canvas were successfully created
+        if (!this.pixi || !this.pixi.canvas) {
+            throw new Error("Bug: Failed to initialize PIXI Application or get canvas.");
+        }
 
         const stub = document.getElementById( containerElementName );
         if ( stub == null || stub.parentElement == null ) {
