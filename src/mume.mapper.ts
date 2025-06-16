@@ -1197,7 +1197,7 @@ namespace Mm2Gfx
                 borders.lineTo( spec.x1, spec.y1 );
             }
         }
-
+        borders.stroke()
         return borders;
     };
 
@@ -1207,13 +1207,14 @@ namespace Mm2Gfx
             return null;
 
         const exit = new PIXI.Graphics();
-        exit.setStrokeStyle( { width: 1, color: 0x000000, alpha: 1 } );
 
         exit.fill( 0xffffff );
         exit.circle( ROOM_PIXELS * 0.75, ROOM_PIXELS * 0.25, ROOM_PIXELS / 8 );
         exit.fill(); // End fill
 
+        exit.setStrokeStyle( { width: 1, color: 0x000000, alpha: 1 } );
         exit.circle( ROOM_PIXELS * 0.75, ROOM_PIXELS * 0.25, 1 );
+        exit.stroke()
 
         return exit;
     };
@@ -1235,11 +1236,14 @@ namespace Mm2Gfx
         exit.circle( centerX, centerY, radius );
         exit.fill(); // End fill
 
+        exit.circle( centerX, centerY, radius );
+        exit.stroke()
+
         exit.moveTo( centerX - crossCoord, centerY - crossCoord );
         exit.lineTo( centerX + crossCoord, centerY + crossCoord );
         exit.moveTo( centerX - crossCoord, centerY + crossCoord );
         exit.lineTo( centerX + crossCoord, centerY - crossCoord );
-
+        exit.stroke()
         return exit;
     };
 
@@ -1311,12 +1315,14 @@ namespace Mm2Gfx
         const offset = ( size - ROOM_PIXELS ) / 2;
 
         const square = new PIXI.Graphics();
-        square.setStrokeStyle( { width: 2, color: 0xFFFF00, alpha: 1 } );
-        square.rect( -offset, -offset, size, size );
 
         square.fill( { color: 0x000000, alpha: 0.1 } );
         square.rect( -offset, -offset, size, size );
         square.fill(); // End fill
+
+        square.setStrokeStyle( { width: 2, color: 0xFFFF00, alpha: 1 } );
+        square.rect( -offset, -offset, size, size )
+        square.stroke();
 
         return square;
     }
