@@ -1143,19 +1143,21 @@ namespace Mm2Gfx
     const buildRoomSector = function( room: Room ) : PIXI.Container
     {
         let display: PIXI.Container;
-        let sectorSprite: PIXI.Sprite; // Rename to avoid confusion
+        let sectorSprite: PIXI.Sprite;
         const dirsf = roadDirsFlags( room );
 
         if ( room.data.sector === Sector.ROAD )
         {
             const imgPath = getRoadAssetPath( dirsf, "road" );
             sectorSprite = new PIXI.Sprite( PIXI.Assets.get( imgPath ) );
-            display = sectorSprite; // display is the sprite itself
+            sectorSprite.height = sectorSprite.width = ROOM_PIXELS; // Resize immediately
+            display = sectorSprite;
         }
         else
         {
             const imgPath = getSectorAssetPath( room.data.sector );
             sectorSprite = new PIXI.Sprite( PIXI.Assets.get( imgPath ) );
+            sectorSprite.height = sectorSprite.width = ROOM_PIXELS; // Resize immediately
 
             if ( dirsf !== 0 ) // Trail (road exits but not Sectors.ROAD)
             {
@@ -1169,11 +1171,9 @@ namespace Mm2Gfx
             }
             else // No trail
             {
-                display = sectorSprite; // display is the sprite itself
+                display = sectorSprite;
             }
         }
-        // Common operations on the main visual component (sprite) before it's part of 'display'
-        sectorSprite.height = sectorSprite.width = ROOM_PIXELS;
         return display;
     };
 
