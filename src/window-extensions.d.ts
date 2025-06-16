@@ -16,7 +16,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
 // src/window-extensions.d.ts
-import 'jquery'; // To reference JQueryStatic
+import { JQueryStatic } from 'jquery'; // Add this import at the top of the file if not already there for other reasons
 
 // Assuming DecafMUDStatic is globally available via src/decafmud.d.ts
 // If not, we might need to import it or ensure its global scope.
@@ -41,6 +41,7 @@ declare global {
     Zlib?: {
       InflateStream?: any; // Changed from Inflate to InflateStream
     };
+    jQuery?: JQueryStatic;
   }
 
   interface OpenerWindow extends Window {
