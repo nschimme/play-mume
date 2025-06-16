@@ -19,8 +19,8 @@ import $ from 'jquery';
 import * as PIXI from 'pixi.js';
 import SparkMD5 from 'spark-md5';
 
+let currentMapDataRoot: string | null = null;
 const ROOM_PIXELS = 48;
-const MAP_DATA_PATH = "mapdata/v1/";
 enum Dir { // Must match MM2's defs.
     NORTH = 0,
     SOUTH = 1,
@@ -331,8 +331,14 @@ class MumeMapIndex
         if ( this.cachedChunks.has( chunk ) )
             return this.findPosByNameDescCached( name, desc, result, hash );
 
+        if (currentMapDataRoot === null) {
+            console.error("currentMapDataRoot is not set, cannot download roomindex chunk.");
+            return result.reject("currentMapDataRoot not set");
+        }
+
         console.log( "Downloading map index chunk " + chunk );
-        const url = MAP_DATA_PATH + "roomindex/" + chunk + ".json";
+        const url = currentMapDataRoot + "roomindex/" + chunk + ".json";
+        console.log("MumeMapIndex.findPosByNameDesc: Attempting to load roomindex from:", url);
         $.getJSON( url )
             .done( ( json: IndexChunk ) =>
             {
@@ -544,24 +550,48 @@ class MumeMapData
     public static load(): JQueryPromise<MumeMapData>
     {
         const result = $.Deferred<MumeMapData>();
+        const localPathRoot = "mapdata/v1/";
+        const fallbackPathRoot = "https://mume.org/play/play-mume/mapdata/v1/";
 
-        $.getJSON( MAP_DATA_PATH + "arda.json" )
+        $.getJSON( localPathRoot + "arda.json" )
             .done( ( json: MapMetaData ) =>
             {
                 try {
+                    currentMapDataRoot = localPathRoot;
+                    console.log("currentMapDataRoot set to:", currentMapDataRoot);
                     result.resolve( new MumeMapData( json ) );
-                    console.log( "Map metadata loaded" );
+                    console.log( "Map metadata loaded from local path." );
                 }
                 catch ( e )
                 {
-                    console.error( "Loading metadata failed: %O", e );
+                    console.error( "Loading metadata failed (local): %O", e );
                     result.reject();
                 }
             } )
-            .fail( function( jqxhr, textStatus, error )
+            .fail( function( jqxhrLocal, textStatusLocal, errorLocal )
             {
-                console.error( "Loading metadata failed: %s, %O", textStatus, error );
-                result.reject();
+                console.log( "Failed to load map metadata from local path, trying fallback..." );
+                $.getJSON( fallbackPathRoot + "arda.json" )
+                    .done( ( json: MapMetaData ) =>
+                    {
+                        try {
+                            currentMapDataRoot = fallbackPathRoot;
+                            console.log("currentMapDataRoot set to:", currentMapDataRoot);
+                            result.resolve( new MumeMapData( json ) );
+                            console.log( "Map metadata loaded from fallback path." );
+                        }
+                        catch ( e )
+                        {
+                            console.error( "Loading metadata failed (fallback): %O", e );
+                            result.reject();
+                        }
+                    } )
+                    .fail( function( jqxhrFallback, textStatusFallback, errorFallback )
+                    {
+                        console.error( "Failed to load map metadata from fallback path: %s, %O", textStatusFallback, errorFallback );
+                        console.error( "...after failing to load from local path: %s, %O", textStatusLocal, errorLocal );
+                        result.reject();
+                    } );
             } );
 
         return result;
@@ -667,8 +697,14 @@ class MumeMapData
     {
         const result = $.Deferred<void>();
 
+        if (currentMapDataRoot === null) {
+            console.error("currentMapDataRoot is not set, cannot download zone.");
+            return result.reject("currentMapDataRoot not set");
+        }
+
         console.log( "Downloading map zone %s", zone );
-        const url = MAP_DATA_PATH + "zone/" + zone + ".json";
+        const url = currentMapDataRoot + "zone/" + zone + ".json";
+        console.log("MumeMapData.downloadAndCacheZone: Attempting to load zone from:", url);
         $.getJSON( url )
             .done( (json: RoomData[]) => // Typed json here
             {
