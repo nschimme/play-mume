@@ -16,6 +16,10 @@ module.exports = {
         use: 'ts-loader',
         exclude: /node_modules/,
       },
+      {
+        test: /\.css$/i,
+        use: ['style-loader', 'css-loader'],
+      },
     ],
   },
   resolve: {
@@ -46,7 +50,6 @@ module.exports = {
         { from: 'mapdata', to: 'mapdata' },
         { from: 'resources', to: 'resources' },
         { from: 'icons', to: 'icons' },
-        { from: 'play.css', to: 'play.css' },
         { from: 'manifest.webmanifest', to: 'manifest.webmanifest' },
         { from: 'sw.js', to: 'sw.js' }, // Service worker
         {
