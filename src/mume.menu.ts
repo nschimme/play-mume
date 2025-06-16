@@ -50,25 +50,25 @@ $(document).ready(function() {
         'Map(per) Bug?', 'mume_menu_map_bug();', );
 
     window.toolbar_menus[MENU_OPTIONS][MI_SUBMENU].unshift(
-        'Detach Map', '_open_mume_map_window();' );
+        'Detach Map', 'open_mume_map_window();' );
 });
 
-function _mume_menu_new(): void
+function mume_menu_new(): void
 {
     window.open('http://mume.org/newcomers.php', 'mume_new_players');
 }
 
-function _mume_menu_help(): void
+function mume_menu_help(): void
 {
     window.open('http://mume.org/help.php', 'mume_help');
 }
 
-function _mume_menu_rules(): void
+function mume_menu_rules(): void
 {
     window.open('http://mume.org/rules.php', 'mume_rules');
 }
 
-function _mume_menu_about_map(): void
+function mume_menu_about_map(): void
 {
     alert(
         "Play MUME!, a modern web client for MUME using DecafMUD, is brought to you by Waba,\n" +
@@ -81,12 +81,12 @@ function _mume_menu_about_map(): void
         "The map data is covered by a separate license." );
 }
 
-function _mume_menu_map_bug(): void
+function mume_menu_map_bug(): void
 {
     window.open( 'https://github.com/MUME/play-mume/issues/new', 'mume_map_bug' );
 }
 
-function _open_mume_map_window(): void
+function open_mume_map_window(): void
 {
     // let where: string | undefined; // Removed as it became unused after url refactoring
     const url: string = (globalMap && globalMap.pathMachine && globalMap.pathMachine.here) ?
@@ -114,9 +114,9 @@ function _open_mume_map_window(): void
     }
 }
 
-window._open_mume_map_window = _open_mume_map_window;
-window._mume_menu_new = _mume_menu_new;
-window._mume_menu_help = _mume_menu_help;
-window._mume_menu_rules = _mume_menu_rules;
-window._mume_menu_about_map = _mume_menu_about_map;
-window._mume_menu_map_bug = _mume_menu_map_bug;
+window.open_mume_map_window = open_mume_map_window;
+window.mume_menu_new = mume_menu_new;
+window.mume_menu_help = mume_menu_help;
+window.mume_menu_rules = mume_menu_rules;
+window.mume_menu_about_map = mume_menu_about_map;
+window.mume_menu_map_bug = mume_menu_map_bug;

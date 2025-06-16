@@ -42,16 +42,17 @@ declare global {
       InflateStream?: any; // Changed from Inflate to InflateStream
     };
     jQuery?: JQueryStatic;
-    _open_mume_map_window?: () => void;
-    _mume_menu_new?: () => void;
-    _mume_menu_help?: () => void;
-    _mume_menu_rules?: () => void;
-    _mume_menu_about_map?: () => void;
-    _mume_menu_map_bug?: () => void;
+    DecafMUD?: DecafMUDStatic;
+    open_mume_map_window?: () => void;
+    mume_menu_new?: () => void;
+    mume_menu_help?: () => void;
+    mume_menu_rules?: () => void;
+    mume_menu_about_map?: () => void;
+    mume_menu_map_bug?: () => void;
   }
 
   interface OpenerWindow extends Window {
-    DecafMUD?: DecafMUDStatic; // Optional because it might not be loaded yet or exist
+    // DecafMUD is now in the base Window interface
     $?: JQueryStatic;          // Optional jQuery static
     // Add any other properties that scripts in map-loader.ts expect on window.opener
   }
