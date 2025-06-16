@@ -17,7 +17,6 @@ import '../play.scss';
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
 import $ from 'jquery'; // Assuming jQuery will be installed as a module
-window.jQuery = $; // Ensure $ is available as global jQuery for the plugin
 // For Split.js, ensure it's installed via npm if not already, then import
 import Split from 'split.js';
 // For SparkMD5, ensure it's installed via npm, then import // Or: import * as SparkMD5 from 'spark-md5'; depending on its export structure

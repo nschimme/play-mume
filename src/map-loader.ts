@@ -18,7 +18,6 @@
 import $ from 'jquery';
 import { MumeMap, MumeXmlParser, RoomCoords, MumeXmlParserTag } from './mume.mapper';
 import { throttle } from './utils';
-// OpenerWindow is global from src/window-extensions.d.ts
 
 (function () {
   "use strict";
@@ -46,13 +45,11 @@ import { throttle } from './utils';
           parser = undefined; // Ensure parser is undefined if not valid
         }
 
-        if (parser && opener.$) { // Check for opener.$ before using it
+        if (parser) { // Check if parser is available
           tagEventHandler = map.processTag.bind(map);
-          opener.$(parser).on(MumeXmlParser.SIG_TAG_END, tagEventHandler);
+          $(parser).on(MumeXmlParser.SIG_TAG_END, tagEventHandler);
           console.log("The main window will now send data to the map window");
-        } else if (!opener.$) {
-            console.error("jQuery ($) not found on opener window. Cannot bind parser events.");
-        } else if (!parser) {
+        } else {
             console.log("MumeXmlParser not found or invalid on opener, map events not bound.");
         }
 
@@ -79,12 +76,13 @@ import { throttle } from './utils';
 
   $(window).on("unload", function (_e: JQuery.Event) {
     const opener = window.opener as Window; // Cast once
-    if (opener && opener.DecafMUD && opener.DecafMUD.instances && opener.DecafMUD.instances[0] && opener.$) {
+    // Check if the necessary objects exist in the opener window
+    if (opener && opener.DecafMUD && opener.DecafMUD.instances && opener.DecafMUD.instances[0]) {
       const decafInstance = opener.DecafMUD.instances[0];
       if (decafInstance) {
         const parser = decafInstance.textInputFilter; // Type will be any if not in DecafMUDInstance
         if (tagEventHandler && parser) {
-          opener.$(parser).off(MumeXmlParser.SIG_TAG_END, tagEventHandler);
+          $(parser).off(MumeXmlParser.SIG_TAG_END, tagEventHandler);
         }
       }
     }
