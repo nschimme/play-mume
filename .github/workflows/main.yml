@@ -24,6 +24,8 @@ jobs:
         run: npm run lint:check
       - name: Compile TypeScript
         run: npm run tsc
+      - name: Run Webpack Development Build
+        run: npm run dev
       - name: Run tests
         run: npm test
 
