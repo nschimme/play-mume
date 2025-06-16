@@ -1384,7 +1384,7 @@ class MumeMapDisplay
     }
 
     /* Installs the viewport into the DOM. */
-    public installMap( containerElementName: string ): void
+    public async installMap( containerElementName: string ): Promise<void>
     {
         this.pixi = new PIXI.Application();
         await this.pixi.init({
@@ -1477,6 +1477,7 @@ class MumeMapDisplay
 
         // And set the stage
         this.pixi.stage.addChild( map );
+        this.reshapeInitialHint();
         this.pixi.render();
 
         return;
