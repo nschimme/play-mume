@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*!
  * DecafMUD v0.9.0
  * http://decafmud.stendec.me

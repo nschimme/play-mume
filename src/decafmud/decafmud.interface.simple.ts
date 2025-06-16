@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*!
  * DecafMUD v0.9.0
  * http://decafmud.stendec.me
@@ -506,7 +506,7 @@ ontSize+';}';
         url += '</title><style>'+css+css2+'</style></head><body>';
         url += '<h1>';
         url += 'DecafMUD Session Log'.tr(this.decaf);
-        url += '</h2>';
+        url += '</h1>';
         url += '<div>' + this.display.display.innerHTML + '</div>';
         url += '</body></html>';
 
