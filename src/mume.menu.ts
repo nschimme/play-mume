@@ -20,19 +20,6 @@ declare const MENU_HELP: string;
 declare const MI_SUBMENU: string;
 declare const MENU_OPTIONS: string;
 
-interface MenuItemArray extends Array<string> {
-    // Define unshift and push specifically if needed, but Array<string> usually covers it.
-    // Unshift and push are standard array methods.
-}
-
-interface ToolbarSubmenu {
-    [miSubmenu: string]: MenuItemArray;
-}
-
-interface ToolbarMenus {
-    [menuHelpOrOptions: string]: ToolbarSubmenu;
-}
-
 interface GlobalMapHere {
     x: number;
     y: number;
@@ -55,16 +42,16 @@ declare let globalSplit: GlobalSplit | null | undefined;
 declare function canvasFitParent(): void;
 declare let globalMapWindow: Window | null; // For the popup window
 
-((window as any).toolbar_menus as ToolbarMenus)[MENU_HELP][MI_SUBMENU].unshift(
+window.toolbar_menus[MENU_HELP][MI_SUBMENU].unshift(
     'New to MUME?', 'mume_menu_new();',
     'MUME Help',    'mume_menu_help();',
     'MUME Rules',   'mume_menu_rules();' );
 
-((window as any).toolbar_menus as ToolbarMenus)[MENU_HELP][MI_SUBMENU].push(
+window.toolbar_menus[MENU_HELP][MI_SUBMENU].push(
     'About Map',     'mume_menu_about_map();',
     'Map(per) Bug?', 'mume_menu_map_bug();', );
 
-((window as any).toolbar_menus as ToolbarMenus)[MENU_OPTIONS][MI_SUBMENU].unshift(
+window.toolbar_menus[MENU_OPTIONS][MI_SUBMENU].unshift(
     'Detach Map', '_open_mume_map_window();' );
 
 function _mume_menu_new(): void
