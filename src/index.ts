@@ -16,6 +16,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
 import $ from 'jquery'; // Assuming jQuery will be installed as a module
+(window as any).jQuery = $; // Ensure $ is available as global jQuery for the plugin
 import 'jquery-throttle-debounce'; // Assuming this is a jQuery plugin, it might need to be imported like this
 // For Split.js, ensure it's installed via npm if not already, then import
 import Split from 'split.js';
