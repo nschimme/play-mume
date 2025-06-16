@@ -47,7 +47,7 @@ module.exports = {
     }),
     new CopyWebpackPlugin({
       patterns: [
-        { from: 'mapdata', to: 'mapdata' },
+        { from: 'mapdata', to: 'mapdata', noErrorOnMissing: true },
         { from: 'resources', to: 'resources' },
         { from: 'icons', to: 'icons' },
         { from: 'manifest.webmanifest', to: 'manifest.webmanifest' },
