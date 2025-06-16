@@ -1311,12 +1311,12 @@ namespace Mm2Gfx
         const offset = ( size - ROOM_PIXELS ) / 2;
 
         const square = new PIXI.Graphics();
-        square.lineStyle( 2, 0xFFFF00, 1 );
-        square.drawRect( -offset, -offset, size, size );
+        square.setStrokeStyle( { width: 2, color: 0xFFFF00, alpha: 1 } );
+        square.rect( -offset, -offset, size, size );
 
-        square.beginFill( 0x000000, 0.1 );
-        square.drawRect( -offset, -offset, size, size );
-        square.endFill();
+        square.fill( { color: 0x000000, alpha: 0.1 } );
+        square.rect( -offset, -offset, size, size );
+        square.fill(); // End fill
 
         return square;
     }
