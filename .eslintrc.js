@@ -9,28 +9,55 @@ module.exports = {
     'plugin:@typescript-eslint/recommended',
   ],
   parserOptions: {
-    ecmaVersion: 2021, // or "latest" or a specific year like 2016 to match our tsconfig target
+    ecmaVersion: 2021,
     sourceType: 'module',
-    project: './tsconfig.json', // Required for some TypeScript rules
+    project: './tsconfig.json',
   },
   env: {
-    browser: true, // Assuming this is a browser project based on HTML files
-    node: true, // For build scripts and configuration files if any
-    es6: true, // Enables ES6 globals
+    browser: true,
+    node: true,
+    es6: true,
+  },
+  globals: {
+    // External Libraries
+    'DecafMUD': 'readonly',
+    'jQuery': 'readonly',
+    '$': 'readonly',
+    'SparkMD5': 'readonly',
+    // DecafMUD menu.js globals
+    'MENU_HELP': 'readonly',
+    'MI_SUBMENU': 'readonly',
+    'MENU_OPTIONS': 'readonly',
+    // MUME project globals (need to verify origin of fkeys_enabled, numpad_enabled)
+    'fkeys_enabled': 'readonly',
+    'numpad_enabled': 'readonly',
+    'globalMap': 'readonly', // or 'writable' if it's reassigned, but usually globals from TS are for reading
+    'globalMapWindow': 'writable', // Can be reassigned
+    'globalSplit': 'readonly', // or 'writable'
+    'canvasFitParent': 'readonly',
+    // Add other DecafMUD globals that might be missing if more errors appear
+    'dragObject': 'readonly', // From DRAGGER.js / decafmud.interface.panels.menu.js
+    'get_fontsize': 'readonly', // From decafmud.display.standard.js potentially, or another UI script
+    'set_fontsize': 'readonly',
+    'fkeymacros': 'readonly', // From decafmud.interface.panels.menu.js (related to fkeys_enabled)
+    'numpadwalking': 'readonly', // From decafmud.interface.panels.menu.js (related to numpad_enabled)
+    'toggle_fkeys': 'readonly',
+    'toggle_numpad': 'readonly',
+    'progress_visible': 'readonly',
+    'toggle_progressbars': 'readonly',
+    'showmap': 'readonly',
+    'toggle_map': 'readonly'
   },
   ignorePatterns: [
-    "dist/", // Ignore the output directory
+    "dist/",
     "node_modules/",
-    "DecafMUD/", // Ignoring submodule
-    "resources/", // Ignoring resources
-    "*.d.ts" // Ignoring declaration files from linting by default
+    "DecafMUD/",
+    "resources/",
+    "*.d.ts"
   ],
   rules: {
-    // Add any initial rule customizations here if needed.
-    // For example, to turn off a specific rule:
-    // 'no-console': 'off',
     "@typescript-eslint/no-unused-vars": [
-      "warn", // or "error"
+      "warn",
       {
         "argsIgnorePattern": "^_",
         "varsIgnorePattern": "^_",
@@ -40,13 +67,12 @@ module.exports = {
   },
   overrides: [
     {
-      files: ['*.js'], // Apply this override to all JavaScript files
+      files: ['*.js'],
       parserOptions: {
-        project: null, // Do not use tsconfig.json for JS files
+        project: null,
       },
       rules: {
-        // You might want to disable certain TypeScript-specific rules for JS files if they cause issues
-        '@typescript-eslint/no-var-requires': 'off', // Example: if you use require() in JS files
+        '@typescript-eslint/no-var-requires': 'off',
       }
     }
   ]

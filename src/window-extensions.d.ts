@@ -23,6 +23,23 @@ import 'jquery'; // To reference JQueryStatic
 // For now, let's assume DecafMUDStatic is a known global type.
 
 declare global {
+  interface MenuItemArray extends Array<string> {
+    // Define unshift and push specifically if needed, but Array<string> usually covers it.
+    // Unshift and push are standard array methods.
+  }
+
+  interface ToolbarSubmenu {
+    [miSubmenu: string]: MenuItemArray;
+  }
+
+  interface ToolbarMenus {
+    [menuHelpOrOptions: string]: ToolbarSubmenu;
+  }
+
+  interface Window {
+    toolbar_menus: ToolbarMenus;
+  }
+
   interface OpenerWindow extends Window {
     DecafMUD?: DecafMUDStatic; // Optional because it might not be loaded yet or exist
     $?: JQueryStatic;          // Optional jQuery static
