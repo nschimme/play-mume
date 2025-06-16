@@ -15,6 +15,12 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
+// DecafMUD Core Styles (converted to SCSS)
+@import './styles/decafmud/main.scss';
+@import './styles/decafmud/mud-colors.scss';
+@import './styles/decafmud/decafmud.scss';
+@import './styles/decafmud/decafmud-dark.scss';
+
 /* The following two rules are from Split.js and MIT-licensed:
  * https://github.com/nathancahill/Split.js/ */
 .gutter {

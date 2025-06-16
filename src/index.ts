@@ -25,23 +25,14 @@ import Split from 'split.js';
 // depending on how DecafMUD's JS files are structured (ES modules, UMD, or global scripts).
 // If they are not modules, this part will fail and need a different strategy (e.g. ordered concatenation or specific loaders).
 // For now, let's assume we can import the main DecafMUD object and other specific files if they export anything.
-// This path and export needs verification // import { DecafMUD } from '../DecafMUD/src/js/decafmud';
-// The following DecafMUD scripts might attach to the DecafMUD object directly or to jQuery.
-// Their direct import might not be necessary if DecafMUD itself handles their registration when it's imported/run.
-// This is a common pattern for older libraries with plugin architectures.
-// We'll need to verify this. If they don't export modules, they might need to be concatenated or loaded sequentially.
-import 'script-loader!../DecafMUD/src/js/decafmud.js'; // Main script for side effects (sets up global DecafMUD)
-import 'script-loader!../DecafMUD/src/js/inflate_stream.min.js'; // Restored this line
-import 'script-loader!../DecafMUD/src/js/decafmud.display.standard.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.encoding.iso885915.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.socket.websocket.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.storage.standard.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.telopt.gmcp.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.menu.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.settings.js';
-import 'script-loader!../DecafMUD/src/js/dragelement.js';
+// For Split.js, ensure it's installed via npm if not already, then import
+// For SparkMD5, ensure it's installed via npm, then import // Or: import * as SparkMD5 from 'spark-md5'; depending on its export structure
 
+// Import DecafMUD related components.
+import DecafMUD from './decafmud/decafmud';
+// The individual DecafMUD plugin files are now also .ts files and will be imported by decafmud.ts or by each other as needed.
+// No need for script-loader for those anymore if they are properly part of the DecafMUD module.
+// If pako is used by DecafMUD, it's imported within decafmud.ts.
 
 // Import project's own TypeScript modules
 import { throttle } from './utils';
@@ -72,19 +63,25 @@ $(window).on('load', function () {
   // const currentPort = window.location.protocol === 'https:' ? 443 : 80; // Unused
   // const currentHost = window.location.hostname; // Unused
 
-  // Ensure DecafMUD is available. The import above should handle this.
-  // If DecafMUD and its plugins are not proper modules, this is where issues will arise.
+  // Ensure DecafMUD is available.
   if (typeof DecafMUD === 'undefined' || !DecafMUD.plugins?.TextInputFilter) {
-    console.error('DecafMUD or DecafMUD.plugins.TextInputFilter is not loaded!');
-    // Potentially load DecafMUD scripts dynamically here if they are not modules,
-    // or ensure they are globally available due to non-module script tags handled by Webpack.
-    // This might require adjusting webpack.config.js to copy and ensure order for non-module scripts.
+    console.error('DecafMUD or DecafMUD.plugins.TextInputFilter is not loaded correctly!');
+    alert('Critical error: DecafMUD core components could not be initialized. Please check the console for details.');
     return;
   }
 
-  DecafMUD.plugins.TextInputFilter.mumexml = MumeXmlParser;
+  // Initialize DecafMUD and its plugins.
+  // The plugins are now typically classes that will be instantiated by the DecafMUD core constructor
+  // or its initialization methods based on the options.
+  // The assignment below is how a text input filter was registered in the old system.
+  // This might need to be adapted if DecafMUD's plugin registration changes with ES6 modules.
+  if (DecafMUD.plugins.TextInputFilter) {
+    (DecafMUD.plugins.TextInputFilter as any).mumexml = MumeXmlParser;
+  } else {
+    console.error("DecafMUD.plugins.TextInputFilter is not defined. Cannot set MumeXmlParser.");
+  }
 
-  new DecafMUD({
+  const decafInstance = new DecafMUD({
     host: 'mume.org',
     port: 443,
     autoreconnect: false,
