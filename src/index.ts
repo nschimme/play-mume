@@ -17,7 +17,6 @@
 
 import $ from 'jquery'; // Assuming jQuery will be installed as a module
 window.jQuery = $; // Ensure $ is available as global jQuery for the plugin
-import 'jquery-throttle-debounce'; // Assuming this is a jQuery plugin, it might need to be imported like this
 // For Split.js, ensure it's installed via npm if not already, then import
 import Split from 'split.js';
 // For SparkMD5, ensure it's installed via npm, then import // Or: import * as SparkMD5 from 'spark-md5'; depending on its export structure
@@ -45,6 +44,7 @@ import 'script-loader!../DecafMUD/src/js/dragelement.js';
 
 
 // Import project's own TypeScript modules
+import { throttle } from './utils';
 import './errorhandler'; // Assuming errorhandler.js is compiled from a .ts file we want to include
 import './mume.macros';  // Assuming mume.macros.js is compiled from a .ts file
 import './mume.menu';    // Assuming mume.menu.js is compiled from a .ts file
@@ -149,15 +149,7 @@ $(window).on('load', function () {
 
     globalMap = map;
 
-    // Throttling resize: Ensure jquery-throttle-debounce is correctly imported and used
-    // If it's a jQuery plugin, it might just extend jQuery.prototype.
-    // For now, assuming $.throttle is available if jquery-throttle-debounce is loaded.
-    if (typeof $.throttle === 'function') {
-        $(window).on('resize', $.throttle(500, canvasFitParent));
-    } else {
-        console.warn('jQuery throttle function not found. Resize events will not be throttled.');
-        $(window).on('resize', canvasFitParent);
-    }
+    $(window).on('resize', throttle(canvasFitParent, 500));
     canvasFitParent();
 
     const mumeClientPanel = $('#mume-client-panel');

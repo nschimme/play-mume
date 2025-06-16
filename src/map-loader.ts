@@ -15,11 +15,9 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
-declare var $: any;
-declare var jQuery: any;
 import $ from 'jquery';
-// Assuming jquery-throttle-debounce is loaded via main import or extends jQuery prototype
 import { MumeMap, MumeXmlParser, RoomCoords, MumeXmlParserTag } from './mume.mapper';
+import { throttle } from './utils';
 // OpenerWindow is global from src/window-extensions.d.ts
 
 (function () {
@@ -65,12 +63,7 @@ import { MumeMap, MumeXmlParser, RoomCoords, MumeXmlParserTag } from './mume.map
 
         if (map.display && typeof map.display.fitParent === 'function') {
           map.display.fitParent();
-          if (typeof $.throttle === 'function') {
-            $(window).on("resize", $.throttle(500, map.display.fitParent.bind(map.display)));
-          } else {
-            console.warn('jQuery throttle function not found for map window. Resize events will not be throttled.');
-            $(window).on("resize", map.display.fitParent.bind(map.display));
-          }
+          $(window).on("resize", throttle(map.display.fitParent.bind(map.display), 500));
         } else {
           console.error("map.display or map.display.fitParent is not available.");
         }
