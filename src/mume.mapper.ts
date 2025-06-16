@@ -1362,8 +1362,10 @@ class MumeMapDisplay
         this.mapData = mapData;
         this.roomDisplays = new SpatialIndex( this.mapData.metaData );
 
-        this.installMap( containerElementName );
-        this.buildMapDisplay();
+        // Await installMap to ensure PIXI application and renderer are initialized
+        this.installMap( containerElementName ).then(() => {
+            this.buildMapDisplay();
+        });
 
     }
 
