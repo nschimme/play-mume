@@ -32,7 +32,6 @@ interface ToolbarSubmenu {
 interface ToolbarMenus {
     [menuHelpOrOptions: string]: ToolbarSubmenu;
 }
-declare let toolbar_menus: ToolbarMenus;
 
 interface GlobalMapHere {
     x: number;
@@ -56,16 +55,16 @@ declare let globalSplit: GlobalSplit | null | undefined;
 declare function canvasFitParent(): void;
 declare let globalMapWindow: Window | null; // For the popup window
 
-toolbar_menus[MENU_HELP][MI_SUBMENU].unshift(
+((window as any).toolbar_menus as ToolbarMenus)[MENU_HELP][MI_SUBMENU].unshift(
     'New to MUME?', 'mume_menu_new();',
     'MUME Help',    'mume_menu_help();',
     'MUME Rules',   'mume_menu_rules();' );
 
-toolbar_menus[MENU_HELP][MI_SUBMENU].push(
+((window as any).toolbar_menus as ToolbarMenus)[MENU_HELP][MI_SUBMENU].push(
     'About Map',     'mume_menu_about_map();',
     'Map(per) Bug?', 'mume_menu_map_bug();', );
 
-toolbar_menus[MENU_OPTIONS][MI_SUBMENU].unshift(
+((window as any).toolbar_menus as ToolbarMenus)[MENU_OPTIONS][MI_SUBMENU].unshift(
     'Detach Map', '_open_mume_map_window();' );
 
 function _mume_menu_new(): void
