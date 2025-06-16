@@ -45,3 +45,10 @@ declare interface DecafMUDSocket {
   write(data: string): void;
   // Add other known properties/methods
 }
+
+declare const MENU_HELP: string;
+declare const MI_SUBMENU: string;
+declare const MENU_OPTIONS: string;
+
+declare function fkeys_enabled(): boolean;
+declare function numpad_enabled(): boolean;

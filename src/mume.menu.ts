@@ -15,11 +15,6 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
-// Placeholder declarations for global variables
-declare const MENU_HELP: string;
-declare const MI_SUBMENU: string;
-declare const MENU_OPTIONS: string;
-
 interface GlobalMapHere {
     x: number;
     y: number;

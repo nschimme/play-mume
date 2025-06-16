@@ -9,11 +9,6 @@ interface Decaf {
   sendInput(command: string): void;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Provided by the environment
-declare function fkeys_enabled(): boolean;
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Provided by the environment
-declare function numpad_enabled(): boolean;
-
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Potentially used by global event handlers or index.html
 function tryExtraMacro(decaf: Decaf, keycode: number): number {
   // f-key macros
