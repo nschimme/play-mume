@@ -21,6 +21,7 @@
 interface DecafMUDInstance {
   textInputFilter?: any; // Property accessed in src/index.ts
   socket: DecafMUDSocket; // Added this line
+  sendInput: (command: string) => void; // Added this line
   // Add other known properties/methods of an instance if available
   // For example, from the original inline script:
   // host: string;
@@ -46,9 +47,9 @@ declare interface DecafMUDSocket {
   // Add other known properties/methods
 }
 
-declare const MENU_HELP: string;
-declare const MI_SUBMENU: string;
-declare const MENU_OPTIONS: string;
+declare const MENU_HELP: number;
+declare const MI_SUBMENU: number;
+declare const MENU_OPTIONS: number;
 
 declare function fkeys_enabled(): boolean;
 declare function numpad_enabled(): boolean;

@@ -15,6 +15,8 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
+import $ from 'jquery';
+
 interface GlobalMapHere {
     x: number;
     y: number;
@@ -37,17 +39,19 @@ declare let globalSplit: GlobalSplit | null | undefined;
 declare function canvasFitParent(): void;
 declare let globalMapWindow: Window | null; // For the popup window
 
-window.toolbar_menus[MENU_HELP][MI_SUBMENU].unshift(
-    'New to MUME?', 'mume_menu_new();',
-    'MUME Help',    'mume_menu_help();',
-    'MUME Rules',   'mume_menu_rules();' );
+$(document).ready(function() {
+    window.toolbar_menus[MENU_HELP][MI_SUBMENU].unshift(
+        'New to MUME?', 'mume_menu_new();',
+        'MUME Help',    'mume_menu_help();',
+        'MUME Rules',   'mume_menu_rules();' );
 
-window.toolbar_menus[MENU_HELP][MI_SUBMENU].push(
-    'About Map',     'mume_menu_about_map();',
-    'Map(per) Bug?', 'mume_menu_map_bug();', );
+    window.toolbar_menus[MENU_HELP][MI_SUBMENU].push(
+        'About Map',     'mume_menu_about_map();',
+        'Map(per) Bug?', 'mume_menu_map_bug();', );
 
-window.toolbar_menus[MENU_OPTIONS][MI_SUBMENU].unshift(
-    'Detach Map', '_open_mume_map_window();' );
+    window.toolbar_menus[MENU_OPTIONS][MI_SUBMENU].unshift(
+        'Detach Map', '_open_mume_map_window();' );
+});
 
 function _mume_menu_new(): void
 {

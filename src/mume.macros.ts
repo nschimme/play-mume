@@ -4,13 +4,8 @@
  * This file is originally from Discworld.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Provided by the environment/DecafMUD core
-interface Decaf {
-  sendInput(command: string): void;
-}
-
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Potentially used by global event handlers or index.html
-function tryExtraMacro(decaf: Decaf, keycode: number): number {
+function tryExtraMacro(decaf: DecafMUDInstance, keycode: number): number {
   // f-key macros
   if (112 <= keycode && keycode <= 121 && fkeys_enabled()) {
     const cmd = "f" + (keycode-111);
