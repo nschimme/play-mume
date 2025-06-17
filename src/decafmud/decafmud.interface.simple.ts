@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { IDecafMUD, IUi, IStorage, IDisplay } from './decafmud.types';
 
 /*!
  * DecafMUD v0.9.0
@@ -13,19 +14,20 @@
  * @version 0.9.0
  */
 
-(function(DecafMUD) {
+(function(DecafMUD_Global) { // Renamed to avoid conflict with imported IDecafMUD
 
-var addEvent = function(node, etype, func) {
+var addEvent = function(node: EventTarget, etype: string, func: EventListenerOrEventListenerObject): void {
 		if ( node.addEventListener ) {
 			node.addEventListener(etype, func, false); return; }
 
-		etype = 'on' + etype;
-		if ( node.attachEvent ) {
-			node.attachEvent(etype, func); }
+		// Fallback for older browsers (less type-safe)
+		const onEtype = 'on' + etype as keyof EventTarget;
+		if ((node as any).attachEvent ) {
+			(node as any).attachEvent(onEtype, func); }
 		else {
-			node[etype] = func; }
+			(node as any)[onEtype] = func; }
 	},
-	delEvent = function(node, etype, func) {
+	delEvent = function(node: EventTarget, etype: string, func: EventListenerOrEventListenerObject): void {
 		if ( node.removeEventListener ) {
 			node.removeEventListener(etype, func, false); }
 	};
@@ -40,23 +42,25 @@ var bodyHack = /Firefox\//.test(navigator.userAgent);
  * @name SimpleInterface
  * @class DecafMUD User Interface: Simple
  * @exports SimpleInterface as DecafMUD.plugins.Interface.simple
- * @param {DecafMUD} decaf The instance of DecafMUD using this plugin. */
-var SimpleInterface = function(decaf) {
+ * @param {IDecafMUD} decaf The instance of DecafMUD using this plugin. */
+var SimpleInterface = function(this: IUi, decaf: IDecafMUD): IUi {
 	var si = this;
 
 	// Store the instance of DecafMUD.
 	this.decaf = decaf;
 
 	// If we have elements, get them.
-	this.container	= decaf.options.set_interface.container;
+	let containerElement: HTMLElement | null = null;
+	if (typeof decaf.options.set_interface!.container === 'string') {
+		containerElement = document.querySelector(decaf.options.set_interface!.container as string);
+	} else if (decaf.options.set_interface!.container instanceof HTMLElement) {
+		containerElement = decaf.options.set_interface!.container;
+	}
 
-	// If the element is a string, querySelector it.
-	if ( typeof this.container === 'string' ) {
-		this.container = document.querySelector(this.container); }
-
-	// Only allow us to use elements for these.
-	if (!( 'nodeType' in this.container )) {
-		throw "The container must be a node in the DOM!"; }
+	if (!containerElement || !('nodeType' in containerElement) ) {
+		throw "The container must be a valid DOM element or selector!";
+	}
+	this.container = containerElement;
 
 	// Build our element tree.
 	this.container.setAttribute('role', 'application');
@@ -71,7 +75,7 @@ var SimpleInterface = function(decaf) {
 	this.container.appendChild(this.el_display);
 
 	// Handle keypresses in scrollback.
-	addEvent(this.el_display,'keydown',function(e){si.displayKey(e)});
+	addEvent(this.el_display,'keydown',function(e){ si.displayKey!(e as KeyboardEvent); });
 
 	// Put the input in a container.
 	this._input = document.createElement('div');
@@ -95,24 +99,25 @@ var SimpleInterface = function(decaf) {
 	this.toolbar = document.createElement('div');
 	this.toolbar.className = 'decafmud toolbar';
 	this.toolbar.setAttribute('role','toolbar');
-	var h = function(){if(!this.className){return;}this.className = this.className.replace(' visible','');}
+	var h = function(this: HTMLElement){if(!this.className){return;}this.className = this.className.replace(' visible','');}
 	addEvent(this.toolbar,'mousemove', h);
 	addEvent(this.toolbar,'blur', h);
 
 	// Make the input element.
-	this.input = document.createElement('input');
-	this.input.title = "MUD Input".tr(this.decaf);
-	this.input.setAttribute('role','textbox');
-	this.input.setAttribute('aria-label', this.input.title);
-	this.input.type = 'text';
-	this.input.className = 'decafmud input';
+	const inputEl = document.createElement('input');
+	inputEl.title = "MUD Input"; // Removed .tr
+	inputEl.setAttribute('role','textbox');
+	inputEl.setAttribute('aria-label', inputEl.title);
+	inputEl.type = 'text';
+	inputEl.className = 'decafmud input';
+	this.input = inputEl; // Assign to typed property
 	this._input.insertBefore(this.input, this._input.firstChild);
 	this.container.appendChild(this._input);
 
 	// Listen to input.
-	addEvent(this.input,'keydown', function(e){si.handleInput(e);});
+	addEvent(this.input,'keydown', function(e){ si.handleInput(e as KeyboardEvent); });
 
-	var helper = function(e) { si.handleBlur(e); };
+	var helper = function(e: Event) { si.handleBlur(e as FocusEvent); };
 	addEvent(this.input, 'blur', helper);
 	addEvent(this.input, 'focus', helper);
 
@@ -123,25 +128,26 @@ var SimpleInterface = function(decaf) {
 	addEvent(window,'resize',function() { si.resizeScreen(); });
 
 	return this;
-};
-SimpleInterface.prototype.toString = function() {
+} as any as { new (decaf: IDecafMUD): IUi; }; // Cast to allow constructor signature
+
+SimpleInterface.prototype.toString = function(this: IUi): string {
 	return '<DecafMUD Interface: Simple' + (this.container.id ? ' (#'+this.container.id+')' : '') + '>'; }
 
-// Defaults
-SimpleInterface.prototype.toolbutton_id = -1;
+// Defaults - These will be initialized in the constructor or as class properties if converted
+SimpleInterface.prototype.toolbutton_id = -1; // This is an internal counter, not part of IUi state
 SimpleInterface.prototype.echo = true;
 SimpleInterface.prototype.inpFocus = false;
-SimpleInterface.prototype.old_parent = undefined;
-SimpleInterface.prototype.next_sib = undefined;
-SimpleInterface.prototype.input = undefined;
-SimpleInterface.prototype.display = undefined;
-SimpleInterface.prototype.splash = null;
-SimpleInterface.prototype.splash_st = null;
-SimpleInterface.prototype.splash_pgi = null;
-SimpleInterface.prototype.splash_pgt = null;
-SimpleInterface.prototype.splash_old = null;
-SimpleInterface.prototype.scrollButton = undefined;
-SimpleInterface.supports = {
+SimpleInterface.prototype.old_parent = undefined as HTMLElement | undefined | null; // For fullscreen
+SimpleInterface.prototype.next_sib = undefined as Element | undefined | null; // For fullscreen
+// this.input is already typed via IUi
+SimpleInterface.prototype.display = undefined as IDisplay | undefined;
+SimpleInterface.prototype.splash = null as HTMLElement | null;
+SimpleInterface.prototype.splash_st = null as HTMLElement | null;
+SimpleInterface.prototype.splash_pgi = null as HTMLElement | null;
+SimpleInterface.prototype.splash_pgt = null as HTMLElement | null;
+SimpleInterface.prototype.splash_old = null as HTMLElement | null;
+SimpleInterface.prototype.scrollButton = undefined as HTMLElement | undefined;
+SimpleInterface.supports = { // This is static-like, not per instance normally
 	'tabComplete'	: true,
 	'multipleOut'	: false,
 	'fullscreen'	: true,
@@ -158,12 +164,12 @@ SimpleInterface.supports = {
  *    bar at.
  * @param {String} [message] The initial message for the splash screen to
  *    display. */
-SimpleInterface.prototype.initSplash = function(percentage,message) {
+SimpleInterface.prototype.initSplash = function(this: IUi, percentage?: number, message?: string): void {
 	if ( percentage === undefined ) { percentage = 0; }
-	if ( message === undefined ) { message = 'Discombobulating interface recipient...'.tr(this.decaf); }
+	if ( message === undefined ) { message = 'Discombobulating interface recipient...'; } // Removed .tr
 
 	// Disable scrolling
-	this.old_y = this.el_display.style.overflowY;
+	(this as any).old_y = this.el_display.style.overflowY; // Store on 'this' if needed elsewhere for restore
 	this.el_display.style.overflowY = 'hidden';
 
 	// Create a <div> to serve as the splash.
@@ -171,28 +177,28 @@ SimpleInterface.prototype.initSplash = function(percentage,message) {
 	this.splash.className = 'decafmud splash';
 
 	// Build the contents.
-	this.splash.innerHTML  = '<h2 class="decafmud heading"><a href="https://github.com/MUME/DecafMUD">DecafMUD</a> <span class="version">v'+DecafMUD.version+'</span></h2>';
+	this.splash.innerHTML  = `<h2 class="decafmud heading"><a href="https://github.com/MUME/DecafMUD">DecafMUD</a> <span class="version">v${this.decaf.version.toString()}</span></h2>`;
 
 	// Create a <div> to act as the progress indicator.
-	this.splash_pg = document.createElement('div');
-	this.splash_pg.className = 'decafmud progress';
-	this.splash_pg.setAttribute('role','progressbar');
-	this.splash_pg.setAttribute('aria-valuemax', 100);
-	this.splash_pg.setAttribute('aria-valuemin', 0);
-	this.splash_pg.setAttribute('aria-valuenow', percentage);
-	this.splash_pg.setAttribute('aria-valuetext', '{0}%'.tr(this.decaf,percentage));
+	const splash_pg_el = document.createElement('div'); // Renamed to avoid conflict with this.splash_pg assignment for IUi
+	splash_pg_el.className = 'decafmud progress';
+	splash_pg_el.setAttribute('role','progressbar');
+	splash_pg_el.setAttribute('aria-valuemax', '100');
+	splash_pg_el.setAttribute('aria-valuemin', '0');
+	splash_pg_el.setAttribute('aria-valuenow', String(percentage));
+	splash_pg_el.setAttribute('aria-valuetext', `${percentage}%`); // Removed .tr
 
 	this.splash_pgi = document.createElement('div');
 	this.splash_pgi.className = 'decafmud inner-progress';
-	this.splash_pgi.style.cssText = 'width:'+percentage+'%;';
-	this.splash_pg.appendChild(this.splash_pgi);
+	this.splash_pgi.style.width = `${percentage}%`;
+	splash_pg_el.appendChild(this.splash_pgi);
 
 	this.splash_pgt = document.createElement('div');
 	this.splash_pgt.className = 'decafmud progress-text';
-	this.splash_pgt.innerHTML = '{0}%'.tr(this.decaf,percentage);
-	this.splash_pg.appendChild(this.splash_pgt);
+	this.splash_pgt.innerHTML = `${percentage}%`; // Removed .tr
+	splash_pg_el.appendChild(this.splash_pgt);
 
-	this.splash.appendChild(this.splash_pg);
+	this.splash.appendChild(splash_pg_el);
 
 	// Create a <div> to contain the status line.
 	this.splash_st = document.createElement('div');
@@ -209,40 +215,46 @@ SimpleInterface.prototype.initSplash = function(percentage,message) {
 
 	// Add the splash to the display.
 	this.container.appendChild(this.splash);
+	(this as any).splash_pg = splash_pg_el; // Store if needed for updateSplash
 }
 
 /** Destroy the splash screen. */
-SimpleInterface.prototype.endSplash = function() {
-	// Rip it apart.
-	this.container.removeChild(this.splash);
+SimpleInterface.prototype.endSplash = function(this: IUi): void {
+	if (this.splash && this.splash.parentNode === this.container) { // Check if splash is child of container
+		// Rip it apart.
+		this.container.removeChild(this.splash);
+	}
 
-	this.el_display.style.overflowY = this.old_y;
+	this.el_display.style.overflowY = (this as any).old_y || ''; // Restore old_y
 
-	this.splash_err = false;
-	this.splash = this.splash_pg = this.splash_pgi = this.splash_pgt = this.splash_st = null;
+	(this as any).splash_err = false; // Assuming splash_err is a boolean property
+	this.splash = this.splash_pgi = this.splash_pgt = this.splash_st = this.splash_old = null;
+	(this as any).splash_pg = null; // Clear stored splash_pg if any
 }
 
 /** Update the splash screen with the provided percentage and text.
  * @param {Number} [percentage] If provided, the percentage will be changed to
  *    this value.
  * @param {String} [message] If provided, this message will be displayed. */
-SimpleInterface.prototype.updateSplash = function(percentage,message) {
-	if ( this.splash === null || this.splash_err ) { return; }
-	if ( percentage !== undefined ) {
-		var t = '{0}%'.tr(this.decaf, percentage);
-		this.splash_pg.setAttribute('aria-valuenow', percentage);
-		this.splash_pg.setAttribute('aria-valuetext', t);
+SimpleInterface.prototype.updateSplash = function(this: IUi, percentage?: number, message?: string): void {
+	if ( this.splash === null || (this as any).splash_err ) { return; }
+	const splash_pg_el = (this as any).splash_pg as HTMLElement | null; // Retrieve stored splash_pg
+
+	if ( percentage !== undefined && splash_pg_el && this.splash_pgt && this.splash_pgi) {
+		var t = `${percentage}%`; // Removed .tr
+		splash_pg_el.setAttribute('aria-valuenow', String(percentage));
+		splash_pg_el.setAttribute('aria-valuetext', t);
 
 		this.splash_pgt.innerHTML = t;
-		this.splash_pgi.style.cssText = 'width:'+percentage+'%;';
+		this.splash_pgi.style.width = `${percentage}%`;
 	}
-	if (! message) { return; }
+	if (!message || !this.splash_st || !this.splash_old) { return; }
 
 	// Append the current message to old.
-	var e = document.createElement('div'),
-		t = this.splash_st.innerHTML;
-	if ( t.endsWith('...') ) { t += 'done.'; }
-	e.innerHTML = t;
+	var e = document.createElement('div');
+	var currentMessage = this.splash_st.innerHTML; // Renamed t to currentMessage
+	if ( currentMessage.endsWith('...') ) { currentMessage += 'done.'; }
+	e.innerHTML = currentMessage;
 	this.splash_old.insertBefore(e, this.splash_old.firstChild);
 
 	this.splash_st.innerHTML = message;
@@ -252,23 +264,23 @@ SimpleInterface.prototype.updateSplash = function(percentage,message) {
  *  an alert dialog.
  * @param {String} message The error to display. This can have HTML.
  * @returns {boolean} True if the error was displayed, else false. */
-SimpleInterface.prototype.splashError = function(message) {
-	if ( this.splash === null ) { return false; }
+SimpleInterface.prototype.splashError = function(this: IUi, message: string): boolean {
+	if ( this.splash === null || !this.splash_pgt || !this.splash_pgi || !this.splash_st ) { return false; }
 
 	this.splash_pgt.innerHTML = '<b>Error</b>';
 	this.splash_pgi.className += ' error';
 	this.splash_st.innerHTML = message;
-	this.splash_err = true;
+	(this as any).splash_err = true; // Assuming splash_err is a boolean property
 
 	return true;
 }
 
-SimpleInterface.prototype.sizeel = undefined;
-SimpleInterface.prototype.sizetm = undefined;
+SimpleInterface.prototype.sizeel = undefined as HTMLElement | undefined; // For showSize/hideSize
+SimpleInterface.prototype.sizetm = undefined as any; // Timer ID for showSize/hideSize
 
 /** Show the current size of the primary display, if we can. Fade out over time
  *  too. */
-SimpleInterface.prototype.showSize = function() {
+SimpleInterface.prototype.showSize = function(this: IUi): void {
 	clearTimeout(this.sizetm);
 
 	// If we don't have a display, quit.
@@ -282,40 +294,39 @@ SimpleInterface.prototype.showSize = function() {
 	}
 
 	var sz = this.display.getSize();
-	this.sizeel.style.cssText = 'opacity:1';
-	this.sizeel.innerHTML = "{0}x{1}".tr(this.decaf, sz[0], sz[1]);
+	this.sizeel.style.opacity = '1'; // Direct assignment
+	this.sizeel.innerHTML = `${sz[0]}x${sz[1]}`; // Removed .tr
 
 	// Set a timer for hiding.
 	var si = this;
-	this.sizetm = setTimeout(function(){si.hideSize()},500);
+	this.sizetm = setTimeout(function(){si.hideSize!();},500);
 }
 
 /** Hide the element, with a CSS fade. */
-SimpleInterface.prototype.hideSize = function(fnl) {
+SimpleInterface.prototype.hideSize = function(this: IUi, fnl?: boolean): void {
 	clearTimeout(this.sizetm);
 
 	if ( fnl === true ) {
 		// Don't try to NAWS until this happens, to avoid socket spam.
-		if ( this.decaf.telopt[DecafMUD.TN.NAWS] !== undefined ) {
-			try { this.decaf.telopt[DecafMUD.TN.NAWS].send(); }
+		if ( this.decaf.telopt && this.decaf.telopt[DecafMUD_Global.TN.NAWS] ) { // Check if telopt and specific option exist
+			try { (this.decaf.telopt[DecafMUD_Global.TN.NAWS] as any).send(); } // Cast to any if send is not on base ITeloptHandler
 			catch(err) { }
 		}
-
-		this.container.removeChild(this.sizeel);
-		this.sizeel = undefined;
+		if (this.sizeel && this.sizeel.parentNode === this.container) { // Check parent before removing
+			this.container.removeChild(this.sizeel);
+			this.sizeel = undefined;
+		}
 		return;
 	}
 
 	// Still here? Show the transition.
-	this.sizeel.style.cssText  = '-webkit-transition: opacity 0.25s linear;';
-	this.sizeel.style.cssText += '-moz-transition: opacity 0.25s linear;';
-	this.sizeel.style.cssText += '-o-transition: opacity 0.25s linear;';
-	this.sizeel.style.cssText += 'transition: opacity 0.25s linear;';
-
-	// Set a timer for hiding.
-	var si = this;
-	setTimeout(function(){si.sizeel.style.opacity=0;},0);
-	this.sizetm = setTimeout(function(){si.hideSize(true)},250);
+	if (this.sizeel) {
+		this.sizeel.style.transition = 'opacity 0.25s linear'; // Use transition for cleaner CSS
+		// Set a timer for hiding.
+		var si = this;
+		setTimeout(function(){ if(si.sizeel) si.sizeel.style.opacity='0';},0); // Start fade out
+		this.sizetm = setTimeout(function(){si.hideSize!(true);},250); // Remove after transition
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -323,20 +334,22 @@ SimpleInterface.prototype.hideSize = function(fnl) {
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Called by Decaf upon connection to let us know. */
-SimpleInterface.prototype.connected = function() {
-	this.updateIcon(this.ico_connected, "DecafMUD is currently connected.".tr(this.decaf),
+(SimpleInterface.prototype as any).ico_connected = -1; // Internal icon ID
+
+SimpleInterface.prototype.connected = function(this: IUi): void {
+	this.updateIcon((this as any).ico_connected, "DecafMUD is currently connected.", // Removed .tr
 		'', 'connectivity connected');
 }
 
 /** Called by Decaf when it's trying to connect. */
-SimpleInterface.prototype.connecting = function() {
-	this.updateIcon(this.ico_connected, "DecafMUD is attempting to connect.".tr(this.decaf),
+SimpleInterface.prototype.connecting = function(this: IUi): void {
+	this.updateIcon((this as any).ico_connected, "DecafMUD is attempting to connect.", // Removed .tr
 		'', 'connectivity connecting');
 }
 
 /** Called by Decaf upon disconnection to let us know. */
-SimpleInterface.prototype.disconnected = function() {
-	this.updateIcon(this.ico_connected, "DecafMUD is currently disconnected.".tr(this.decaf),
+SimpleInterface.prototype.disconnected = function(this: IUi, reconnecting?: boolean): void { // Added reconnecting based on IUi
+	this.updateIcon((this as any).ico_connected, "DecafMUD is currently disconnected.", // Removed .tr
 		'', 'connectivity disconnected');
 }
 
@@ -345,13 +358,13 @@ SimpleInterface.prototype.disconnected = function() {
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Load our dependencies. That's pretty much it. */
-SimpleInterface.prototype.load = function() {
+SimpleInterface.prototype.load = function(this: IUi): void {
 	// Require whatever display handler we use, and that's it.
-	this.decaf.require('decafmud.display.'+this.decaf.options.display);
+	this.decaf.require('decafmud.display.'+this.decaf.options.display!); // Add non-null assertion if display is always set
 }
 
 // Reset the interface to its default state.
-SimpleInterface.prototype.reset = function() {
+SimpleInterface.prototype.reset = function(this: IUi): void {
 	// Reset the input handling state
 	this.masked		= false;
 	this.inputCtrl	= false;
@@ -379,85 +392,81 @@ SimpleInterface.prototype.reset = function() {
 }
 
 /** Setup the UI plugin associated with this, this being a DecafMUD instance. */
-SimpleInterface.prototype.setup = function() {
+SimpleInterface.prototype.setup = function(this: IUi): void {
 	// Get a settings object.
-	this.store = this.decaf.store.sub('ui');
-	this.storage = this.store;
+	this.store = this.decaf.store!.sub('ui'); // Assuming decaf.store is defined
+	// this.storage = this.store; // storage is an alias in IDecafMUD
 
 	// Should the toolbar be on the left or the right?
-	var tbar = this.store.get('toolbar-position','top-left');
-	this.old_tbarpos = tbar;
+	var tbar = this.store.get('toolbar-position','top-left') as string;
+	(this as any).old_tbarpos = tbar; // Store for internal use
 	this.toolbar.className += ' ' + tbar;
 	this.container.insertBefore(this.toolbar, this.container.firstChild);
 
 	// Get the display type.
-	var display = this.decaf.options.display;
+	var displayType = this.decaf.options.display!;
 
 	// Create the display.
-	this.decaf.debugString('Initializing display plugin "'+display+'" in: #' + this.el_display.id,'info');
-	this.display = new DecafMUD.plugins.Display[display](this.decaf, this, this.el_display);
-	this.decaf.display = this.display;
+	this.decaf.debugString('Initializing display plugin "'+displayType+'" in: #' + this.el_display.id,'info');
+	const DisplayPlugin = DecafMUD_Global.plugins.Display[displayType];
+	if (DisplayPlugin) {
+		this.display = new DisplayPlugin(this.decaf, this, this.el_display);
+		this.decaf.display = this.display; // Also assign to decaf's main display reference
+	}
+
 
 	// Should we go fullscreen automatically?
-	this.goFullOnResize = this.store.get('fullscreen-auto', true);
+	(this as any).goFullOnResize = this.store.get('fullscreen-auto', true) as boolean;
 
 	// Should we be starting in fullscreen?
-	var fs = this.store.get('fullscreen-start', this.decaf.options.set_interface.start_full);
+	var fs = this.store.get('fullscreen-start', this.decaf.options.set_interface!.start_full) as boolean;
 
 	// Create the fullscreen button.
-	this.fsbutton = this.tbNew(
-		"Fullscreen".tr(this.decaf),
+	(this as any).fsbutton = this.tbNew( // fsbutton is an internal ID, not directly on IUi
+		"Fullscreen", // Removed .tr
 		undefined,
-		"Click to enter fullscreen mode.".tr(this.decaf),
+		"Click to enter fullscreen mode.", // Removed .tr
 		1,
 		true,
 		fs,
 		undefined,
-		function(e){ this.click_fsbutton(e); }
+		function(this: IUi, e: Event){ (this as any).click_fsbutton(e); }
 	);
 
 	// Create the log button.
-	this.logbutton = this.tbNew(
-		"Logs".tr(this.decaf),
+	(this as any).logbutton = this.tbNew( // logbutton is an internal ID
+		"Logs", // Removed .tr
 		undefined,
-		"Click to open a window containing this session's logs.".tr(this.decaf),
+		"Click to open a window containing this session's logs.", // Removed .tr
 		0,
 		true,
 		false,
 		undefined,
-		function(e){ this.showLogs(); }
+		function(this: IUi, e: Event){ this.showLogs!(); }
 	);
 
-	// Create a settings button.
-	//this.stbutton = this.tbNew(
-	//	"Settings".tr(this.decaf),
-	//	undefined,
-	//	"Click to change DecafMUD's settings.".tr(this.decaf),
-	//	1, true, false, undefined,
-	//	function(e){ this.showSettings(); }
-	//);
 
 	// Create the connected notification icon.
-	this.ico_connected = this.addIcon("You are currently disconnected.".tr(this.decaf), '', 'connectivity disconnected');
+	(this as any).ico_connected = this.addIcon("You are currently disconnected.", '', 'connectivity disconnected'); // Removed .tr ico_connected is internal ID
 
 	// Go directly to fullscreen if necessary.
 	if ( fs ) {
-		this.enter_fs(false);
+		this.enter_fs!(false);
 	} else {
 		// Still resize stuff.
-		if ( ! this._resizeToolbar() ) {
+		if ( !(this as any)._resizeToolbar() ) { // Assuming _resizeToolbar is an internal method
 			this.resizeScreen(false); }
 	}
 }
 
 /** Quick and dirty function for saving logs. */
-SimpleInterface.prototype.showLogs = function() {
-	//var wd = win.document;
+SimpleInterface.prototype.showLogs = function(this: IUi): void {
 
 	// Build some CSS.
 	var css = '', css2 = '';
-	if ( window.getComputedStyle ) {
-		var node = this.display.display, count=0;
+	if ( window.getComputedStyle && this.display ) {
+		var node: HTMLElement | null = this.display.display; // Type node explicitly
+		var count=0;
 		while(node) {
 			count += 1;
 			if(count>15){alert('Too high count!');return;}
@@ -466,17 +475,17 @@ SimpleInterface.prototype.showLogs = function() {
 				style.backgroundColor === 'transparent' ||
 				style.backgroundColor.substr(0,5) === 'rgba(') {
 				if(node === document.body) { break; }
-				node = node.parentNode;
+				node = node.parentNode as HTMLElement | null; // Ensure parentNode is HTMLElement or null
 			} else {
 				css = 'background-color:' + style.backgroundColor + ';';
 				break;
 			}
 		}
 		if(!css) { css = 'background-color:#000;'; }
-		var style = getComputedStyle(this.display.display,null);
-		css = 'body{'+css+'color:'+style.color+';}';
+		var displayStyle = getComputedStyle(this.display.display,null); // display is potentially undefined
+		css = 'body{'+css+'color:'+displayStyle.color+';}';
 
-		css2 = 'div{font-family:'+style.fontFamily+';font-size:'+style.fontSize+';}';
+		css2 = 'div{font-family:'+displayStyle.fontFamily+';font-size:'+displayStyle.fontSize+';}';
 	} else {
 		css = 'body{background:#000;color:#C0C0C0;}';
 		css2= 'div{font-family:monospace;}';
@@ -485,12 +494,12 @@ SimpleInterface.prototype.showLogs = function() {
 	var url = 'data:text/html,';
 
 	url += '<html><head><title>';
-	url += 'DecafMUD Session Log'.tr(this.decaf);
+	url += 'DecafMUD Session Log'; // Removed .tr
 	url += '</title><style>'+css+css2+'</style></head><body>';
 	url += '<h1>';
-	url += 'DecafMUD Session Log'.tr(this.decaf);
+	url += 'DecafMUD Session Log'; // Removed .tr
 	url += '</h2>';
-	url += '<div>' + this.display.display.innerHTML + '</div>';
+	url += '<div>' + (this.display ? this.display.display.innerHTML : '') + '</div>'; // Check if display exists
 	url += '</body></html>';
 
 	var win = window.open(url,'log-window','width=700,height=400,directories=no,location=no,menubar=no,status=no,toolbar=no,scrollbars=yes');
@@ -501,17 +510,23 @@ SimpleInterface.prototype.showLogs = function() {
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Storage for the settings div. */
-SimpleInterface.prototype.settings = undefined;
+SimpleInterface.prototype.settings = undefined as HTMLElement | undefined; // For showSettings
+(SimpleInterface.prototype as any).set_cont = undefined as HTMLElement | undefined; // Internal for showSettings
+(SimpleInterface.prototype as any).set_mid = undefined as HTMLElement | undefined; // Internal for showSettings
+(SimpleInterface.prototype as any).stbutton = -1; // Internal button ID for settings
+(SimpleInterface.prototype as any).toolbarPadding = undefined as number | undefined; // Internal
 
 /** Load the settings interface. */
-SimpleInterface.prototype.showSettings = function() {
+SimpleInterface.prototype.showSettings = function(this: IUi): void {
 	/** Is there already a settings element? */
 	if ( this.settings ) {
-		this.settings.parentNode.removeChild(this.settings);
+		if (this.settings.parentNode) { // Check if it has a parent before removing
+			this.settings.parentNode.removeChild(this.settings);
+		}
 		this.settings = undefined;
-		this.set_cont = undefined;
-		this.tbPressed(this.stbutton,false);
-		this.tbTooltip(this.stbutton,"Click to change DecafMUD's settings.".tr(this.decaf))
+		(this as any).set_cont = undefined;
+		this.tbPressed((this as any).stbutton,false); // Assuming stbutton is an ID
+		this.tbTooltip((this as any).stbutton,"Click to close the settings window.") // Removed .tr
 		this.el_display.setAttribute('tabIndex','0');
 
 		return;
@@ -522,8 +537,9 @@ SimpleInterface.prototype.showSettings = function() {
 	set.className = 'decafmud window settings';
 
 	// Apply top padding if the toolbar is visible
-	if ( this.toolbarPadding ) {
-		set.style.paddingTop = (this.toolbarPadding-5) + 'px';
+	const currentToolbarPadding = (this as any).toolbarPadding as number | undefined;
+	if ( currentToolbarPadding ) {
+		set.style.paddingTop = (currentToolbarPadding-5) + 'px';
 	}
 
 	// Create the secondary layer for pretty spacing.
@@ -538,34 +554,34 @@ SimpleInterface.prototype.showSettings = function() {
 
 	// Fill it with settings!
 	var h = document.createElement('h2');
-	h.innerHTML = "DecafMUD Settings".tr(this.decaf);
+	h.innerHTML = "DecafMUD Settings"; // Removed .tr
 	cont.appendChild(h);
 
-	var d = document.createElement('p');
-	d.innerHTML = "Use the form below to adjust DecafMUD's settings, then click Apply when you're done.".tr(this.decaf);
-	cont.appendChild(d);
+	var pDesc = document.createElement('p'); // Renamed d
+	pDesc.innerHTML = "Use the form below to adjust DecafMUD's settings, then click Apply when you're done."; // Removed .tr
+	cont.appendChild(pDesc);
 
 	// Go through decaf.settings.
 	for(var k in this.decaf.settings) {
 		var setting = this.decaf.settings[k];
 		// Create the container for this settings branch.
-		var s = document.createElement('fieldset');
-		s.className = 'decafmud settings';
+		var fieldsetEl = document.createElement('fieldset'); // Renamed s
+		fieldsetEl.className = 'decafmud settings';
 
 		// Calculate the name.
-		var n = k.substr(0,1).toUpperCase() + k.substr(1);
-		if ( setting['_name'] !== undefined ) { n = setting['_name']; }
+		var name = k.substr(0,1).toUpperCase() + k.substr(1); // Renamed n
+		if ( setting['_name'] !== undefined ) { name = setting['_name']; }
 
 		// Create a header.
-		var l = document.createElement('legend');
-		l.innerHTML = n.tr(this.decaf);
-		s.appendChild(l);
+		var legendEl = document.createElement('legend'); // Renamed l
+		legendEl.innerHTML = name; // Removed .tr
+		fieldsetEl.appendChild(legendEl);
 
 		// Is there a description?
 		if ( setting['_desc'] !== undefined ) {
-			var d = document.createElement('p');
-			d.innerHTML = setting['_desc'].tr(this.decaf);
-			s.appendChild(d);
+			var settingDescP = document.createElement('p'); // Renamed d
+			settingDescP.innerHTML = setting['_desc']; // Removed .tr
+			fieldsetEl.appendChild(settingDescP);
 		}
 
 		// Get the path.
@@ -575,97 +591,95 @@ SimpleInterface.prototype.showSettings = function() {
 		// Go through the controls.
 		for(var _k in setting) {
 			if ( _k.substr(0,1) === '_' ) { continue; }
-			var d = document.createElement('div'),
-				sett = setting[_k];
+			var controlDiv = document.createElement('div'); // Renamed d
+			const sett = setting[_k] as any; // Cast to any for simplicity
 
 			// Calculate the name.
-			var n = _k.substr(0,1).toUpperCase() + _k.substr(1);
-			if ( sett['_name'] !== undefined ) { n = sett['_name']; }
+			var controlName = _k.substr(0,1).toUpperCase() + _k.substr(1); // Renamed n
+			if ( sett['_name'] !== undefined ) { controlName = sett['_name']; }
 
 			// Calculate the ID.
 			var id = path + _k;
 
 			// Get the type of input element necessary.
-			var t = sett['_type'] || 'text';
+			var controlType = sett['_type'] || 'text'; // Renamed t
 
 			// Create the label if not boolean.
-			if ( t !== 'boolean' ) {
-				var l = document.createElement('label');
-				l.setAttribute('for', id);
-				l.innerHTML = n.tr(this.decaf);
-				d.appendChild(l);
+			if ( controlType !== 'boolean' ) {
+				var labelEl = document.createElement('label'); // Renamed l
+				labelEl.htmlFor = id; // Use htmlFor for label
+				labelEl.innerHTML = controlName; // Removed .tr
+				controlDiv.appendChild(labelEl);
 			}
 
 			// Create the input control
-			if ( t === 'password' ) {
-				var i = document.createElement('input');
-				i.setAttribute('id',id);
-				i.setAttribute('type','password');
-				d.appendChild(i);
-			} else if ( t === 'boolean' ) {
-				var i = document.createElement('input');
-				i.setAttribute('id',id);
-				i.setAttribute('type','checkbox');
-				d.appendChild(i);
-			} else if ( t === 'nochance' ) {
-				var i = document.createElement('select');
-				i.setAttribute('id',id);
-				var c = document.createElement('option');
-				c.setAttribute('value','true');
-				c.innerHTML = 'Yes';
-				i.appendChild(c);
-				c = document.createElement('option');
-				c.setAttribute('value','false');
-				c.innerHTML = 'No';
-				i.appendChild(c);
-				d.appendChild(i);
+			let inputEl: HTMLElement; // Renamed i
+			if ( controlType === 'password' ) {
+				const passInput = document.createElement('input');
+				passInput.id = id; passInput.type = 'password';
+				inputEl = passInput;
+			} else if ( controlType === 'boolean' ) {
+				const boolInput = document.createElement('input');
+				boolInput.id = id; boolInput.type = 'checkbox';
+				inputEl = boolInput;
+			} else if ( controlType === 'nochance' ) {
+				const selectInput = document.createElement('select');
+				selectInput.id = id;
+				var optTrue = document.createElement('option'); // Renamed c
+				optTrue.value = 'true'; optTrue.innerHTML = 'Yes';
+				selectInput.appendChild(optTrue);
+				var optFalse = document.createElement('option');
+				optFalse.value = 'false'; optFalse.innerHTML = 'No';
+				selectInput.appendChild(optFalse);
+				inputEl = selectInput;
 			} else {
-				var i = document.createElement('input');
-				i.setAttribute('id',id);
-				d.appendChild(i);
+				const textInput = document.createElement('input');
+				textInput.id = id;
+				inputEl = textInput;
 			}
+			controlDiv.appendChild(inputEl);
 
 			// Is there a desc?
 			if ( sett['_desc'] !== undefined ) {
-				var i;
-				if ( t === 'boolean' ) {
-					i = document.createElement('label');
-					i.setAttribute('for',id);
+				let descElement: HTMLElement; // Renamed i
+				if ( controlType === 'boolean' ) {
+					descElement = document.createElement('label');
+					(descElement as HTMLLabelElement).htmlFor = id;
 				} else {
-					i = document.createElement('p');
+					descElement = document.createElement('p');
 				}
-				i.innerHTML = sett['_desc'].tr(this.decaf);
-				d.appendChild(i);
-			} else if ( t === 'boolean' ) {
-				var i = document.createElement('label');
-				i.setAttribute('for',id);
-				i.innerHTML = n.tr(this.decaf);
-				d.appendChild(i);
+				descElement.innerHTML = sett['_desc']; // Removed .tr
+				controlDiv.appendChild(descElement);
+			} else if ( controlType === 'boolean' ) {
+				var boolLabel = document.createElement('label'); // Renamed i
+				boolLabel.htmlFor = id;
+				boolLabel.innerHTML = controlName; // Removed .tr
+				controlDiv.appendChild(boolLabel);
 			}
 
 			// Add this.
-			s.appendChild(d);
+			fieldsetEl.appendChild(controlDiv);
 		}
 
 
 		// Append the fieldset to the document.
-		cont.appendChild(s);
+		cont.appendChild(fieldsetEl);
 	}
 
 	// Compute the height.
 	var tot = this.container.offsetHeight - (this._input.offsetHeight + 17);
-	if ( this.toolbarPadding ) { tot = tot - (this.toolbarPadding-12); }
+	if ( currentToolbarPadding ) { tot = tot - (currentToolbarPadding-12); }
 	if ( tot < 0 ) { tot = 0; }
 	seccont.style.height = tot + 'px';
 
 	// Show the settings pane.
-	this.el_display.setAttribute('tabIndex','-1');
+	this.el_display.setAttribute('tabIndex','-1'); // Make display unfocusable while settings open
 	this.container.insertBefore(set, this.el_display);
 	this.settings = set;
-	this.set_cont = cont;
-	this.set_mid  = seccont;
-	this.tbPressed(this.stbutton,true);
-	this.tbTooltip(this.stbutton,"Click to close the settings window.".tr(this.decaf));
+	(this as any).set_cont = cont;
+	(this as any).set_mid  = seccont;
+	this.tbPressed((this as any).stbutton,true);
+	this.tbTooltip((this as any).stbutton,"Click to close the settings window."); // Removed .tr
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -674,86 +688,87 @@ SimpleInterface.prototype.showSettings = function() {
 
 /** Delete a toolbar button with the given ID.
  * @param {number} id The ID of the button to delete. */
-SimpleInterface.prototype.tbDelete = function(id) {
+SimpleInterface.prototype.tbDelete = function(this: IUi, id: number): void {
 	if ( this.toolbuttons[id] === undefined ) { return; }
-	var btn = this.toolbuttons[id];
-	btn[0].parentNode.removeChild(btn[0]);
-	this.toolbuttons[id] = undefined;
-	delete btn;
+	var btnTuple = this.toolbuttons[id]; // btn is a tuple: [HTMLElement, ...]
+	if (btnTuple[0].parentNode) { // Check parentNode before removing
+		btnTuple[0].parentNode.removeChild(btnTuple[0]);
+	}
+	delete this.toolbuttons[id]; // Use delete for object properties
 
 	// Resize the toolbar.
-	this._resizeToolbar();
+	(this as any)._resizeToolbar(); // Internal method, cast to any if not on IUi
 }
 
 /** Change a toolbar button's text. */
-SimpleInterface.prototype.tbText = function(id, text) {
-	var btn = this.toolbuttons[id];
-	if ( btn === undefined ) { throw "Invalid button ID."; }
+SimpleInterface.prototype.tbText = function(this: IUi, id: number, text: string): void {
+	var btnTuple = this.toolbuttons[id];
+	if ( btnTuple === undefined ) { throw "Invalid button ID."; }
 	if ( !text ) { throw "Text can't be empty/false/null/whatever."; }
-	btn[0].innerHTML = text;
-	if ( btn[3] === undefined ) {
-		btn[3] = text;
-		btn[0].title = text; }
+	btnTuple[0].innerHTML = text; // Element is at index 0
+	if ( btnTuple[3] === undefined ) { // Tooltip is at index 3
+		btnTuple[3] = text; // Store original text as tooltip if no tooltip
+		(btnTuple[0] as HTMLElement).title = text; }
 }
 
 /** Change a toolbar button's tooltip. */
-SimpleInterface.prototype.tbTooltip = function(id, tooltip) {
-	var btn = this.toolbuttons[id];
-	if ( btn === undefined ) { throw "Invalid button ID."; }
-	btn[3] = tooltip;
-	if ( tooltip ) { btn[0].title = tooltip; }
-	else { btn[0].title = btn[1]; }
+SimpleInterface.prototype.tbTooltip = function(this: IUi, id: number, tooltip: string): void {
+	var btnTuple = this.toolbuttons[id];
+	if ( btnTuple === undefined ) { throw "Invalid button ID."; }
+	btnTuple[3] = tooltip; // Store new tooltip (index 3)
+	if ( tooltip ) { (btnTuple[0] as HTMLElement).title = tooltip; }
+	else { (btnTuple[0] as HTMLElement).title = btnTuple[1]; } // Use text (index 1) as title if tooltip empty
 }
 
 /** Enable or disable a toolbar button. */
-SimpleInterface.prototype.tbEnabled = function(id, enabled) {
-	var btn = this.toolbuttons[id];
-	if ( btn === undefined ) { throw "Invalid button ID."; }
+SimpleInterface.prototype.tbEnabled = function(this: IUi, id: number, enabled: boolean): void {
+	var btnTuple = this.toolbuttons[id];
+	if ( btnTuple === undefined ) { throw "Invalid button ID."; }
 	enabled = !!(enabled);
-	btn[5] = enabled;
-	btn[0].setAttribute('aria-disabled', !enabled);
-	if ( enabled ) { btn[0].className = btn[0].className.replace(' disabled',''); }
-	else if (! /disabled/.test(btn[0].className) ) {
-		btn[0].className += ' disabled'; }
+	btnTuple[5] = enabled; // Store enabled state (index 5)
+	btnTuple[0].setAttribute('aria-disabled', String(!enabled));
+	if ( enabled ) { btnTuple[0].className = btnTuple[0].className.replace(' disabled',''); }
+	else if (! /disabled/.test(btnTuple[0].className) ) {
+		btnTuple[0].className += ' disabled'; }
 }
 
 /** Change a toolbar button's pressed state. */
-SimpleInterface.prototype.tbPressed = function(id, pressed) {
-	var btn = this.toolbuttons[id];
-	if ( btn === undefined ) { throw "Invalid button ID."; }
+SimpleInterface.prototype.tbPressed = function(this: IUi, id: number, pressed: boolean): void {
+	var btnTuple = this.toolbuttons[id];
+	if ( btnTuple === undefined ) { throw "Invalid button ID."; }
 	pressed = !!(pressed);
-	btn[6] = pressed;
-	btn[0].setAttribute('aria-pressed',pressed);
+	btnTuple[6] = pressed; // Store pressed state (index 6)
+	btnTuple[0].setAttribute('aria-pressed', String(pressed));
 	if ( pressed ) {
-		if ( /toggle-depressed/.test(btn[0].className) ) {
-			btn[0].className = btn[0].className.replace(' toggle-depressed',' toggle-pressed'); }
+		if ( /toggle-depressed/.test(btnTuple[0].className) ) {
+			btnTuple[0].className = btnTuple[0].className.replace(' toggle-depressed',' toggle-pressed'); }
 	} else {
-		if ( /toggle-pressed/.test(btn[0].className) ) {
-			btn[0].className = btn[0].className.replace(' toggle-pressed',' toggle-depressed'); }
+		if ( /toggle-pressed/.test(btnTuple[0].className) ) {
+			btnTuple[0].className = btnTuple[0].className.replace(' toggle-pressed',' toggle-depressed'); }
 	}
 }
 
 /** Change a toolbar button's class. */
-SimpleInterface.prototype.tbClass = function(id, clss) {
-	var btn = this.toolbuttons[id];
-	if ( btn === undefined ) { throw "Invalid button ID."; }
-	var old_clss = btn[7];
-	btn[7] = clss;
-	if ( old_clss !== undefined ) { btn[0].className = btn[0].className.replace(' '+old_clss,''); }
-	if ( clss ) { btn[0].className += ' ' + clss; }
+SimpleInterface.prototype.tbClass = function(this: IUi, id: number, clss: string): void {
+	var btnTuple = this.toolbuttons[id];
+	if ( btnTuple === undefined ) { throw "Invalid button ID."; }
+	var old_clss = btnTuple[7]; // Store old class (index 7)
+	btnTuple[7] = clss; // Store new class
+	if ( old_clss !== undefined ) { btnTuple[0].className = btnTuple[0].className.replace(' '+old_clss,''); }
+	if ( clss ) { btnTuple[0].className += ' ' + clss; }
 }
 
 /** Change a toolbar button's icon. */
-SimpleInterface.prototype.tbIcon = function(id, icon) {
-	var btn = this.toolbuttons[id];
-	if ( btn === undefined ) { throw "Invalid button ID."; }
-	btn[2] = icon;
+SimpleInterface.prototype.tbIcon = function(this: IUi, id: number, icon: string): void {
+	var btnTuple = this.toolbuttons[id];
+	if ( btnTuple === undefined ) { throw "Invalid button ID."; }
+	btnTuple[2] = icon; // Store icon URL (index 2)
 	if ( icon ) {
-		if (! / icon/.test(btn[0].className) ) { btn[0].className += ' icon'; }
-		btn[0].style.cssText = 'background-image: url('+icon+');';
+		if (! / icon/.test(btnTuple[0].className) ) { btnTuple[0].className += ' icon'; }
+		(btnTuple[0] as HTMLElement).style.backgroundImage = `url(${icon})`;
 	} else {
-		btn[0].className = btn[0].className.replace(' icon','');
-		btn[0].style.cssText = ''; }
+		btnTuple[0].className = btnTuple[0].className.replace(' icon','');
+		(btnTuple[0] as HTMLElement).style.backgroundImage = ''; }
 }
 
 /** Create a new toolbar button.
@@ -767,160 +782,180 @@ SimpleInterface.prototype.tbIcon = function(id, icon) {
  * @param {String} [clss] Any additional class to set on the button.
  * @param {function} [onclick] The function to call when the button is clicked
  *    or toggled. */
-SimpleInterface.prototype.tbNew = function(text,icon,tooltip,type,enabled,pressed,clss,onclick) {
-	if ( typeof icon === 'function' ) {
-		var onc = onclick;
-		onclick = icon;
-		icon = tooltip;
-		tooltip = type;
-		type = enabled;
-		enabled = pressed;
-		pressed = clss;
-		clss = onc; }
+SimpleInterface.prototype.tbNew = function(
+	this: IUi,
+	text: string,
+	icon?: string,
+	tooltip?: string,
+	type?: number, // 0 normal, 1 toggle
+	enabled?: boolean,
+	pressed?: boolean,
+	clss?: string,
+	onclick?: (e: Event) => void
+): number {
+	// Simplified overload handling for type safety, assuming standard order or explicit undefined
+	if ( typeof icon === 'function' ) { // This was a JS way to handle optional args, less safe in TS
+		onclick = icon as (e: Event) => void; // Cast: if icon is func, it's onclick
+		icon = tooltip as string | undefined; // Shift args
+		tooltip = type as string | undefined;
+		type = enabled as number | undefined;
+		enabled = pressed as boolean | undefined;
+		pressed = clss as boolean | undefined;
+		clss = undefined; // onc was not defined here, assume no class
+	 }
 
 	// Get this button's ID.
-	var ind = ( ++this.toolbutton_id );
+	var ind = ( ++(this as any).toolbutton_id ); // Internal counter
 
-	var btn = document.createElement('a');
+	var btn = document.createElement('a'); // Toolbar buttons are anchors
 	btn.id = this.container.id + '-toolbar-button-' + ind;
 	btn.className = 'decafmud button toolbar-button';
 	if ( clss ) { btn.className += ' ' + clss; }
 	if ( type === 1 ) { btn.className += ' toggle ' + (pressed ? 'toggle-pressed' : 'toggle-depressed'); }
 	btn.innerHTML = text;
 	if ( tooltip ) { btn.title = tooltip; }
-	else { btn.title = text; }
-	if ( enabled !== false ) { enabled = true; }
+	else { btn.title = text; } // Default tooltip to text
+	if ( enabled !== false ) { enabled = true; } // Default to true
+	else { enabled = false; }
 	if ( !enabled ) { btn.className += ' disabled'; }
-	btn.setAttribute('tabIndex','0');
+	btn.setAttribute('tabIndex','0'); // Make it focusable
 
 	// Set accessibility data
 	btn.setAttribute('role','button');
-	btn.setAttribute('aria-disabled', !enabled);
-	if ( type === 1 ) {
-		btn.setAttribute('aria-pressed', pressed); }
+	btn.setAttribute('aria-disabled', String(!enabled));
+	if ( type === 1 ) { // Toggle button
+		btn.setAttribute('aria-pressed', String(!!pressed)); } // Ensure pressed is boolean
 
 	// Is there an icon?
 	if ( icon ) {
-		btn.style.cssText = 'background-image: url('+icon+');';
+		btn.style.backgroundImage = `url(${icon})`; // Use template literal
 		btn.className += ' icon'; }
 
 	if ( onclick ) {
-		var si = this;
-		var helper = function(e) {
-			if ( e.type === 'keydown' && e.keyCode !== 13 ) { return; }
-			var btn = si.toolbuttons[ind];
-			if ( btn[5] !== true ) { return; }
+		var si = this; // Capture 'this' (the IUi instance)
+		var helper = function(e: Event) {
+			if ( (e as KeyboardEvent).type === 'keydown' && (e as KeyboardEvent).keyCode !== 13 ) { return; } // Only act on Enter for keydown
+			var btnArr = si.toolbuttons[ind]; // Get button data from stored array
+			if ( btnArr && btnArr[5] !== true ) { return; } // Check enabled state (index 5 in tuple)
 
-			onclick.call(si, e);
-			if ( e.type && e.type !== 'keydown' ) { btn[0].blur(); }
+			onclick!.call(si, e); // Call the provided onclick, 'this' will be the IUi instance
+			if ( e.type && e.type !== 'keydown' && btnArr) { (btnArr[0] as HTMLElement).blur(); } // Blur after click unless it was a keydown
 		}
 		addEvent(btn, 'click', helper);
 		addEvent(btn, 'keydown', helper);
 	}
 
 	// Focus Helpers
-	addEvent(btn,'focus',function(e) {
+	addEvent(btn,'focus',function(this: HTMLElement, e: Event) { // 'this' is the button element here
 		if (! this.parentNode ) { return; }
-		if (/toolbar/.test(this.parentNode.className)) {
-			this.parentNode.setAttribute('aria-activedescendant', this.id);
-			this.parentNode.className += ' visible'; }
+		const parentNode = this.parentNode as HTMLElement; // Assume parent is HTMLElement
+		if (/toolbar/.test(parentNode.className)) { // If parent is the toolbar
+			parentNode.setAttribute('aria-activedescendant', this.id); // For ARIA navigation
+			parentNode.className += ' visible'; } // Make toolbar visible on focus
 	});
-	addEvent(btn,'blur',function(e) {
+	addEvent(btn,'blur',function(this: HTMLElement, e: Event) { // 'this' is the button element
 		if (! this.parentNode ) { return; }
-		if (/toolbar/.test(this.parentNode.className)) {
-			if ( this.parentNode.getAttribute('aria-activedescendant') === this.id ) {
-				this.parentNode.setAttribute('aria-activedescendant', ''); }
-			this.parentNode.className = this.parentNode.className.replace(' visible',''); }
+		const parentNode = this.parentNode as HTMLElement;
+		if (/toolbar/.test(parentNode.className)) {
+			if ( parentNode.getAttribute('aria-activedescendant') === this.id ) {
+				parentNode.setAttribute('aria-activedescendant', ''); } // Clear active descendant
+			parentNode.className = parentNode.className.replace(' visible',''); } // Hide toolbar if no focus
 	});
 
-	// Store the button.
-	this.toolbuttons[ind] = [btn,text,icon,tooltip,type,enabled,pressed,clss,onclick];
-	btn.setAttribute('button-id', ind);
+	// Store the button and its data in a tuple/array
+	this.toolbuttons[ind] = [btn,text,icon,tooltip,type || 0,enabled,!!pressed,clss,onclick];
+	btn.setAttribute('button-id', String(ind)); // Store ID on element for easier retrieval if needed
 
 	// Add it to the toolbar.
 	this.toolbar.appendChild(btn);
 
 	// Resize the toolbar.
-	this._resizeToolbar();
+	(this as any)._resizeToolbar(); // Internal method, cast to any if not on IUi
 
-	return ind;
+	return ind; // Return the ID of the new button
 }
 
+
 /** Resize the toolbar when adding/changing/removing a button. */
-SimpleInterface.prototype.toolbarPadding = undefined;
-SimpleInterface.prototype._resizeToolbar = function() {
-	var tbar = this.store.get('toolbar-position','top-left'),
-		always = this.store.get('toolbar-always',2),
-		css = this.toolbar.style.cssText,
-		ret = false;
+// SimpleInterface.prototype.toolbarPadding = undefined; // This is an internal property, should be on `this` if needed
+SimpleInterface.prototype._resizeToolbar = function(this: IUi): boolean { // Made internal, return type assumed boolean from original
+	var tbarPos = this.store!.get('toolbar-position','top-left') as string; // store is IStorage, get returns any
+	var alwaysOpt = this.store!.get('toolbar-always',2) as number; // 0=never, 1=always, 2=fullscreen only
+	var css = this.toolbar.style.cssText;
+	var ret = false;
 
-	if ( this.old_tbarpos !== tbar ) {
+	const currentOldTbarPos = (this as any).old_tbarpos as string | undefined; // Internal tracking property
+	if ( currentOldTbarPos !== tbarPos ) {
 		// Move the toolbar.
-		this.toolbar.className = this.toolbar.className.replace(' '+this.old_tbarpos,' '+tbar);
+		if(currentOldTbarPos) this.toolbar.className = this.toolbar.className.replace(' '+currentOldTbarPos,' '+tbarPos);
+		else this.toolbar.className += ' ' + tbarPos; // First time setting
 
-		// Remove the old class from the toolbar's CSS.
-		if ( this.old_tbarpos === 'top-left' || this.old_tbarpos === 'top-right' ) {
+
+		// Remove the old position class from the toolbar's CSS if it was inline (less likely with class-based positioning)
+		if ( currentOldTbarPos === 'top-left' || currentOldTbarPos === 'top-right' ) {
 			css = css.replace(/top:[\s\-0-9a-z]+;/g, '');
-		} else if ( this.old_tbarpos === 'left' ) {
+		} else if ( currentOldTbarPos === 'left' ) {
 			css = css.replace(/left:[\s\-0-9a-z]+;/g, '');
-		} else {
+		} else if (currentOldTbarPos) { // implies 'right'
 			css = css.replace(/right:[\s\-0-9a-z]+;/g, '');
 		}
 
 		// Store the new position.
-		this.old_tbarpos = tbar;
+		(this as any).old_tbarpos = tbarPos;
 	}
 
 	// Do we need to add or remove always-on?
-	if ( always === 0 ) { always = false; }
-	else if ( always === 1 ) { always = true; }
-	else { always = this.container.className.indexOf('fullscreen') !== -1; }
+	let alwaysVisible: boolean;
+	if ( alwaysOpt === 0 ) { alwaysVisible = false; }
+	else if ( alwaysOpt === 1 ) { alwaysVisible = true; }
+	else { alwaysVisible = this.container.className.indexOf('fullscreen') !== -1; } // fullscreen only
 
-	if ( this.toolbar.className.indexOf(' always-on') === -1 && always ) {
+	if ( this.toolbar.className.indexOf(' always-on') === -1 && alwaysVisible ) {
 		this.toolbar.className += ' always-on';
-	} else if ( this.toolbar.className.indexOf(' always-on') !== -1 && !always ) {
+	} else if ( this.toolbar.className.indexOf(' always-on') !== -1 && !alwaysVisible ) {
 		this.toolbar.className = this.toolbar.className.replace(' always-on','');
 	}
 
+	const currentToolbarPadding = (this as any).toolbarPadding as number | undefined; // Internal tracking
 	// If the toolbar is always-on and top-left or top-right...
 	if ( / always-on/.test(this.toolbar.className) && / top-(?:left|right)/.test(this.toolbar.className) ) {
-		if ( this.settings && this.toolbarPadding !== this.toolbar.clientHeight ) {
+		if ( this.settings && currentToolbarPadding !== this.toolbar.clientHeight ) { // settings is HTMLElement | undefined
 			this.settings.style.paddingTop = (this.toolbar.clientHeight-5) + 'px';
 		}
-		if ( this.display && this.toolbarPadding !== this.toolbar.clientHeight ) {
+		if ( this.display && currentToolbarPadding !== this.toolbar.clientHeight ) { // display is IDisplay | undefined
 			// If we have a display, check its padding.
-			this.display.shouldScroll();
+			this.display.shouldScroll(); // Assuming shouldScroll exists
 			this.el_display.style.paddingTop = this.toolbar.clientHeight + 'px';
-			this.toolbarPadding = this.toolbar.clientHeight;
-			this.resizeScreen(false,true);
-			this.display.doScroll();
+			(this as any).toolbarPadding = this.toolbar.clientHeight;
+			this.resizeScreen(false,true); // Call resizeScreen
+			this.display.doScroll(); // Assuming doScroll exists
 			ret = true;
-		} else {
-			this.toolbarPadding = this.toolbar.clientHeight;
+		} else if (this.display) { // If display exists but padding hasn't changed, still might need to set toolbarPadding
+			(this as any).toolbarPadding = this.toolbar.clientHeight;
 		}
-	} else if ( this.toolbarPadding !== undefined ) {
+	} else if ( currentToolbarPadding !== undefined ) { // Toolbar is not always-on top or has changed
 		if ( this.settings ) {
-			this.settings.style.paddingTop = '';
+			this.settings.style.paddingTop = ''; // Clear padding
 		}
 		if ( this.display ) {
 			this.display.shouldScroll();
-			this.el_display.style.paddingTop = '0px';
-			this.toolbarPadding = undefined;
+			this.el_display.style.paddingTop = '0px'; // Reset padding
+			(this as any).toolbarPadding = undefined;
 			this.resizeScreen(false,true);
 			this.display.doScroll();
 			ret = true;
 		}
 	}
 
-	// Get the toolbar width and height.
-	var w = -1 * (this.toolbar.clientWidth - 15),
-		h = -1 * (this.toolbar.clientHeight - 12);
+	// Get the toolbar width and height for positioning when not always-on (hover-reveal)
+	var w = -1 * (this.toolbar.clientWidth - 15); // Negative for offset
+	var h = -1 * (this.toolbar.clientHeight - 12);
 
-	if ( / left/.test(this.toolbar.className) ) {
+	if ( / left/.test(this.toolbar.className) ) { // For left-side toolbar
 		css = css.replace(/left:[\s\-0-9a-z]+;/g, '') + 'left:'+w+'px;';
-	} else if ( / right/.test(this.toolbar.className) ) {
+	} else if ( / right/.test(this.toolbar.className) ) { // For right-side toolbar
 		css = css.replace(/right:[\s\-0-9a-z]+;/g,'') + 'right:'+w+'px;';
-	} else {
+	} else { // top-left or top-right
 		css = css.replace(/top:[\s\-0-9a-z]+;/g, '') + 'top:'+h+'px;';
 	}
 	this.toolbar.style.cssText = css;
@@ -933,16 +968,17 @@ SimpleInterface.prototype._resizeToolbar = function() {
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Create a scroll button for the main output pane. */
-SimpleInterface.prototype.showScrollButton = function() {
+SimpleInterface.prototype.showScrollButton = function(this: IUi): void {
 	if ( this.scrollButton !== undefined ) { return; }
 
-	var sb = document.createElement('div'), si = this;
+	var sb = document.createElement('div');
+	var si = this; // Capture 'this'
 	sb.className = 'button scroll-button';
-	sb.setAttribute('tabIndex',0);
-	sb.innerHTML = "More".tr(this.decaf);
-	var helper = function(e) {
-		if ( e.type == 'keydown' && e.keyCode !== 13 ) { return; }
-		si.display.scrollNew(); }
+	sb.setAttribute('tabIndex','0');
+	sb.innerHTML = "More"; // Removed .tr
+	var helper = function(e: Event) {
+		if ( (e as KeyboardEvent).type == 'keydown' && (e as KeyboardEvent).keyCode !== 13 ) { return; }
+		si.display!.scrollNew!(); } // Assuming display and scrollNew are defined and non-null
 	addEvent(sb, 'click', helper);
 	addEvent(sb, 'keydown', helper);
 
@@ -950,13 +986,15 @@ SimpleInterface.prototype.showScrollButton = function() {
 
 	// Add the button, then reflow.
 	this.container.appendChild(sb);
-	sb.style.cssText = 'bottom:' + (this._input.offsetHeight + 12) + 'px';
+	sb.style.bottom = (this._input.offsetHeight + 12) + 'px'; // Direct assignment
 }
 
 /** Destroy the scroll button. */
-SimpleInterface.prototype.hideScrollButton = function() {
+SimpleInterface.prototype.hideScrollButton = function(this: IUi): void {
 	if ( this.scrollButton === undefined ) { return; }
-	this.scrollButton.parentNode.removeChild(this.scrollButton);
+	if (this.scrollButton.parentNode) { // Check parentNode before removing
+		this.scrollButton.parentNode.removeChild(this.scrollButton);
+	}
 	this.scrollButton = undefined; }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -979,185 +1017,215 @@ SimpleInterface.prototype.hideScrollButton = function() {
  * @param {Array}  [buttons] A list of buttons to be displayed.
  * @param {function} [click] A function to be called when the bar is clicked.
  * @param {function} [close] A function to be called when the bar is closed. */
-SimpleInterface.prototype.infoBar = function(text, clss, timeout, icon, buttons, click, close) {
-	if ( typeof clss === 'number' ) {
-		var t = timeout;
-		timeout = clss;
-		clss = t; }
+// Internal state for infoBar
+(SimpleInterface.prototype as any).ibar = undefined as HTMLElement | undefined;
+(SimpleInterface.prototype as any).ibartimer = undefined as any; // Timer ID
 
-	if ( clss === undefined ) { clss = 'info'; }
-	if ( timeout === undefined ) { timeout = 0; }
+SimpleInterface.prototype.infoBar = function(
+	this: IUi,
+	text: string,
+	clss?: string,
+	timeout?: number,
+	icon?: string,
+	buttons?: [string, (e: Event) => void][], // Array of [buttonText, callback]
+	click?: (e: Event) => void,
+	close?: (e: Event) => void
+): void {
+	if ( typeof clss === 'number' ) { // JS way of handling optional args by type sniffing
+		const tempTimeout = timeout; // Store original timeout if it was passed after number-clss
+		timeout = clss; // clss is actually timeout
+		clss = tempTimeout as string | undefined; // old timeout becomes clss, or undefined
+	}
 
-	var ibar = {
-		'text'		: text,
-		'class'		: clss,
-		'timeout'	: timeout,
-		'icon'		: icon,
-		'buttons'	: buttons,
-		'click'		: click,
-		'close'		: close
+	if ( clss === undefined ) { clss = 'info'; } // Default class
+	if ( timeout === undefined ) { timeout = 0; } // Default timeout (0 = no auto-close)
+
+	var ibarData = { // Store as an object for clarity
+		text: text,
+		class: clss,
+		timeout: timeout,
+		icon: icon,
+		buttons: buttons,
+		click: click,
+		close: close,
+		el: undefined as HTMLElement | undefined // To store the DOM element once created
 	};
-	this.infobars.push(ibar);
+	this.infobars.push(ibarData); // Add to queue
 
-	// Is there a current information bar?
-	if ( this.ibar !== undefined ) { return; }
+	// Is there a current information bar? If so, don't create a new one yet.
+	if ( (this as any).ibar !== undefined ) { return; }
 
-	// Create a new infobar.
-	this.createIBar();
+	// Create a new infobar (will take the first from the queue).
+	this.createIBar!(); // Assert createIBar is defined
 }
 
 /** Same as the regular infoBar function, but only adds an infoBar if it will
  *  be displayed immediately. */
-SimpleInterface.prototype.immediateInfoBar = function(text, clss, timeout, icon, buttons, click, close) {
-	if ( this.ibar !== undefined ) { return false; }
+SimpleInterface.prototype.immediateInfoBar = function(
+	this: IUi,
+	text: string,
+	clss?: string,
+	timeout?: number,
+	icon?: string,
+	buttons?: [string, (e: Event) => void][],
+	click?: (e: Event) => void,
+	close?: (e: Event) => void
+): boolean {
+	if ( (this as any).ibar !== undefined ) { return false; } // Don't add if one is already showing
 	this.infoBar(text, clss, timeout, icon, buttons, click, close);
 	return true;
 }
 
 /** Helper for adding buttons to an IBar. */
-var addButton = function(bar, btn, si) {
+var addButtonToIBarInternal = function(bar: HTMLElement, btnData: [string, (e: Event) => void], si: IUi): void { // Renamed to avoid conflict
 	var b = document.createElement('a');
 	b.className = 'button';
-	b.setAttribute('href','#');
-	b.setAttribute('onclick','return false;');
-	b.innerHTML = btn[0];
-	addEvent(b, 'click', function(e) {
-		si.closeIBar(true);
-		setTimeout(function(){ btn[1].call(si,e); },0);
+	b.href = '#'; // Use href for anchors
+	b.onclick = () => false; // Prevent default action and stop propagation simply
+	b.innerHTML = btnData[0]; // Button text
+	addEvent(b, 'click', function(e: Event) {
+		si.closeIBar!(true); // Close the bar, then execute callback
+		setTimeout(function(){ btnData[1].call(si,e); },0); // Callback with 'this' as IUi
 
 		// Stop it from propagating
-		e.cancelBubble = true;
-		if ( e.stopPropagation ) { e.stopPropagation() }
+		if(e.stopPropagation) e.stopPropagation();
+		else (e as any).cancelBubble = true; // For older IE
 
-		return false; });
+		return false; }); // Redundant due to onclick = () => false
 	bar.appendChild(b);
 }
 
 /** Handle the creation of showing of the info bar. Used internally. */
-SimpleInterface.prototype.createIBar = function() {
-	var si = this,
-		ibar = this.infobars[0],
-		obj = document.createElement('div');
+SimpleInterface.prototype.createIBar = function(this: IUi): void { // Internal method
+	var si = this; // Capture 'this' (IUi instance)
+	if (this.infobars.length === 0) return; // No bars in queue
+
+	const ibarData = this.infobars[0] as any; // Get first bar from queue (cast to any for simplicity)
+	const obj = document.createElement('div'); // The bar element
 
 	// Accessibility
-	obj.setAttribute('role', 'alert');
+	obj.setAttribute('role', 'alert'); // Important for screen readers
 
-	obj.className = 'decafmud infobar ' + ibar['class'];
-	obj.innerHTML = ibar.text;
-	obj.style.cssText = 'top: -26px;';
+	obj.className = 'decafmud infobar ' + ibarData.class;
+	obj.innerHTML = ibarData.text;
+	obj.style.top = '-26px'; // Initial position for slide-in animation
 
 	// If it's clickable, make it focusable too.
-	if ( ibar.click !== undefined ) {
+	if ( ibarData.click !== undefined ) {
 		obj.className += ' clickable';
-		obj.setAttribute('tabIndex','0');
+		obj.setAttribute('tabIndex','0'); // Make it focusable
 	}
 
 	// Create the close/click handlers.
-	var closer = function(e) {
-		if ( e === undefined || ( e.type === 'keydown' && e.keyCode !== 13 && e.keyCode !== 27 )) { return; }
-		if ( e.type === 'click' && !ibar.click ) { return; }
+	var closer = function(e: Event) {
+		const keyboardEvent = e as KeyboardEvent;
+		if ( e === undefined || ( keyboardEvent.type === 'keydown' && keyboardEvent.keyCode !== 13 && keyboardEvent.keyCode !== 27 )) { return; } // Enter or Esc for keydown
+		if ( e.type === 'click' && !ibarData.click ) { return; } // If not clickable, ignore click
 
 		// Stop it from propagating
-		e.cancelBubble = true;
-		if ( e.stopPropagation ) { e.stopPropagation() }
+		if(e.stopPropagation) e.stopPropagation();
+		else (e as any).cancelBubble = true;
 
 		// Close it.
-		si.closeIBar(true);
+		si.closeIBar!(true); // Close immediately
 
-		if ( e.type === 'keydown' && e.keyCode === 27 ) {
+		if ( keyboardEvent.type === 'keydown' && keyboardEvent.keyCode === 27 ) { // If Esc key
 			// Return before the click function can be called.
-			if ( ibar.close ) {
-				ibar.close.call(si, e); }
+			if ( ibarData.close ) { // If a close callback is defined
+				ibarData.close.call(si, e); } // Call it
 			return; }
 
-		if ( ibar.click ) {
-			ibar.click.call(si, e); }
+		if ( ibarData.click ) { // If a click callback is defined
+			ibarData.click.call(si, e); } // Call it
 	};
 
 	// Add events.
 	addEvent(obj, 'click', closer);
 	addEvent(obj, 'keydown', closer);
 
-	// Create the close button.
+	// Create the close button (the 'X').
 	var closebtn = document.createElement('div');
 	closebtn.innerHTML = 'X';
 	closebtn.className = 'close';
-	closebtn.setAttribute('tabIndex','0');
-	var helper = function(e) {
-		if ( e === undefined || ( e.type === 'keydown' && e.keyCode !== 13 )) { return; }
-		si.closeIBar(true);
-		if ( ibar.close ) { ibar.close.call(si, e); }
+	closebtn.setAttribute('tabIndex','0'); // Make it focusable
+	var closeHelper = function(e: Event) { // Renamed helper to avoid conflict
+		const keyboardEvent = e as KeyboardEvent;
+		if ( e === undefined || ( keyboardEvent.type === 'keydown' && keyboardEvent.keyCode !== 13 )) { return; } // Enter for keydown
+		si.closeIBar!(true); // Close immediately
+		if ( ibarData.close ) { ibarData.close.call(si, e); } // Call close callback if defined
 
 		// Stop it from propagating
-		e.cancelBubble = true;
-		if ( e.stopPropagation ) { e.stopPropagation() }
+		if(e.stopPropagation) e.stopPropagation();
+		else (e as any).cancelBubble = true;
 	};
-	addEvent(closebtn, 'click', helper);
-	addEvent(closebtn, 'keydown', helper);
-	obj.insertBefore(closebtn, obj.firstChild); //appendChild(closebtn);
+	addEvent(closebtn, 'click', closeHelper);
+	addEvent(closebtn, 'keydown', closeHelper);
+	obj.insertBefore(closebtn, obj.firstChild); // Insert before text
 
-	// Create the buttons.
-	if ( ibar.buttons ) {
+	// Create the buttons if any are defined.
+	if ( ibarData.buttons ) {
 		var btncont = document.createElement('div');
-		btncont.className = 'btncont';
-		for(var i=0; i<ibar.buttons.length; i++) {
-			addButton(btncont, ibar.buttons[i], this);
+		btncont.className = 'btncont'; // Container for buttons
+		for(var i=0; i<ibarData.buttons.length; i++) {
+			addButtonToIBarInternal(btncont, ibarData.buttons[i], this); // Use renamed helper
 		}
-		obj.insertBefore(btncont, closebtn);
+		obj.insertBefore(btncont, closebtn); // Insert buttons before close button
 	}
 
 	// Add it to the document.
-	this.ibar = obj;
-	ibar.el = obj;
-	this.container.insertBefore(obj, this.container.firstChild);
+	(this as any).ibar = obj; // Store the current bar element on the instance
+	ibarData.el = obj; // Store element on the data object too
+	this.container.insertBefore(obj, this.container.firstChild); // Add to top of container
 
-	// Add awesome styling.
+	// Add awesome styling (slide-in animation and icon).
 	setTimeout(function(){
-		var pt = 0;
-		if ( window.getComputedStyle ) {
-			pt = parseInt(getComputedStyle(obj,null).paddingTop); }
-		else if ( obj.currentStyle ) {
-			pt = parseInt(obj.currentStyle['paddingTop']); }
-		if ( si.toolbarPadding ) { pt += si.toolbarPadding - 10; }
-		obj.style.cssText = 'background-position: 5px '+pt+'px;' +
-			'padding-top: '+pt+'px;' +
-			'-webkit-transition: top 0.1s linear;' +
-			'-moz-transition: top 0.1s linear;' +
-			'-o-transition: top 0.1s linear;' +
-			'transition: top 0.1s linear; top: inherit';
-		if ( ibar.icon ) {
-			obj.style.cssText += 'background-image: url("'+ibar.icon+'")'; }
-	},0);
+		let pt = 0; // Padding-top
+		const computedStyle = window.getComputedStyle ? getComputedStyle(obj,null) : (obj as any).currentStyle; // Cross-browser style
+		if (computedStyle) {
+			pt = parseInt(computedStyle.paddingTop || '0');
+		}
 
-	// If there's a timeout, create the timer.
-	if ( ibar.timeout > 0 ) {
-		this.ibartimer = setTimeout(function() {
-			si.closeIBar(); }, 1000 * ibar.timeout);
+		const currentToolbarPadding = (si as any).toolbarPadding as number | undefined; // Internal tracking for toolbar
+		if ( currentToolbarPadding ) { pt += currentToolbarPadding - 10; } // Adjust if toolbar is present
+
+		let newCssText = `background-position: 5px ${pt}px; padding-top: ${pt}px; transition: top 0.1s linear; top: inherit;`;
+		if ( ibarData.icon ) { // If an icon URL is provided
+			newCssText += `background-image: url("${ibarData.icon}")`;
+		}
+		obj.style.cssText = newCssText; // Apply styles
+	},0); // Timeout to allow DOM update before animation
+
+	// If there's a timeout, create the timer to auto-close the bar.
+	if ( ibarData.timeout > 0 ) {
+		(this as any).ibartimer = setTimeout(function() {
+			si.closeIBar!(); }, 1000 * ibarData.timeout); // Call closeIBar after timeout
 	}
 }
 
 /** Close the info bar. If there's another one waiting, show it next. */
-SimpleInterface.prototype.closeIBar = function(steptwo) {
-	if ( this.ibar === undefined ) { return; }
-	clearTimeout(this.ibartimer);
-	if ( !steptwo ) {
-		// Fade it nicely.
-		this.ibar.style.cssText += '-webkit-transition: opacity 0.25s linear;' +
-			'-moz-transition: opacity 0.25s linear;' +
-			'-o-transition: opacity 0.25s linear;' +
-			'transition: opacity 0.25s linear; opacity: 0';
+SimpleInterface.prototype.closeIBar = function(this: IUi, steptwo?: boolean): void { // Internal method
+	const currentIbarEl = (this as any).ibar as HTMLElement | undefined; // Get current bar element
+	if ( currentIbarEl === undefined ) { return; } // No bar to close
+	clearTimeout((this as any).ibartimer); // Clear auto-close timer
+
+	if ( !steptwo ) { // First step: start fade-out animation
+		currentIbarEl.style.transition = 'opacity 0.25s linear';
+		currentIbarEl.style.opacity = '0'; // Fade out
 		var si = this;
-		this.ibartimer = setTimeout(function(){si.closeIBar(true)},250);
+		(this as any).ibartimer = setTimeout(function(){si.closeIBar!(true);},250); // Call again after animation
 		return;
 	}
 
-	this.ibar.parentNode.removeChild(this.ibar);
-	delete this.ibar;
-	this.infobars.shift();
+	// Second step: remove element and show next bar
+	if (currentIbarEl.parentNode) { // Check if element is still in DOM
+		currentIbarEl.parentNode.removeChild(currentIbarEl);
+	}
+	(this as any).ibar = undefined; // Clear current bar reference
+	this.infobars.shift(); // Remove from queue
 
-	// Is there a new one?
+	// Is there a new one? If so, create it.
 	if ( this.infobars.length > 0 ) {
-		this.createIBar(); }
+		this.createIBar!(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1167,11 +1235,18 @@ SimpleInterface.prototype.closeIBar = function(steptwo) {
 /** Create a new tray icon. These show up next to the text input and support
  *  click/key events. They can be changed dynamically too, but must remain at
  *  16x16 in size. */
-SimpleInterface.prototype.addIcon = function(text, html, clss, onclick, onkey) {
+SimpleInterface.prototype.addIcon = function(
+	this: IUi,
+	text: string,
+	html: string,
+	clss: string,
+	onclick?: (e: Event) => void,
+	onkey?: (e: KeyboardEvent) => void
+): number {
 	var ico = document.createElement('div');
 	ico.className = 'decafmud status-icon ' + clss + ( onclick ? ' icon-click' : '' );
 	ico.innerHTML = html;
-	ico.setAttribute('title', text);
+	ico.title = text; // Use direct assignment
 
 	// Accessibility.
 	ico.setAttribute('role','status');
@@ -1180,27 +1255,28 @@ SimpleInterface.prototype.addIcon = function(text, html, clss, onclick, onkey) {
 	// Make it selectable if necessary.
 	if ( onclick || onkey ) { ico.setAttribute('tabIndex','0'); }
 
-	// Add this to icons.
-	var ind = this.icons.push([ico,onclick,onkey]) - 1;
+	// Add this to icons. this.icons is [HTMLElement, Function | undefined, Function | undefined][]
+	var ind = this.icons.push([ico, onclick, onkey]) - 1;
+
 
 	// Recalculate icon positions.
 	for(var i=0; i < this.icons.length; i++) {
-		this.icons[i][0].style.cssText = 'right:'+(((this.icons.length-i)-1)*21)+'px';
+		this.icons[i][0].style.right = (((this.icons.length-i)-1)*21)+'px'; // Direct assignment
 	}
 
 	// Add to DOM.
-	this.tray.appendChild(ico); //._input.appendChild(ico);
+	this.tray.appendChild(ico);
 
 	// Add the event listeners.
-	var si = this;
-	if ( onclick ) { addEvent(ico, 'click', function(e) { onclick.call(si,e); }); }
-	if ( onclick && !onkey ) { addEvent(ico, 'keydown', function(e) {
-		if (e.keyCode !== 13) { return; }
-		onclick.call(si,e); }); }
-	if ( onkey ) { addEvent(ico, 'keydown', function(e) { onkey.call(si,e); }); }
+	var si = this; // Capture 'this' (IUi instance)
+	if ( onclick ) { addEvent(ico, 'click', function(e: Event) { onclick!.call(si,e); }); } // Assert onclick is defined
+	if ( onclick && !onkey ) { addEvent(ico, 'keydown', function(e: Event) { // Only if onclick and no specific onkey
+		if ((e as KeyboardEvent).keyCode !== 13) { return; } // Only Enter key
+		onclick!.call(si,e); }); } // Assert onclick is defined
+	if ( onkey ) { addEvent(ico, 'keydown', function(e: Event) { onkey!.call(si,e as KeyboardEvent); }); } // Assert onkey is defined
 
 	// Resize the tray now.
-	this._resizeTray();
+	(this as any)._resizeTray(); // Internal method, cast to any if not on IUi
 
 	// Return the index
 	return ind;
@@ -1208,25 +1284,27 @@ SimpleInterface.prototype.addIcon = function(text, html, clss, onclick, onkey) {
 
 /** Destroy the icon with the given index.
  * @param {Number} ind The index of the icon to destroy. */
-SimpleInterface.prototype.delIcon = function(ind) {
+SimpleInterface.prototype.delIcon = function(this: IUi, ind: number): void {
 	if ( ind < 0 || ind >= this.icons.length ) {
 		throw "Invalid index for icon!"; }
 
 	// Get the element and pop it off the list.
-	var el = this.icons[ind][0];
-	this.icons.splice(ind,1);
+	var iconArr = this.icons[ind]; // iconArr is a tuple [HTMLElement, Function?, Function?]
+	if (!iconArr) return;
+	var el = iconArr[0]; // The HTMLElement
+	this.icons.splice(ind,1); // Remove from array
 
-	// Remove the icon from DOM and delete.
-	this._input.removeChild(el);
-	delete el;
+	// Remove the icon from DOM.
+	if (el.parentNode) el.parentNode.removeChild(el); // Check parentNode before removing
+	// delete el; // Not needed in JS for DOM elements removed this way, garbage collection handles it.
 
 	// Recalculate icon positions.
 	for(var i=0; i < this.icons.length; i++) {
-		this.icons[i].style.cssText = 'right:'+(((this.icons.length-i)-1)*21)+'px';
+		this.icons[i][0].style.right = (((this.icons.length-i)-1)*21)+'px';
 	}
 
 	// Resize the tray now.
-	this._resizeTray();
+	(this as any)._resizeTray(); // Internal method
 }
 
 /** Update an icon with a new class and/or text.
@@ -1234,28 +1312,28 @@ SimpleInterface.prototype.delIcon = function(ind) {
  * @param {String} [text] The title text to attach to the icon.
  * @param {String} [clss] The new class to set on the icon.
  * @param {String} [html] The innerHTML to set on the icon. */
-SimpleInterface.prototype.updateIcon = function(ind, text, html, clss) {
+SimpleInterface.prototype.updateIcon = function(this: IUi, ind: number, text?: string, html?: string, clss?: string): void {
 	if ( ind < 0 || ind >= this.icons.length ) {
 		throw "Invalid index for icon!"; }
 
 	// Get the icon.
-	var el = this.icons[ind];
-	var onclick = el[1], onkey = el[2];
-	el = el[0];
+	var iconArr = this.icons[ind]; // iconArr is [HTMLElement, Function?, Function?]
+	if(!iconArr) return;
+	var el = iconArr[0]; // The HTMLElement
+	var onclick = iconArr[1]; // The onclick handler
 
 	if ( clss ) { el.className = 'decafmud status-icon ' + clss + ( onclick ? ' icon-click' : ''); }
-	if ( html ) { el.innerHTML = html; }
-	if ( text ) {
-		el.setAttribute('title', text);
-		el.setAttribute('aria-label', text);
+	if ( html !== undefined ) { el.innerHTML = html; } // Check for undefined to allow setting empty string
+	if ( text ) { // If text is provided
+		el.title = text; // Set title attribute
+		el.setAttribute('aria-label', text); // Update ARIA label
 	}
 }
 
 /** Helper. Resizes the input based on the number of icons. */
-SimpleInterface.prototype._resizeTray = function() {
-	var w = this.tray.clientWidth;
-	//var w = 21 * this.icons.length;
-	this._input.style.cssText = 'padding-right:'+w+'px';
+SimpleInterface.prototype._resizeTray = function(this: IUi): void { // Internal method
+	var w = this.tray.clientWidth; // Get current width of the tray
+	this._input.style.paddingRight = w+'px'; // Set padding on the input container
 }
 
 ///////////////////////////////////////////////////////////////////////////////

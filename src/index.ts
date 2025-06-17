@@ -29,7 +29,10 @@ import Split from 'split.js';
 // For SparkMD5, ensure it's installed via npm, then import // Or: import * as SparkMD5 from 'spark-md5'; depending on its export structure
 
 // Import DecafMUD related components.
-import DecafMUD from './decafmud/decafmud';
+// DecafMUD is now accessed from the global window object after its script (decafmud.ts) has run.
+import { DecafMUDConstructor, IDecafMUD } from './decafmud/decafmud.types';
+const DecafMUD: DecafMUDConstructor = (window as any).DecafMUD;
+
 // The individual DecafMUD plugin files are now also .ts files and will be imported by decafmud.ts or by each other as needed.
 // No need for script-loader for those anymore if they are properly part of the DecafMUD module.
 // If pako is used by DecafMUD, it's imported within decafmud.ts.
@@ -64,7 +67,7 @@ $(window).on('load', function () {
   // const currentHost = window.location.hostname; // Unused
 
   // Ensure DecafMUD is available.
-  if (typeof DecafMUD === 'undefined' || !DecafMUD.plugins?.TextInputFilter) {
+  if (typeof DecafMUD === 'undefined' || !(DecafMUD as any).plugins?.TextInputFilter) { // Cast DecafMUD to any for plugins check temporarily
     console.error('DecafMUD or DecafMUD.plugins.TextInputFilter is not loaded correctly!');
     alert('Critical error: DecafMUD core components could not be initialized. Please check the console for details.');
     return;
@@ -75,13 +78,13 @@ $(window).on('load', function () {
   // or its initialization methods based on the options.
   // The assignment below is how a text input filter was registered in the old system.
   // This might need to be adapted if DecafMUD's plugin registration changes with ES6 modules.
-  if (DecafMUD.plugins.TextInputFilter) {
-    (DecafMUD.plugins.TextInputFilter as any).mumexml = MumeXmlParser;
+  if ((DecafMUD as any).plugins.TextInputFilter) { // Cast DecafMUD to any for plugins check
+    ((DecafMUD as any).plugins.TextInputFilter as any).mumexml = MumeXmlParser;
   } else {
     console.error("DecafMUD.plugins.TextInputFilter is not defined. Cannot set MumeXmlParser.");
   }
 
-  const decafInstance = new DecafMUD({
+  const decafInstance: IDecafMUD = new DecafMUD({ // Added type IDecafMUD
     host: 'mume.org',
     port: 443,
     autoreconnect: false,
@@ -98,7 +101,6 @@ $(window).on('load', function () {
       repeat_input: false,
       start_full: false,
     },
-    language: 'en',
     textinputfilter: 'mumexml',
     socket: 'websocket',
   });
@@ -125,8 +127,8 @@ $(window).on('load', function () {
     let parser: MumeXmlParser; // Type correctly
     let tagEventHandler;
 
-    if (DecafMUD.instances && DecafMUD.instances[0] && DecafMUD.instances[0].textInputFilter) {
-      parser = DecafMUD.instances[0].textInputFilter as MumeXmlParser; // Type assertion
+    if (DecafMUD.instances && DecafMUD.instances[0] && (DecafMUD.instances[0] as IDecafMUD).textInputFilter) { // Cast instance to IDecafMUD
+      parser = (DecafMUD.instances[0] as IDecafMUD).textInputFilter as MumeXmlParser; // Type assertion
       // Original check: if ( !( parser.isMumeXmlParser ) )
       // We need to ensure isMumeXmlParser is a static property or use instanceof if MumeXmlParser is a class
       // For now, assuming the type assertion is sufficient if structure is correct.

@@ -16,25 +16,27 @@
  * @author Stendec <stendec365@gmail.com>
  * @version 0.9.0
  */
+import { IDecafMUD, IUi, IDisplay, IStorage } from './decafmud.types';
+import { makeDraggable, DraggableController } from './simple-dragger';
 
-(function(DecafMUD) {
+(function(DecafMUD_Global: any) { // Changed DecafMUD to DecafMUD_Global to avoid conflict with imported types
 
-var addEvent = function(node, etype, func) {
+var addEvent = function(node: HTMLElement | Document | Window, etype: string, func: EventListenerOrEventListenerObject) { // Basic typing for addEvent
 		if ( node.addEventListener ) {
 			node.addEventListener(etype, func, false); return; }
 
-		etype = 'on' + etype;
-		if ( node.attachEvent ) {
-			node.attachEvent(etype, func); }
+		const onetype = 'on' + etype; // Ensure onetype is const
+		if ( (node as any).attachEvent ) { // Use type assertion for older IE
+			(node as any).attachEvent(onetype, func); }
 		else {
-			node[etype] = func; }
+			(node as any)[onetype] = func; } // Use type assertion
 	},
-	delEvent = function(node, etype, func) {
+	delEvent = function(node: HTMLElement | Document | Window, etype: string, func: EventListenerOrEventListenerObject) { // Basic typing for delEvent
 		if ( node.removeEventListener ) {
 			node.removeEventListener(etype, func, false); }
 	};
 
-var bodyHack = /Firefox\//.test(navigator.userAgent);
+var bodyHack = /Firefox\//.test(navigator.userAgent); // This is a global, consider passing as param or making it part of class if possible
 
 /** <p>This is a minimal user interface for DecafMUD, only providing a basic
  *  input handler if an input element is provided and rendering output to a
@@ -43,37 +45,116 @@ var bodyHack = /Firefox\//.test(navigator.userAgent);
  *  experience.</p>
  * @name SimpleInterface
  * @class DecafMUD User Interface: Simple
- * @exports SimpleInterface as DecafMUD.plugins.Interface.simple
- * @param {DecafMUD} decaf The instance of DecafMUD using this plugin. */
-var SimpleInterface = function(decaf) {
-	var si = this;
+ * @exports SimpleInterface as DecafMUD_Global.plugins.Interface.simple
+ * @param {IDecafMUD} decaf The instance of DecafMUD using this plugin. */
+class SimpleInterface implements IUi {
+    // --- Declare properties ---
+    public decaf: IDecafMUD;
+    public container: HTMLElement;
+    public el_display: HTMLElement;
+    public sidebar: HTMLElement;
+    public progresstable: HTMLTableElement;
+    public progressbars: any[]; // TODO: Define specific type
+    public mapdiv: HTMLElement;
+    public _input: HTMLElement;
+    public tray: HTMLElement;
+    public toolbuttons: { [id: number]: [HTMLElement, string, string | undefined, string | undefined, number, boolean, boolean, string | undefined, Function | undefined] };
+    public infobars: any[]; // TODO: Define specific type
+    public icons: [HTMLElement, Function | undefined, Function | undefined][];
+    public toolbar: HTMLElement;
+    public input: HTMLInputElement;
 
-	// Store the instance of DecafMUD.
-	this.decaf = decaf;
+    // Defaults from prototype
+    public toolbutton_id: number = -1;
+    public echo: boolean = true;
+    public inpFocus: boolean = false;
+    public old_parent: (Node & ParentNode) | undefined = undefined; // Adjusted type
+    public next_sib: ChildNode | null | undefined = undefined; // Adjusted type
 
-	// If we have elements, get them.
-	this.container	= decaf.options.set_interface.container;
+    public display: IDisplay | undefined = undefined;
 
-	// If the element is a string, querySelector it.
-	if ( typeof this.container === 'string' ) {
-		this.container = document.querySelector(this.container); }
+    public splash: HTMLElement | null = null;
+    public splash_st: HTMLElement | null = null;
+    public splash_pgi: HTMLElement | null = null;
+    public splash_pgt: HTMLElement | null = null;
+    public splash_old: HTMLElement | null = null;
+    public splash_err: boolean = false;
+    public scrollButton: HTMLElement | undefined = undefined;
 
-	// Only allow us to use elements for these.
-	if (!( 'nodeType' in this.container )) {
-		throw "The container must be a node in the DOM!"; }
+    public history: string[];
+    public historyPosition: number;
 
-	// Build our element tree.
-	this.container.setAttribute('role', 'application');
-	this.container.className += ' decafmud mud interface';
+    public masked: boolean = false;
+    public inputCtrl: boolean = false;
+    public reqTab: boolean = false;
+    public wantTab: boolean = false;
+    public tabIndex: number = -1;
+    public tabValues: string[] = [];
+    public buffer: string = '';
+    public old_y?: string;
+    public inp_buffer?: string;
 
-	// Make the display container
-	this.el_display = document.createElement('div');
-	this.el_display.className = 'decafmud mud-pane primary-pane';
-	this.el_display.setAttribute('role', 'log');
-	this.el_display.setAttribute('tabIndex','0');
-	this.container.appendChild(this.el_display);
+    public popup: HTMLElement | undefined = undefined;
+    public headerdrag: DraggableController | undefined = undefined;
+    public popupheader: HTMLElement | undefined = undefined;
 
-        // Make the sidebar
+    public settings?: HTMLElement;
+    public set_cont?: HTMLElement;
+    public set_mid?: HTMLElement;
+    public stbutton?: number;
+
+    public old_tbarpos: string = '';
+    public toolbarPadding: number | undefined = undefined;
+
+    public oldscrollX: number | undefined = undefined;
+    public oldscrollY: number | undefined = undefined;
+    public old_children: HTMLElement[] = [];
+    public old_display: (string | null)[] = []; // display style can be null
+    public old_body_over: string = '';
+    public goFullOnResize: boolean = false;
+    public old_fs: boolean = false;
+
+    public sizeel: HTMLElement | undefined = undefined;
+    public sizetm: number | undefined = undefined;
+
+    public ico_connected!: number; // Definite assignment in setup
+
+    public store?: IStorage;
+    public storage?: IStorage; // Alias
+
+    // Static properties
+    public static supports = {
+        'tabComplete'   : true,
+        'multipleOut'   : false,
+        'fullscreen'    : true,
+        'editor'        : false,
+        'splash'        : true
+    };
+
+    constructor(decaf: IDecafMUD) {
+        this.decaf = decaf;
+
+        // Port constructor logic from the original SimpleInterface function
+        const passed_container = decaf.options.set_interface.container;
+        if ( typeof passed_container === 'string' ) {
+            this.container = document.querySelector(passed_container) as HTMLElement;
+        } else {
+            this.container = passed_container as HTMLElement;
+        }
+
+        if (!this.container || !( 'nodeType' in this.container )) { // Ensure container is a valid node
+            throw "The container must be a node in the DOM!";
+        }
+
+        this.container.setAttribute('role', 'application');
+        this.container.className += ' decafmud mud interface';
+
+        this.el_display = document.createElement('div');
+        this.el_display.className = 'decafmud mud-pane primary-pane';
+        this.el_display.setAttribute('role', 'log');
+        this.el_display.setAttribute('tabIndex','0');
+        this.container.appendChild(this.el_display);
+
         this.sidebar = document.createElement('div');
         this.sidebar.className = 'decafmud mud-pane side-pane';
         this.sidebar.setAttribute('tabIndex', '1');
@@ -81,120 +162,79 @@ var SimpleInterface = function(decaf) {
         this.progresstable = document.createElement('table');
         this.progresstable.style.display = 'none';
         this.sidebar.appendChild(this.progresstable);
-        this.progressbars = new Array();
+        this.progressbars = []; // Initialize as empty array
         this.mapdiv = document.createElement('div');
         this.mapdiv.style.display = 'none';
         this.sidebar.appendChild(this.mapdiv);
 
-	// Handle keypresses and clicks in scrollback.
-	this.el_display.onmouseup = this.maybeFocusInput.bind(this);
-	addEvent(this.el_display,'keydown',function(e){si.displayKey(e)});
-	addEvent(this.sidebar,'keydown',function(e){si.displayKey(e)});
+        this.el_display.onmouseup = this.maybeFocusInput.bind(this);
+        addEvent(this.el_display,'keydown', (e) => this.displayKey(e as KeyboardEvent));
+        addEvent(this.sidebar,'keydown', (e) => this.displayKey(e as KeyboardEvent));
 
-	// Put the input in a container.
-	this._input = document.createElement('div');
-	this._input.className = 'decafmud input-cont';
+        this._input = document.createElement('div');
+        this._input.className = 'decafmud input-cont';
 
-	// Create a container for the icons.
-	this.tray = document.createElement('div');
-	this.tray.className = 'decafmud icon-tray';
-	this._input.appendChild(this.tray);
+        this.tray = document.createElement('div');
+        this.tray.className = 'decafmud icon-tray';
+        this._input.appendChild(this.tray);
 
-	// A variable for storing toolbar buttons.
-	this.toolbuttons = {};
+        this.toolbuttons = {};
+        this.infobars = [];
+        this.icons = [];
 
-	// A variable for storing queued information bars.
-	this.infobars = [];
+        this.toolbar = document.createElement('div');
+        this.toolbar.className = 'decafmud toolbar';
+        this.toolbar.setAttribute('role','toolbar');
+        const h = function(this: HTMLElement) { if(!this.className){return;}this.className = this.className.replace(' visible',''); };
+        addEvent(this.toolbar,'mousemove', h.bind(this.toolbar)); // Bind h to toolbar
+        addEvent(this.toolbar,'blur', h.bind(this.toolbar));    // Bind h to toolbar
 
-	// A variable for storing notification icons.
-	this.icons = [];
-
-	// Create the toolbar. Don't attach it yet though.
-	this.toolbar = document.createElement('div');
-	this.toolbar.className = 'decafmud toolbar';
-	this.toolbar.setAttribute('role','toolbar');
-	var h = function(){if(!this.className){return;}this.className = this.className.replace(' visible','');}
-	addEvent(this.toolbar,'mousemove', h);
-	addEvent(this.toolbar,'blur', h);
-
-	// Make the input element.
-	this.input = document.createElement('input');
+        this.input = document.createElement('input') as HTMLInputElement;
         this.input.id = "inputelement";
-	this.input.title = "MUD Input".tr(this.decaf);
-	this.input.type = 'text';
-	this.input.className = 'decafmud input';
-	this._input.insertBefore(this.input, this._input.firstChild);
-	this.container.appendChild(this._input);
+        this.input.title = "MUD Input";
+        this.input.type = 'text';
+        this.input.className = 'decafmud input';
+        this._input.insertBefore(this.input, this._input.firstChild);
+        this.container.appendChild(this._input);
 
-	// Listen to input.
-	addEvent(this.input,'keydown', function(e){si.handleInput(e);});
+        addEvent(this.input,'keydown', (e) => this.handleInput(e as KeyboardEvent));
+        const blurFocusHelper = (e: FocusEvent) => { this.handleBlur(e); };
+        addEvent(this.input, 'blur', blurFocusHelper);
+        addEvent(this.input, 'focus', blurFocusHelper);
 
-	var helper = function(e) { si.handleBlur(e); };
-	addEvent(this.input, 'blur', helper);
-	addEvent(this.input, 'focus', helper);
-
-        // remember a limited history; historyPosition is -1 unless
-        // the user is browsing through history (so the moment the
-        // input field changes, historyposition oes back to 0
         this.history = [];
         this.historyPosition = -1;
-        for (i = 0; i < 100; i++) this.history[i] = '';
+        for (let i = 0; i < 100; i++) this.history[i] = ''; // Use let
 
-	// Reset the interface state.
-	this.reset();
+        this.reset();
 
-	// Listen to window resizing
-	addEvent(window, 'resize', this.resizeScreenFromEvent.bind(this, 'window resize'));
+        addEvent(window, 'resize', this.resizeScreenFromEvent.bind(this, 'window resize'));
 
-	// Neuters IE's F1 help popup
-	if ("onhelp" in window)
-		window.onhelp = function() { return false; };
+        if ("onhelp" in window) {
+            (window as any).onhelp = function() { return false; };
+        }
+        window.onbeforeunload = this.unloadPageFromEvent.bind(this);
 
-	// Prevent leaving the page by accident (backspace)
-	window.onbeforeunload = this.unloadPageFromEvent.bind(this);
-
-        // Make sure the input is focussed
         this.input.focus();
+    }
 
-	return this;
-};
-SimpleInterface.prototype.toString = function() {
-	return '<DecafMUD Interface: Simple' + (this.container.id ? ' (#'+this.container.id+')' : '') + '>'; }
+    public toString(): string {
+        return '<DecafMUD Interface: Simple' + (this.container.id ? ' (#'+this.container.id+')' : '') + '>';
+    }
 
-// Defaults
-SimpleInterface.prototype.toolbutton_id = -1;
-SimpleInterface.prototype.echo = true;
-SimpleInterface.prototype.inpFocus = false;
-SimpleInterface.prototype.old_parent = undefined;
-SimpleInterface.prototype.next_sib = undefined;
-SimpleInterface.prototype.input = undefined;
-SimpleInterface.prototype.display = undefined;
-SimpleInterface.prototype.splash = null;
-SimpleInterface.prototype.splash_st = null;
-SimpleInterface.prototype.splash_pgi = null;
-SimpleInterface.prototype.splash_pgt = null;
-SimpleInterface.prototype.splash_old = null;
-SimpleInterface.prototype.scrollButton = undefined;
-SimpleInterface.supports = {
-	'tabComplete'   : true,
-	'multipleOut'   : false,
-	'fullscreen'    : true,
-	'editor'        : false,
-	'splash'        : true
-};
+    // Placeholder for other prototype methods, to be moved in subsequent steps
+    // initSplash, endSplash, etc.
+}
 
-///////////////////////////////////////////////////////////////////////////////
-// Splash Functionality
-///////////////////////////////////////////////////////////////////////////////
+// SimpleInterface.prototype.toolbutton_id, echo, etc. are now class instance properties with defaults.
+// SimpleInterface.supports is now a static property of the class.
 
-/** Initialize the splash screen and display an initial message.
- * @param {Number} [percentage] The initial percent to display the progress
- *    bar at.
- * @param {String} [message] The initial message for the splash screen to
- *    display. */
-SimpleInterface.prototype.initSplash = function(percentage,message) {
+// SimpleInterface.prototype.toString has been moved into the class.
+
+/*
+SimpleInterface.prototype.initSplash = function(this: IUi, percentage?: number,message?: string) {
 	if ( percentage === undefined ) { percentage = 0; }
-	if ( message === undefined ) { message = 'Discombobulating interface recipient...'.tr(this.decaf); }
+	if ( message === undefined ) { message = 'Discombobulating interface recipient...'; } // Localization removed
 
 	// Disable scrolling
 	this.old_y = this.el_display.style.overflowY;
@@ -211,10 +251,10 @@ SimpleInterface.prototype.initSplash = function(percentage,message) {
 	this.splash_pg = document.createElement('div');
 	this.splash_pg.className = 'decafmud progress';
 	this.splash_pg.setAttribute('role','progressbar');
-	this.splash_pg.setAttribute('aria-valuemax', 100);
-	this.splash_pg.setAttribute('aria-valuemin', 0);
-	this.splash_pg.setAttribute('aria-valuenow', percentage);
-	this.splash_pg.setAttribute('aria-valuetext', '{0}%'.tr(this.decaf,percentage));
+	this.splash_pg.setAttribute('aria-valuemax', "100");
+	this.splash_pg.setAttribute('aria-valuemin', "0");
+	this.splash_pg.setAttribute('aria-valuenow', String(percentage));
+	this.splash_pg.setAttribute('aria-valuetext', `${percentage}%`); // Localization removed
 
 	this.splash_pgi = document.createElement('div');
 	this.splash_pgi.className = 'decafmud inner-progress';
@@ -223,7 +263,80 @@ SimpleInterface.prototype.initSplash = function(percentage,message) {
 
 	this.splash_pgt = document.createElement('div');
 	this.splash_pgt.className = 'decafmud progress-text';
-	this.splash_pgt.innerHTML = '{0}%'.tr(this.decaf,percentage);
+	this.splash_pgt.innerHTML = `${percentage}%`; // Localization removed
+	this.splash_pg.appendChild(this.splash_pgt);
+
+	this.splash.appendChild(this.splash_pg);
+
+	// Create a <div> to contain the status line.
+	this.splash_st = document.createElement('div');
+	this.splash_st.className = 'decafmud status';
+	this.splash_st.innerHTML = message;
+
+	this.splash.appendChild(this.splash_st);
+
+	// Add another element for old status messages
+	this.splash_old = document.createElement('div');
+	this.splash_old.className = 'decafmud old';
+	this.splash_old.innerHTML = '';
+	this.splash.appendChild(this.splash_old);
+
+	// Add the splash to the display.
+	this.container.appendChild(this.splash);
+}
+*/
+// ... (The rest of the prototype methods will be moved in later steps)
+// ... (Helper functions like addButton, etc., will also be moved or refactored later)
+
+// Expose this to DecafMUD
+(DecafMUD_Global as any).plugins.Interface.panels = SimpleInterface;
+})(window.DecafMUD); // Pass the global DecafMUD
+	'fullscreen'    : true,
+	'editor'        : false,
+	'splash'        : true
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Splash Functionality
+///////////////////////////////////////////////////////////////////////////////
+
+/** Initialize the splash screen and display an initial message.
+ * @param {Number} [percentage] The initial percent to display the progress
+ *    bar at.
+ * @param {String} [message] The initial message for the splash screen to
+ *    display. */
+SimpleInterface.prototype.initSplash = function(this: IUi, percentage?: number,message?: string) {
+	if ( percentage === undefined ) { percentage = 0; }
+	if ( message === undefined ) { message = 'Discombobulating interface recipient...'; } // Localization removed
+
+	// Disable scrolling
+	this.old_y = this.el_display.style.overflowY;
+	this.el_display.style.overflowY = 'hidden';
+
+	// Create a <div> to serve as the splash.
+	this.splash = document.createElement('div');
+	this.splash.className = 'decafmud splash';
+
+	// Build the contents.
+	this.splash.innerHTML  = '<h2 class="decafmud heading"><a href="http://decafmud.stendec.me/">DecafMUD</a> <span class="version">v'+DecafMUD.version+'</span></h2>';
+
+	// Create a <div> to act as the progress indicator.
+	this.splash_pg = document.createElement('div');
+	this.splash_pg.className = 'decafmud progress';
+	this.splash_pg.setAttribute('role','progressbar');
+	this.splash_pg.setAttribute('aria-valuemax', "100");
+	this.splash_pg.setAttribute('aria-valuemin', "0");
+	this.splash_pg.setAttribute('aria-valuenow', String(percentage));
+	this.splash_pg.setAttribute('aria-valuetext', `${percentage}%`); // Localization removed
+
+	this.splash_pgi = document.createElement('div');
+	this.splash_pgi.className = 'decafmud inner-progress';
+	this.splash_pgi.style.cssText = 'width:'+percentage+'%;';
+	this.splash_pg.appendChild(this.splash_pgi);
+
+	this.splash_pgt = document.createElement('div');
+	this.splash_pgt.className = 'decafmud progress-text';
+	this.splash_pgt.innerHTML = `${percentage}%`; // Localization removed
 	this.splash_pg.appendChild(this.splash_pgt);
 
 	this.splash.appendChild(this.splash_pg);
@@ -260,11 +373,11 @@ SimpleInterface.prototype.endSplash = function() {
  * @param {Number} [percentage] If provided, the percentage will be changed to
  *    this value.
  * @param {String} [message] If provided, this message will be displayed. */
-SimpleInterface.prototype.updateSplash = function(percentage,message) {
-	if ( this.splash === null || this.splash_err ) { return; }
-	if ( percentage !== undefined ) {
-		var t = '{0}%'.tr(this.decaf, percentage);
-		this.splash_pg.setAttribute('aria-valuenow', percentage);
+SimpleInterface.prototype.updateSplash = function(this: IUi, percentage?: number,message?: string) {
+	if ( this.splash === null || (this as any).splash_err ) { return; }
+	if ( percentage !== undefined && this.splash_pg && this.splash_pgt && this.splash_pgi) {
+		var t = `${percentage}%`; // Localization removed
+		this.splash_pg.setAttribute('aria-valuenow', String(percentage));
 		this.splash_pg.setAttribute('aria-valuetext', t);
 
 		this.splash_pgt.innerHTML = t;
@@ -273,26 +386,26 @@ SimpleInterface.prototype.updateSplash = function(percentage,message) {
 	if (! message) { return; }
 
 	// Append the current message to old.
-	var e = document.createElement('div'),
-		t = this.splash_st.innerHTML;
-	if ( t.endsWith('...') ) { t += 'done.'; }
-	e.innerHTML = t;
-	this.splash_old.insertBefore(e, this.splash_old.firstChild);
+	var e = document.createElement('div');
+	var current_status_text = this.splash_st ? this.splash_st.innerHTML : "";
+	if ( current_status_text.endsWith('...') ) { current_status_text += 'done.'; }
+	e.innerHTML = current_status_text;
+	if (this.splash_old) { this.splash_old.insertBefore(e, this.splash_old.firstChild); }
 
-	this.splash_st.innerHTML = message;
+	if (this.splash_st) { this.splash_st.innerHTML = message; }
 }
 
 /** Show an error with the splash message so it doesn't need to be presented as
  *  an alert dialog.
  * @param {String} message The error to display. This can have HTML.
  * @returns {boolean} True if the error was displayed, else false. */
-SimpleInterface.prototype.splashError = function(message) {
+SimpleInterface.prototype.splashError = function(this: IUi, message: string): boolean {
 	if ( this.splash === null ) { return false; }
 
-	this.splash_pgt.innerHTML = '<b>Error</b>';
-	this.splash_pgi.className += ' error';
-	this.splash_st.innerHTML = message;
-	this.splash_err = true;
+	if (this.splash_pgt) { this.splash_pgt.innerHTML = '<b>Error</b>'; }
+	if (this.splash_pgi) { this.splash_pgi.className += ' error'; }
+	if (this.splash_st) { this.splash_st.innerHTML = message; }
+	(this as any).splash_err = true; // splash_err not in IUi
 
 	return true;
 }
@@ -309,15 +422,15 @@ SimpleInterface.prototype.showSize = function() {
 	if ( this.display === undefined ) { return; }
 
 	// If the element doesn't exist, create it.
-	if ( this.sizeel === undefined ) {
-		this.sizeel = document.createElement('div');
-		this.sizeel.className = 'decafmud note center';
-		this.container.appendChild(this.sizeel);
+	if ( (this as any).sizeel === undefined ) {
+		(this as any).sizeel = document.createElement('div');
+		((this as any).sizeel as HTMLElement).className = 'decafmud note center';
+		this.container.appendChild((this as any).sizeel);
 	}
 
-	var sz = this.display.getSize();
-	this.sizeel.style.cssText = 'opacity:1';
-	this.sizeel.innerHTML = "{0}x{1}".tr(this.decaf, sz[0], sz[1]);
+	var sz = this.display!.getSize();
+	((this as any).sizeel as HTMLElement).style.cssText = 'opacity:1';
+	((this as any).sizeel as HTMLElement).innerHTML = `${sz[0]}x${sz[1]}`; // Localization removed
 
 	// Set a timer for hiding.
 	var si = this;
@@ -341,15 +454,17 @@ SimpleInterface.prototype.hideSize = function(fnl) {
 	}
 
 	// Still here? Show the transition.
-	this.sizeel.style.cssText  = '-webkit-transition: opacity 0.25s linear;';
-	this.sizeel.style.cssText += '-moz-transition: opacity 0.25s linear;';
-	this.sizeel.style.cssText += '-o-transition: opacity 0.25s linear;';
-	this.sizeel.style.cssText += 'transition: opacity 0.25s linear;';
+	if ((this as any).sizeel) {
+		((this as any).sizeel as HTMLElement).style.cssText  = '-webkit-transition: opacity 0.25s linear;';
+		((this as any).sizeel as HTMLElement).style.cssText += '-moz-transition: opacity 0.25s linear;';
+		((this as any).sizeel as HTMLElement).style.cssText += '-o-transition: opacity 0.25s linear;';
+		((this as any).sizeel as HTMLElement).style.cssText += 'transition: opacity 0.25s linear;';
 
-	// Set a timer for hiding.
-	var si = this;
-	setTimeout(function(){si.sizeel.style.opacity=0;},0);
-	this.sizetm = setTimeout(function(){si.hideSize(true)},250);
+		// Set a timer for hiding.
+		var si = this as any; // For timeout access
+		setTimeout(function(){ if(si.sizeel) { (si.sizeel as HTMLElement).style.opacity='0';} },0);
+		this.sizetm = setTimeout(function(){(si as IUi).hideSize!(true)},250); // Call hideSize on IUi
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -361,43 +476,45 @@ SimpleInterface.prototype.print_msg = function(txt) {
 }
 
 /** Called by Decaf upon connection to let us know. */
-SimpleInterface.prototype.connected = function() {
-	this.updateIcon(this.ico_connected, "DecafMUD is currently connected.".tr(this.decaf),
+SimpleInterface.prototype.connected = function(this: IUi):void {
+	this.updateIcon((this as any).ico_connected, "DecafMUD is currently connected.", // Localization removed
 		'', 'connectivity connected');
 }
 
 /** Called by Decaf when it's trying to connect. */
-SimpleInterface.prototype.connecting = function() {
-  this.print_msg(this.decaf.options.set_interface.msg_connecting);
+SimpleInterface.prototype.connecting = function(this: IUi):void {
+  (this as any).print_msg(this.decaf.options.set_interface.msg_connecting);
   if (this.decaf.options.set_interface.connect_hint)
   {
+    const wsport = this.decaf.options.set_socket?.wsport;
+    const port = this.decaf.options.port;
     if (this.decaf.options.socket == "websocket") {
-      this.display.message("<span>You are connecting using <i>websockets</i> " +
-        "on port " + this.decaf.options.set_socket.wsport + ".  If this does " +
+      this.display!.message("<span>You are connecting using <i>websockets</i> " +
+        "on port " + wsport + ".  If this does " +
         "not work (for example because the port is blocked or you have an " +
         "older version of websockets), you can connecting with flash.  To do " +
         "so, open <a href=\"web_client.html?socket=flash\">the flash version</a> " +
         "instead.</span>");
     }
     else {
-      this.display.message("<span>You are connecting using <i>flash</i> " +
-        "on port " + this.decaf.options.port + ".  To connect using " +
+      this.display!.message("<span>You are connecting using <i>flash</i> " +
+        "on port " + port + ".  To connect using " +
         "websockets, make sure you have an up-to-date browser which " +
         "supports this, and open " +
         "<a href=\"web_client.html?socket=websocket\">the websocket version</a> " +
         "instead.</span>");
     }
   }
-  this.updateIcon(this.ico_connected,
-                  "DecafMUD is attempting to connect.".tr(this.decaf),
+  this.updateIcon((this as any).ico_connected,
+                  "DecafMUD is attempting to connect.", // Localization removed
                   '', 'connectivity connecting');
 }
 
 /** Called by Decaf upon disconnection to let us know. */
-SimpleInterface.prototype.disconnected = function() {
-  this.print_msg("Connection closed.");
-  this.updateIcon(this.ico_connected,
-                  "DecafMUD is currently not connected.".tr(this.decaf),
+SimpleInterface.prototype.disconnected = function(this: IUi, reconnecting?: boolean):void {
+  (this as any).print_msg("Connection closed.");
+  this.updateIcon((this as any).ico_connected,
+                  "DecafMUD is currently not connected.", // Localization removed
                   '', 'connectivity disconnected');
 }
 
@@ -458,40 +575,46 @@ SimpleInterface.prototype.setup = function() {
 	this.container.insertBefore(this.toolbar, this.container.firstChild);
 
 	// Get the display type.
-	var display = this.decaf.options.display;
+	var display_plugin_name = this.decaf.options.display!;
 
 	// Create the display.
-	this.decaf.debugString('Initializing display plugin "'+display+'" in: #' + this.el_display.id,'info');
-	this.display = new DecafMUD.plugins.Display[display](this.decaf, this, this.el_display);
-        this.display.id = 'mud-display';
-	this.decaf.display = this.display;
+	this.decaf.debugString('Initializing display plugin "'+display_plugin_name+'" in: #' + this.el_display.id,'info');
+	const DisplayPlugin = (DecafMUD_Global as any).plugins.Display[display_plugin_name];
+  if (DisplayPlugin) {
+    this.display = new DisplayPlugin(this.decaf, this, this.el_display);
+    (this.display as any).id = 'mud-display';
+	  this.decaf.display = this.display;
+  } else {
+    this.decaf.error(`Display plugin "${display_plugin_name}" not found.`);
+  }
+
 
         // Make the menu
-        var menus = get_menus();
-        for (i = 0; i < menus.length; i+=3) {
+        var menus = (window as any).get_menus();
+        for (let i = 0; i < menus.length; i+=3) {
           this.tbNew(
-            menus[i],
-            menus[i+1].tr(this.decaf),
-            undefined,
-            menus[i+2].tr(this.decaf),
-            1,
-            true,
-            false,
-            undefined,
-            function(i) {return function(e) {toggle_menu(i/3);}} (i)
+            menus[i], // btnid
+            menus[i+1], // text (localization removed)
+            undefined, // icon
+            menus[i+2], // tooltip (localization removed)
+            1, // type
+            true, // enabled
+            false, // pressed
+            undefined, // clss
+            function(idx) {return function(e: Event) { (window as any).toggle_menu(idx/3);}} (i)
           );
         }
 
 
 	// Should we go fullscreen automatically?
         // NB: disabled, gets confused by browser-based fullscreen (F11)
-	this.goFullOnResize = false; //this.store.get('fullscreen-auto', true);
+	(this as any).goFullOnResize = false;
 
 	// Should we be starting in fullscreen?
-	var fs = this.store.get('fullscreen-start', this.decaf.options.set_interface.start_full);
+	var fs = this.store!.get('fullscreen-start', this.decaf.options.set_interface.start_full);
 
 	// Create the connected notification icon.
-	this.ico_connected = this.addIcon("You are currently disconnected.".tr(this.decaf), '', 'connectivity disconnected');
+	(this as any).ico_connected = this.addIcon("You are currently disconnected.", '', 'connectivity disconnected'); // Localization removed
 
 	// Go directly to fullscreen if necessary.
 	if ( fs ) {
@@ -874,16 +997,18 @@ SimpleInterface.prototype._resizeToolbar = function() {
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Create a scroll button for the main output pane. */
-SimpleInterface.prototype.showScrollButton = function() {
+SimpleInterface.prototype.showScrollButton = function(this: IUi):void {
 	if ( this.scrollButton !== undefined ) { return; }
 
-	var sb = document.createElement('div'), si = this;
+	var sb = document.createElement('div');
+  var si = this as any;
 	sb.className = 'button scroll-button';
-	sb.setAttribute('tabIndex',0);
-	sb.innerHTML = "More".tr(this.decaf);
-	var helper = function(e) {
-		if ( e.type == 'keydown' && e.keyCode !== 13 ) { return; }
-		si.display.scrollNew(); }
+	sb.setAttribute('tabIndex','0');
+	sb.innerHTML = "More"; // Localization removed
+	var helper = function(e: Event) {
+		if ( (e as KeyboardEvent).type == 'keydown' && (e as KeyboardEvent).keyCode !== 13 ) { return; }
+		if (si.display) { si.display.scrollNew(); }
+  }
 	addEvent(sb, 'click', helper);
 	addEvent(sb, 'keydown', helper);
 
@@ -1511,17 +1636,20 @@ SimpleInterface.prototype.horizontalPopupOffset = function() {
 }
 
 /** Hide the popup if one is open */
-SimpleInterface.prototype.hidePopup = function() {
+SimpleInterface.prototype.hidePopup = function(this: IUi):void { // Added this type
   if (!this.popup) return;
-  this.headerdrag.StopListening(true);
-  this.popup.parentNode.removeChild(this.popup);
+  if (this.headerdrag) {
+      this.headerdrag.dispose();
+      this.headerdrag = undefined; // Clear the reference
+  }
+  if (this.popup.parentNode) { this.popup.parentNode.removeChild(this.popup); }
   this.popup = undefined;
   this.popupheader = undefined;
-  this.input.focus();
+  if (this.input) { (this.input as HTMLElement).focus(); } // Cast to HTMLElement for focus
 }
 
 /** Load the settings interface. */
-SimpleInterface.prototype.showPopup = function() {
+SimpleInterface.prototype.showPopup = function(this: IUi): HTMLElement { // Added this type and return type
   // if we already have a popup, remove it first, so we can start over
   if (this.popup) this.hidePopup();
 
@@ -1554,7 +1682,9 @@ SimpleInterface.prototype.showPopup = function() {
   this.popupheader.className = 'decafmud window-header';
   this.popupheader.id = "popupheader";
   this.popup.appendChild(this.popupheader);
-  this.headerdrag = new dragObject("popup", "popupheader");
+  if (this.popup && this.popupheader) { // Ensure elements exist for makeDraggable
+      this.headerdrag = makeDraggable(this.popup as HTMLElement, this.popupheader as HTMLElement);
+  }
 
   // create a close button
   var x = document.createElement('button');
@@ -1970,5 +2100,5 @@ SimpleInterface.prototype.updateInput = function(force) {
 };
 
 // Expose this to DecafMUD
-DecafMUD.plugins.Interface.panels = SimpleInterface;
-})(DecafMUD);
+(DecafMUD_Global as any).plugins.Interface.panels = SimpleInterface;
+})(window.DecafMUD); // Pass the global DecafMUD
