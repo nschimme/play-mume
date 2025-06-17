@@ -267,15 +267,6 @@ export interface ITeloptHandler {
   _do?(data?: string): boolean | void;
   _dont?(data?: string): boolean | void;
   _sb?(data: string): boolean | void; // data is the subnegotiation string
-  // GMCP specific properties
-  pingDelay?: number;
-  pingAverage?: number;
-  pingCount?: number;
-  pingWhen?: Date;
-  pingTimer?: any;
-  packages?: any; // For GMCP structure
-  sendGMCP?(pckg: string, data?: any): void; // GMCP specific
-  getFunction?(pckg: string): Function | undefined; // GMCP specific
 }
 
 export interface IGMCP extends ITeloptHandler {
