@@ -1382,7 +1382,7 @@ SimpleInterface.prototype.enter_fs = function(showSize) {
 
 	// Adjust the fs button.
 	this.tbPressed(this.fsbutton, true);
-	this.tbTooltip(this.fsbutton, "Click to exit fullscreen mode.".tr(this.decaf));
+	this.tbTooltip(this.fsbutton, "Click to exit fullscreen mode.");
 
 	// Hide all the other body elements.
 	for(var i=0;i<document.body.children.length;i++) {
@@ -1442,7 +1442,7 @@ SimpleInterface.prototype.exit_fs = function() {
 
 	// Adjust the fs button.
 	this.tbPressed(this.fsbutton, false);
-	this.tbTooltip(this.fsbutton, "Click to enter fullscreen mode.".tr(this.decaf));
+	this.tbTooltip(this.fsbutton, "Click to enter fullscreen mode.");
 
 	// Add the container back to the parent element.
 	if ( this.next_sib !== undefined && this.next_sib !== null ) {

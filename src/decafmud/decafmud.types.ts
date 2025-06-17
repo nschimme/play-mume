@@ -68,6 +68,7 @@ export interface IDecafMUD {
 
   // GMCP specific, might move to a GMCP plugin interface later
   gmcp?: IGMCP; // Reference to the GMCP handler instance
+  zmp?: IZMP; // Reference to the ZMP handler instance
 }
 
 export interface DecafMUDOptions {
@@ -297,6 +298,45 @@ export interface IGMCP extends ITeloptHandler {
   ping(): void; // Added from GMCP.prototype.ping
 }
 
+/**
+ * Interface for ZMP (Zenith MUD Protocol) message handling.
+ * Extends the base Telnet option handler.
+ */
+export interface IZMP extends ITeloptHandler {
+  /**
+   * Sends a ZMP command to the server.
+   * @param cmd The ZMP command string.
+   * @param data Optional array of string data accompanying the command.
+   */
+  sendZMP(cmd: string, data?: string[]): void;
+
+  /**
+   * Retrieves a ZMP function or a package of functions.
+   * If package_ok is true and the command corresponds to a package,
+   * the entire package object is returned. Otherwise, the specific function
+   * is returned.
+   * @param cmd The ZMP command or package name.
+   * @param package_ok Whether to allow returning a whole package.
+   * @returns The ZMP function, a package object, or undefined if not found.
+   */
+  getFunction(cmd: string, package_ok?: boolean): ((cmd: string, data: string[]) => void) | object | undefined;
+
+  /**
+   * Adds or replaces a ZMP function handler.
+   * @param cmd The ZMP command to register a handler for.
+   * @param func The function to be executed when the ZMP command is received.
+   *                It takes the command itself and an array of data strings as arguments.
+   */
+  addFunction(cmd: string, func: (cmd: string, data: string[]) => void): void;
+
+  /**
+   * Stores the registered ZMP commands and their handlers or packages.
+   * Structure can be nested, e.g., { "package.command": func, "other_cmd": func }
+   * or { "package": { "command": func } }
+   */
+  commands: any; // Using 'any' for now due to potentially complex nested structure.
+}
+
 export interface DecafMUDConstructor {
   new(options?: Partial<DecafMUDOptions>): IDecafMUD;
   instances: IDecafMUD[];
@@ -318,7 +358,58 @@ export interface DecafMUDConstructor {
   };
   options: DecafMUDOptions; // static default options
   settings: DecafMUDSettings; // static default settings
-  TN: any; // Telnet constants, consider defining a more specific type if possible
+  TN: {
+    // Telnet Command Bytes (RFC 854)
+    SE: number;     // Subnegotiation End
+    NOP: number;    // No Operation
+    DM: number;     // Data Mark
+    BRK: number;    // Break
+    IP: number;     // Interrupt Process
+    AO: number;     // Abort Output
+    AYT: number;    // Are You There
+    EC: number;     // Erase Character
+    EL: number;     // Erase Line
+    GA: number;     // Go Ahead
+    SB: number;     // Subnegotiation Begin
+    WILL: number;   // Will option
+    WONT: number;   // Won't option
+    DO: number;     // Do option
+    DONT: number;   // Don't option
+    IAC: number;    // Interpret As Command
+
+    // Telnet Option Codes (RFC 855 and others)
+    TRANSMIT_BINARY: number; // RFC 856
+    ECHO: number;            // RFC 857
+    RECONNECTION: number;    // RFC 680 (obsoleted by RFC 4777)
+    SUPPRESS_GO_AHEAD: number; // RFC 858
+    STATUS: number;          // RFC 859
+    TIMING_MARK: number;     // RFC 860
+    EXTENDED_OPTIONS_LIST: number; // RFC 861
+
+    TTYPE: number;           // Terminal Type (RFC 930, RFC 1091)
+    NAWS: number;            // Negotiate About Window Size (RFC 1073)
+    TERMINAL_SPEED: number;  // RFC 1079
+    REMOTE_FLOW_CONTROL: number; // RFC 1080 (often miscited as RFC 1372)
+    LINEMODE: number;        // RFC 1184
+    X_DISPLAY_LOCATION: number; // RFC 1096
+    NEW_ENVIRON: number;     // RFC 1572 (replaces ENVIRON RFC 1408)
+
+    COMPRESS: number;        // MCCP v1 (unofficial, widely used)
+    COMPRESS2: number;       // MCCP v2 (RFC 1950, unofficial, widely used)
+
+    MSP: number;             // MUD Sound Protocol (unofficial)
+    MXP: number;             // MUD eXtension Protocol (unofficial)
+    ZMP: number;             // Zenith MUD Protocol (unofficial)
+    GMCP: number;            // Generic MUD Communication Protocol (unofficial)
+
+    // MUD Server Data Protocol (unofficial)
+    MSDP: number;
+    // MUD Client Compression Protocol (unofficial)
+    MCCP3: number; // MCCP v3 (unofficial)
+
+    // Telnet Option Numbers from IANA registry (incomplete, just examples)
+    TELOPT_CHARSET: number; // RFC 2066
+  };
   ESC: string;
   BEL: string;
   debugIAC(seq: string): string;

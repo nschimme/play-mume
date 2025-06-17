@@ -126,11 +126,11 @@ GMCP.prototype.packages.Core = {
 		var n = new Date() - this.pingWhen;
 		this.pingCount++;
 		this.pingAverage = Math.ceil((n + (this.pingAverage * (this.pingCount-1))) / this.pingCount);
-		console.debug('PING: {0}ms over {1} pings'.tr(this.decaf,this.pingAverage,this.pingCount));
+		console.debug(`PING: ${this.pingAverage}ms over ${this.pingCount} pings`);
 	},
 
 	'Goodbye' : function(data) {
-		this.decaf.debugString('Reason for disconnect: {0}'.tr(this.decaf,data));
+		this.decaf.debugString(`Reason for disconnect: ${data}`);
 	}
 };
 

@@ -66,8 +66,7 @@ DecafWebSocket.prototype.setup = function() {
 		return; }
 
 	clearTimeout(this.decaf.timer);
-	this.decaf.error("Unable to create a WebSocket. Does your browser support them? If not, try {0}.".tr(
-		this.decaf, '<a href="http://www.google.com/chrome" target="_blank">Google Chrome</a>'));
+	this.decaf.error("Unable to create a WebSocket. Does your browser support them? If not, try <a href=\"http://www.google.com/chrome\" target=\"_blank\">Google Chrome</a>.");
 }
 
 /** Connects to the remote server. All the necessary data is pulled from
