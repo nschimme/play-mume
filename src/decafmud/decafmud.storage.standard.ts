@@ -110,4 +110,4 @@ Storage.prototype.change = function(path) {
 
 // Expose this to DecafMUD
 DecafMUD.plugins.Storage.standard = Storage;
-})(DecafMUD);
+})(window.DecafMUD);

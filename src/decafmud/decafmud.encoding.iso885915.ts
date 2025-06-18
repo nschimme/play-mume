@@ -28,24 +28,44 @@ var replaces = {
 }
 
 // Reverse the array for ISO-8859-15 --> ISO-8859-1
-// Also, build our regexes.
-var rep_reg = '[', unrep_reg = '[';
-var unreplaces = {};
+var unreplaces: {[key: string]: string} = {};
 for(var k in replaces) {
-	rep_reg += k;
-	unrep_reg += replaces[k];
-	unreplaces[replaces[k]] = k; }
+	unreplaces[replaces[k as keyof typeof replaces]] = k;
+}
 
-// Build regexes
-rep_reg = new RegExp(rep_reg+']',"g");
-unrep_reg = new RegExp(unrep_reg+']',"g");
+// Regexes rep_reg and unrep_reg removed as per instructions.
 
-var decode = function(data) {
-		return [data.replace(rep_reg, function(m) { return replaces[m]; }), ''];
+var decode = function(data: Uint8Array): [string, Uint8Array] {
+		const outputChars: string[] = [];
+		for (let i = 0; i < data.length; i++) {
+			const byte = data[i];
+			const charFromByte = String.fromCharCode(byte);
+			if (replaces[charFromByte as keyof typeof replaces]) {
+				outputChars.push(replaces[charFromByte as keyof typeof replaces]);
+			} else {
+				outputChars.push(charFromByte);
+			}
+		}
+		const decodedString = outputChars.join('');
+		return [decodedString, new Uint8Array()];
 	},
 
-	encode = function(data) {
-		return data.replace(unrep_reg, function(m) { return unreplaces[m]; });
+	encode = function(data: string): Uint8Array {
+		const outputBytes: number[] = [];
+		for (let i = 0; i < data.length; i++) {
+			const char = data[i];
+			if (unreplaces[char]) {
+				outputBytes.push(unreplaces[char].charCodeAt(0));
+			} else {
+				const charCode = char.charCodeAt(0);
+				if (charCode < 0x100) { // Fits in a single byte (Latin-1 range)
+					outputBytes.push(charCode);
+				} else { // Unicode character not representable in ISO-8859-15
+					outputBytes.push(0x3F); // Question mark
+				}
+			}
+		}
+		return new Uint8Array(outputBytes);
 	};
 
 // Expose to DecafMUD.
@@ -53,27 +73,27 @@ var decode = function(data) {
  *  character encoding to DecafMUD by translating the different characters into
  *  their unicode equivilents.
  * @example
- * alert(DecafMUD.plugins.Encoding.iso885915.decode("This is some text!"));
+ * // decaf.decode(new Uint8Array([0xA4])); // Assuming this is how it's used
  * @namespace DecafMUD Character Encoding: ISO-8859-15 */
 DecafMUD.plugins.Encoding.iso885915 = {
 	proper : 'ISO-8859-15',
 
-	/** Replace ISO-8859-15 encoded characters with their unicode equivilents.
-	 * @example
-	 * DecafMUD.plugins.Encoding.iso885915.decode("\xA4");
-	 * // Becomes: "\u20AC"
-	 * @function
-	 * @param {String} data The text to decode. */
+    /** Replace ISO-8859-15 encoded bytes with their unicode equivilents.
+     * @example
+     * // decaf.decode(new Uint8Array([0xA4]));
+     * // Becomes: "\u20AC"
+     * @function
+     * @param {Uint8Array} data The bytes to decode. */
 	decode: decode,
 
-	/** Replace the unicode equivilents of ISO-8859-15 characters with their
-	 *  ISO-8859-15 values.
-	 * @example
-	 * DecafMUD.plugins.Encoding.iso885915.encode("\u20AC")
-	 * // Becomes: "\xA4"
-	 * @function
-	 * @param {String} data The text to encode. */
+    /** Replace the unicode equivilents of ISO-8859-15 characters with their
+     *  ISO-8859-15 byte values.
+     * @example
+     * // decaf.encode("\u20AC")
+     * // Becomes: Uint8Array([0xA4])
+     * @function
+     * @param {String} data The text to encode. */
 	encode: encode
 };
 
-})(DecafMUD);
+})(window.DecafMUD);

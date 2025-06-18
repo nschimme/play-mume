@@ -149,16 +149,26 @@ DecafWebSocket.prototype.assertConnected = function() {
 /** Send data to the remote server.
  * @example
  * decaf.socket.write("This is my message!\n");
- * @param {String} data The data to send to the remote server. This must be a
- *    string consisting only of the bytes 0 to 255.
+ * @param {Uint8Array} data The data to send to the remote server.
  * @throws {String} If the data cannot be written for any reason. */
-DecafWebSocket.prototype.write = function(data) {
+DecafWebSocket.prototype.write = function(data: Uint8Array) { // Changed type from string to Uint8Array
 	this.assertConnected();
-	var text = new Array(data.length);
-	for(var i=0; i< data.length; i++)
-	    text[i] = data.charCodeAt(i);
-	var arr = (new Uint8Array(text)).buffer;
-	this.websocket.send(arr);
+	// data is already a Uint8Array. We need to send its underlying ArrayBuffer.
+	// If data.buffer is already the exact buffer, use it.
+	// Otherwise, if it's a view (e.g. from subarray), we might need to copy it
+	// or ensure the view aligns with what send expects.
+	// For simplicity and common WebSocket usage, sending the buffer of a Uint8Array is typical.
+	// However, it's crucial that the ArrayBuffer sent is exactly the segment of interest.
+	// If `data` could be a slice/view of a larger buffer, this needs care.
+	// Assuming `data` is a Uint8Array whose buffer is what should be sent,
+	// or that `send` handles views correctly.
+	// A safer approach for views is to get a copy if data.byteOffset !== 0 || data.byteLength !== data.buffer.byteLength
+	if (data.byteOffset === 0 && data.byteLength === data.buffer.byteLength) {
+		this.websocket.send(data.buffer);
+	} else {
+		// If it's a view, create a copy to send
+		this.websocket.send(data.slice().buffer);
+	}
 }
 
 /** Called when the WebSocket's onOpen event fires. If the WebSocket's readyState
@@ -207,4 +217,4 @@ DecafWebSocket.prototype.onMessage = function(websocket, event) {
 // Add this to DecafMUD
 DecafMUD.plugins.Socket.websocket = DecafWebSocket;
 
-})(DecafMUD);
+})(window.DecafMUD);

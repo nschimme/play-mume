@@ -662,4 +662,4 @@ Display.prototype.tags = {
 
 // Expose the display to DecafMUD
 DecafMUD.plugins.Display.standard = Display;
-})(DecafMUD);
+})(window.DecafMUD);

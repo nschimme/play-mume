@@ -45,73 +45,80 @@ var lows = ["\u2007","\u263A","\u263B","\u2665","\u2666","\u2663","\u2660", //  
 			"\u2248","\u00b0","\u2219","\u00b7","\u221a","\u207f","\u00b2",
 			"\u25a0","\u00a0"],
 
-	decode = function(data) {
-		return [data.replace(/[\x00-\x1F\x80-\xFF]/g, function(m) {
-			var c = m.charCodeAt(0);
-			if ( c < 0x80 && c < lows.length ) {
-				return lows[c];
-			} else if ( c >= 0x80 ) {
-				c -= 0x80;
-				if ( c < chars.length ) { return chars[c]; }
+	decode = function(data: Uint8Array): [string, Uint8Array] {
+		const outputChars: string[] = [];
+		for (let i = 0; i < data.length; i++) {
+			const byte = data[i];
+			if (byte < 0x20) {
+				if (byte < lows.length && lows[byte] !== undefined) { // Ensure lows[byte] exists
+					outputChars.push(lows[byte]);
+				} else {
+					outputChars.push(String.fromCharCode(byte)); // Default char if not in lows
+				}
+			} else if (byte >= 0x80) {
+				const index = byte - 0x80;
+				if (index < chars.length && chars[index] !== undefined) { // Ensure chars[index] exists
+					outputChars.push(chars[index]);
+				} else {
+					outputChars.push(String.fromCharCode(0x3F)); // CP437 question mark for unmappable extended chars
+				}
+			} else { // Standard ASCII 0x20 - 0x7F
+				outputChars.push(String.fromCharCode(byte));
 			}
-			return m;
-		}), '']; },
+		}
+		return [outputChars.join(''), new Uint8Array()];
+	},
 
-	encode = function(data) {
-		return data.replace(/[\u00A0-\u266B]/g, function(m) {
-			var c = chars.indexOf(m);
-			if ( c !== -1 ) {
-				return String.fromCharCode(0x80 + c);
+	encode = function(data: string): Uint8Array {
+		const outputBytes: number[] = [];
+		for (let i = 0; i < data.length; i++) {
+			const char = data[i];
+			let index = chars.indexOf(char);
+			if (index !== -1) {
+				outputBytes.push(0x80 + index);
 			} else {
-				c = lows.indexOf(m);
-				if ( c !== -1 ) {
-					return String.fromCharCode(c); }
+				index = lows.indexOf(char);
+				if (index !== -1) {
+					outputBytes.push(index);
+				} else {
+					const charCode = char.charCodeAt(0);
+					if (charCode < 0x80) { // Standard ASCII
+						outputBytes.push(charCode);
+					} else { // Unicode char not in CP437
+						outputBytes.push(0x3F); // CP437 question mark '?'
+					}
+				}
 			}
-			return m;
-		}); };
-
-// Find the lowest (thats greater than FF) and the highest.
-var lowest = 65535, highest = 0;
-for(var i=0;i<lows.length;i++) {
-	var c = lows[i].charCodeAt(0);
-	if ( c < lowest && c > 0xFF ) { lowest = c; }
-	if ( c > highest ) { highest = c; }
-}
-for(var i=0;i<chars.length;i++) {
-	var c = chars[i].charCodeAt(0);
-	if ( c < lowest && c > 0xFF ) { lowest = c; }
-	if ( c > highest ) { highest = c; }
-}
-//console.debug('Low: ' + lowest + '    High: ' + highest);
-
-// var o='';for(var i=0;i<256;i++){o+=String.fromCharCode(i)}DecafMUD.plugins.Encoding.cp437.encode(DecafMUD.plugins.Encoding.cp437.decode(o))
+		}
+		return new Uint8Array(outputBytes);
+	};
 
 // Expose to Decaf
 /** This provides support for the <a href="http://en.wikipedia.org/wiki/Code_page_437">CP437</a>
  *  character encoding to DecafMUD by translating the characters into their
  *  unicode equivilents.
  * @example
- * alert(DecafMUD.plugins.Encoding.cp437.decode("This is some text!"));
+ * // Assuming DecafMUD.plugins.Encoding.cp437.decode is called with Uint8Array
  * @namespace DecafMUD Character Encoding: Code Page 437 (IBM PC) */
 DecafMUD.plugins.Encoding.cp437 = {
 	proper : 'CP437',
 
-    /** Replace CP437-encoded characters with their unicode equivilents.
+    /** Replace CP437-encoded bytes with their unicode equivilents.
      * @example
-     * DecafMUD.plugins.Encoding.cp437.decode("\xB2");
+     * // decaf.decode(new Uint8Array([0xB2])); // Assuming this is how it's used
      * // Becomes: "\u2593"
      * @function
-     * @param {String} data The text to decode. */
+     * @param {Uint8Array} data The bytes to decode. */
 	decode: decode,
 
     /** Replace the unicode equivilents of CP437 characters with the
-     *  CP437-encoded values.
+     *  CP437-encoded bytes.
      * @example
-     * DecafMUD.plugins.Encoding.cp437.encode("\u2593");
-     * // Becomes: "\xB2"
+     * // decaf.encode("\u2593"); // Assuming this is how it's used
+     * // Becomes: Uint8Array([0xB2])
      * @function
      * @param {String} data The text to encode. */
 	encode: encode
 };
 
-})(DecafMUD);
+})(window.DecafMUD);

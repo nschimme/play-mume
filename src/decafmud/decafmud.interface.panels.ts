@@ -22,18 +22,10 @@ import { makeDraggable, DraggableController } from './simple-dragger';
 (function(DecafMUD_Global: any) {
 
 var addEvent = function(node: HTMLElement | Document | Window, etype: string, func: EventListenerOrEventListenerObject) {
-		if ( node.addEventListener ) {
-			node.addEventListener(etype, func, false); return; }
-
-		const onetype = 'on' + etype;
-		if ( (node as any).attachEvent ) {
-			(node as any).attachEvent(onetype, func); }
-		else {
-			(node as any)[onetype] = func; }
+		node.addEventListener(etype, func, false);
 	},
 	delEvent = function(node: HTMLElement | Document | Window, etype: string, func: EventListenerOrEventListenerObject) {
-		if ( node.removeEventListener ) {
-			node.removeEventListener(etype, func, false); }
+		node.removeEventListener(etype, func, false);
 	};
 
 var bodyHack = /Firefox\//.test(navigator.userAgent);

@@ -11,7 +11,7 @@ export interface IDecafMUD {
   connecting: boolean;
   connected: boolean;
   id: number;
-  need: any[]; // Array of modules to load
+  need: [string, () => boolean][]; // Array of modules to load
   inbuf: (string | Uint8Array)[];
   telopt: { [key: string]: ITeloptHandler | boolean | undefined };
   isCompressionActive: boolean;
@@ -24,9 +24,9 @@ export interface IDecafMUD {
   textInputFilter?: ITextInputFilter;
   version: { major: number; minor: number; micro: number; flag: string; toString: () => string; };
   socket_ready?: boolean;
-  conn_timer?: any; // Timer ID
-  loadTimer?: any; // Timer ID
-  timer?: any; // Timer ID
+  conn_timer?: number; // Timer ID
+  loadTimer?: number; // Timer ID
+  timer?: number; // Timer ID
   connect_try: number;
   required: number;
   extra?: number; // Used in loading splash
@@ -159,13 +159,16 @@ export interface ISocket {
   connect(): void;
   close(): void;
   assertConnected?(): void; // Optional, as it's internal to DecafWebSocket
-  write(data: string): void;
+  /**
+   * Writes data to the socket.
+   * @param {Uint8Array} data The byte array to write.
+   */
+  write(data: Uint8Array): void;
 
   // Event handlers, usually bound
   onOpen?(websocket: WebSocket, event: Event): void;
   onClose?(websocket: WebSocket, event: CloseEvent): void;
   onMessage?(websocket: WebSocket, event: MessageEvent): void;
-  // For Flash socket, different methods would be here
 }
 
 export interface IUi {
@@ -408,8 +411,18 @@ export interface DecafMUDConstructor {
 
 export interface IEncoding {
   proper: string; // e.g., 'UTF-8'
-  decode(data: string): [string, string]; // [decoded_string, remaining_data]
-  encode(data: string): string;
+  /**
+   * Decodes a Uint8Array of bytes into a JavaScript string.
+   * @param {Uint8Array} data The byte array to decode.
+   * @returns {[string, Uint8Array]} A tuple containing the decoded string and any remaining unprocessed bytes.
+   */
+  decode(data: Uint8Array): [string, Uint8Array];
+  /**
+   * Encodes a JavaScript string into a Uint8Array of bytes.
+   * @param {string} data The string to encode.
+   * @returns {Uint8Array} The resulting byte array.
+   */
+  encode(data: string): Uint8Array;
 }
 
 export interface ITextInputFilter {
@@ -418,9 +431,5 @@ export interface ITextInputFilter {
   connected(): void;
 }
 
-// Global DecafMUD constructor type on window (if needed, but prefer modules)
-declare global {
-  interface Window {
-    DecafMUD: DecafMUDConstructor;
-  }
-}
+// Global DecafMUD constructor type
+declare var DecafMUD: DecafMUDConstructor;
