@@ -9,10 +9,10 @@
 import { DecafMUD } from "./decafmud";
 import { PanelsInterface } from "./decafmud.interface.panels";
 
-// Type definitions for menu structures (mirrors what's in window-extensions.d.ts for clarity here)
-type SubMenuItem = string;
-type SubMenuArray = SubMenuItem[];
-export type ToolbarMenuItemTuple = [string, string, string, SubMenuArray];
+// Type definitions for menu structures
+export type SubMenuItem = string; // e.g., "Reconnect" or "menu_reconnect();"
+export type SubMenuArray = SubMenuItem[]; // Represents the array like ['Item1', 'action1();', 'Item2', 'action2();']
+export type ToolbarMenuItemTuple = [string, string, string, SubMenuArray]; // [name, id, tooltip, submenuArray]
 export type ToolbarMenusArray = ToolbarMenuItemTuple[];
 
 // These would ideally be imported or properly typed if they come from other TS files.

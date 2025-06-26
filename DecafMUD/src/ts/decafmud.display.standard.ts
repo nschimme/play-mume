@@ -109,6 +109,8 @@ class StandardDisplay implements DecafMUDDisplay {
 
         this.splash = this.display.innerHTML; // Capture any existing splash text
         this.clear(); // Clears display and resets ANSI state
+        // Example of tr usage if it were here:
+        // this.someProperty = ("Test string {0}").tr(this.decaf, "value");
 
         this.message('<br><a href="https://github.com/MUME/DecafMUD">DecafMUD</a> v' + DecafMUD.version.toString() + ' by Stendec &lt;<a href="mailto:stendec365@gmail.com">stendec365@gmail.com</a>&gt;<br>');
         if (this.splash.length > 0) {

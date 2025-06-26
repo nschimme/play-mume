@@ -200,7 +200,7 @@ class PanelsInterface implements DecafMUDInterface {
 
         this.input = document.createElement('input');
         this.input.id = "inputelement"; // As per original
-        this.input.title = this.decaf.tr("MUD Input");
+        this.input.title = ("MUD Input" as string).tr(this.decaf);
         this.input.type = 'text';
         this.input.className = 'decafmud input';
         this._input.insertBefore(this.input, this._input.firstChild);
@@ -248,7 +248,7 @@ class PanelsInterface implements DecafMUDInterface {
 
     // --- Splash Screen ---
     initSplash(percentage: number = 0, message?: string): void {
-        if (message === undefined) message = this.decaf.tr('Discombobulating interface recipient...');
+        if (message === undefined) message = ('Discombobulating interface recipient...' as string).tr(this.decaf);
 
         this.old_y = this.el_display.style.overflowY;
         this.el_display.style.overflowY = 'hidden';
@@ -263,7 +263,7 @@ class PanelsInterface implements DecafMUDInterface {
         this.splash_pg.setAttribute('aria-valuemax', '100');
         this.splash_pg.setAttribute('aria-valuemin', '0');
         this.splash_pg.setAttribute('aria-valuenow', String(percentage));
-        this.splash_pg.setAttribute('aria-valuetext', this.decaf.tr('{0}%', percentage));
+        this.splash_pg.setAttribute('aria-valuetext', ('{0}%' as string).tr(this.decaf, percentage));
 
         this.splash_pgi = document.createElement('div');
         this.splash_pgi.className = 'decafmud inner-progress';
@@ -272,7 +272,7 @@ class PanelsInterface implements DecafMUDInterface {
 
         this.splash_pgt = document.createElement('div');
         this.splash_pgt.className = 'decafmud progress-text';
-        this.splash_pgt.innerHTML = this.decaf.tr('{0}%', percentage);
+        this.splash_pgt.innerHTML = ('{0}%' as string).tr(this.decaf, percentage);
         this.splash_pg.appendChild(this.splash_pgt);
         this.splash.appendChild(this.splash_pg);
 
@@ -301,7 +301,7 @@ class PanelsInterface implements DecafMUDInterface {
         if (!this.splash || this.splash_err) return;
 
         if (this.splash_pg && this.splash_pgt && this.splash_pgi) {
-            const t = this.decaf.tr('{0}%', percentage);
+            const t = ('{0}%' as string).tr(this.decaf, percentage);
             this.splash_pg.setAttribute('aria-valuenow', String(percentage));
             this.splash_pg.setAttribute('aria-valuetext', t);
             this.splash_pgt.innerHTML = t;
@@ -340,7 +340,7 @@ class PanelsInterface implements DecafMUDInterface {
         }
         const sz = this.display.getSize();
         this.sizeel.style.opacity = '1';
-        this.sizeel.innerHTML = this.decaf.tr("{0}x{1}", sz[0], sz[1]);
+        this.sizeel.innerHTML = ("{0}x{1}" as string).tr(this.decaf, sz[0], sz[1]);
         this.sizetm = setTimeout(() => this.hideSize(), 500);
     }
 
@@ -369,7 +369,7 @@ class PanelsInterface implements DecafMUDInterface {
     }
 
     connected(): void {
-        this.updateIcon(this.ico_connected, this.decaf.tr("DecafMUD is currently connected."), '', 'connectivity connected');
+        this.updateIcon(this.ico_connected, ("DecafMUD is currently connected." as string).tr(this.decaf), '', 'connectivity connected');
     }
 
     connecting(): void {
@@ -377,22 +377,22 @@ class PanelsInterface implements DecafMUDInterface {
 
         if (this.options.connect_hint && this.display && this.display.message) {
             if (this.decaf.options.socket === "websocket") {
-                this.display.message("<span>" + this.decaf.tr("You are connecting using <i>websockets</i> on port {0}. If this does not work (for example because the port is blocked or you have an older version of websockets), you can connecting with flash. To do so, open <a href=\"web_client.html?socket=flash\">the flash version</a> instead.", this.decaf.options.set_socket?.wsport || 'N/A') + "</span>");
+                this.display.message("<span>" + ("You are connecting using <i>websockets</i> on port {0}. If this does not work (for example because the port is blocked or you have an older version of websockets), you can connecting with flash. To do so, open <a href=\"web_client.html?socket=flash\">the flash version</a> instead." as string).tr(this.decaf, this.decaf.options.set_socket?.wsport || 'N/A') + "</span>");
             } else {
-                 this.display.message("<span>" + this.decaf.tr("You are connecting using <i>flash</i> on port {0}. To connect using websockets, make sure you have an up-to-date browser which supports this, and open <a href=\"web_client.html?socket=websocket\">the websocket version</a> instead.", this.decaf.options.port || 'N/A') + "</span>");
+                 this.display.message("<span>" + ("You are connecting using <i>flash</i> on port {0}. To connect using websockets, make sure you have an up-to-date browser which supports this, and open <a href=\"web_client.html?socket=websocket\">the websocket version</a> instead." as string).tr(this.decaf, this.decaf.options.port || 'N/A') + "</span>");
             }
         }
-        this.updateIcon(this.ico_connected, this.decaf.tr("DecafMUD is attempting to connect."), '', 'connectivity connecting');
+        this.updateIcon(this.ico_connected, ("DecafMUD is attempting to connect." as string).tr(this.decaf), '', 'connectivity connecting');
     }
 
     disconnected(reconnecting: boolean): void { // Added reconnecting param as per DecafMUDInterface
-        this.print_msg(this.decaf.tr("Connection closed."));
-        this.updateIcon(this.ico_connected, this.decaf.tr("DecafMUD is currently not connected."), '', 'connectivity disconnected');
+        this.print_msg(("Connection closed." as string).tr(this.decaf));
+        this.updateIcon(this.ico_connected, ("DecafMUD is currently not connected." as string).tr(this.decaf), '', 'connectivity disconnected');
     }
 
     private unloadPageFromEvent(e: BeforeUnloadEvent): string | void {
         if (this.decaf.connected) {
-            const confirmationMessage = this.decaf.tr("You are still connected.");
+            const confirmationMessage = ("You are still connected." as string).tr(this.decaf);
             (e || window.event).returnValue = confirmationMessage; // For IE/Firefox
             return confirmationMessage; // For Safari/Chrome
         }
@@ -450,9 +450,9 @@ class PanelsInterface implements DecafMUDInterface {
             for (let i = 0; i < menus.length; i += 3) {
                 this.tbNew(
                     menus[i], // id
-                    this.decaf.tr(menus[i+1]), // text
+                    (menus[i+1] as string).tr(this.decaf), // text
                     undefined, // icon
-                    this.decaf.tr(menus[i+2]), // tooltip
+                    (menus[i+2] as string).tr(this.decaf), // tooltip
                     1, // type (toggle)
                     true, // enabled
                     false, // pressed
@@ -467,7 +467,7 @@ class PanelsInterface implements DecafMUDInterface {
         this.goFullOnResize = this.store.get('fullscreen-auto', false); // Original: true, but disabled in comment
         const startFull = this.store.get('fullscreen-start', this.options.start_full);
 
-        this.ico_connected = this.addIcon(this.decaf.tr("You are currently disconnected."), '', 'connectivity disconnected');
+        this.ico_connected = this.addIcon(("You are currently disconnected." as string).tr(this.decaf), '', 'connectivity disconnected');
 
         if (startFull) {
             this.enter_fs(false);
@@ -551,7 +551,7 @@ class PanelsInterface implements DecafMUDInterface {
         this.scrollButton = document.createElement('div');
         this.scrollButton.className = 'button scroll-button';
         this.scrollButton.tabIndex = 0;
-        this.scrollButton.innerHTML = this.decaf.tr("More");
+        this.scrollButton.innerHTML = ("More" as string).tr(this.decaf);
         const helper = (e: Event) => {
             if (e.type === 'keydown' && (e as KeyboardEvent).keyCode !== 13) return;
             this.display?.scrollNew?.();

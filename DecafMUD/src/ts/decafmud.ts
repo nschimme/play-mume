@@ -1151,7 +1151,8 @@ export class DecafMUD {
     }
 
     disableMCCP2(): void {
-        this.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.DONT + DecafMUD.TN.COMPRESSv2);
+        const TN_REF = DecafMUD.TN; // Explicit local reference
+        this.sendIAC(TN_REF.IAC + TN_REF.DONT + TN_REF.COMPRESSv2);
         this.isCompressed = false;
         this.decompressor = null;
         // this.startCompressV2 = false; // This flag is somewhat redundant now
