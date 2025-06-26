@@ -1548,7 +1548,7 @@ declare global {
     interface String {
         endsWith(suffix: string): boolean;
         substr_count(needle: string): number;
-            tr(decafInstanceOrFirstArg?: DecafMUD | unknown, ...args: any[]): string; // Changed 'any' to 'unknown'
+        tr(decafInstance: DecafMUD, ...formatArgs: any[]): string; // Renamed rest param for clarity
     }
     interface Array<T> {
         indexOf(searchElement: T, fromIndex?: number): number;
@@ -1558,65 +1558,42 @@ declare global {
     }
 }
 
-// String.prototype.tr definition (simplified, assuming 'this' is the string)
-String.prototype.tr = function(this: string, decafInstanceOrFirstArg?: DecafMUD | any, ...args: any[]): string {
-    let decaf: DecafMUD | undefined;
-    let off = 0;
-    let s = this.toString(); // Ensure 'this' is treated as a string primitive
+// String.prototype.tr definition
+String.prototype.tr = function(this: string, decafInstance: DecafMUD, ...formatArgs: any[]): string {
+    let s = this.toString(); // The string to be translated
 
-    if (decafInstanceOrFirstArg instanceof DecafMUD) {
-        decaf = decafInstanceOrFirstArg;
-        off = 0; // args will be the actual replacement values
-    } else {
-        decaf = DecafMUD.instances[DecafMUD.instances.length - 1];
-        // If decafInstanceOrFirstArg was not DecafMUD, it's the first replacement arg
-        args.unshift(decafInstanceOrFirstArg);
-    }
-
-    const lang = decaf?.options.language;
+    // Use the provided decafInstance for language settings
+    const lang = decafInstance?.options.language; // decafInstance is now guaranteed to be DecafMUD
     if (lang && lang !== 'en') {
         const langPack = DecafMUD.plugins.Language[lang];
         if (langPack && langPack[s]) {
-            s = langPack[s];
+            s = langPack[s]; // Translated string
         } else {
             if (String.logNonTranslated && typeof console !== 'undefined' && console.warn) {
                  const langName = langPack && langPack['English'] ? langPack['English'] : `"${lang}"`;
-                 console.warn(`DecafMUD[${decaf?.id || '?'}] i18n: No ${langName} translation for: ${s.replace(/\n/g, '\\n')}`);
+                 console.warn(`DecafMUD[${decafInstance?.id || '?'}] i18n: No ${langName} translation for: ${s.replace(/\n/g, '\\n')}`);
             }
         }
     }
 
-    // Reconstruct what the original 'arguments' object and 'off' would represent
-    let actualArgumentsForReplacement: any[];
-    // 'decaf' is the instance from the outer scope of String.prototype.tr,
-    // 'decafInstanceOrFirstArg' is the first param passed to tr.
-    // 'args' is the ...args from the function signature.
-    if (decafInstanceOrFirstArg instanceof DecafMUD && decaf === decafInstanceOrFirstArg) {
-        actualArgumentsForReplacement = args; // Corrected to use 'args'
-    } else {
-        // The first argument was not a DecafMUD instance OR not the one determined by tr's scope,
-        // so it's part of the values to be substituted.
-        actualArgumentsForReplacement = [decafInstanceOrFirstArg, ...args]; // Corrected to use 'args'
-    }
-
-    // Replacement logic
-    // Check if the first actual argument for replacement is an object for keyed substitution
-    if (actualArgumentsForReplacement.length === 1 &&
-        typeof actualArgumentsForReplacement[0] === 'object' &&
-        actualArgumentsForReplacement[0] !== null &&
-        !Array.isArray(actualArgumentsForReplacement[0])) {
-        const replacements = actualArgumentsForReplacement[0] as Record<string, any>;
+    // Replacement logic using formatArgs
+    // Check if the first formatArg is an object for keyed substitution
+    if (formatArgs.length === 1 &&
+        typeof formatArgs[0] === 'object' &&
+        formatArgs[0] !== null &&
+        !Array.isArray(formatArgs[0])) {
+        const replacements = formatArgs[0] as Record<string, any>;
         for (const key in replacements) {
             if (Object.prototype.hasOwnProperty.call(replacements, key)) {
                 const value = replacements[key];
                 s = s.replace(new RegExp('{' + key + '}', 'g'), typeof value !== 'undefined' ? String(value) : '');
             }
         }
-    } else { // Numbered arguments
+    } else { // Numbered arguments from formatArgs array
         s = s.replace(/{(\d+)}/g, (matchString, p1) => {
             const placeholderIndex = parseInt(p1, 10);
-            if (placeholderIndex >= 0 && placeholderIndex < actualArgumentsForReplacement.length) {
-                const value = actualArgumentsForReplacement[placeholderIndex];
+            if (placeholderIndex >= 0 && placeholderIndex < formatArgs.length) {
+                const value = formatArgs[placeholderIndex];
                 return typeof value !== 'undefined' ? String(value) : ''; // Replace undefined with empty string
             }
             return matchString; // Keep placeholder if index out of bounds
