@@ -3,7 +3,7 @@
  *
  * This file is originally from Discworld.
  */
-import { DecafMUD } from "decafmud";
+import { DecafMUD } from "../DecafMUD/src/ts/decafmud";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Potentially used by global event handlers or index.html
 function tryExtraMacro(decaf: DecafMUD, keycode: number): number {

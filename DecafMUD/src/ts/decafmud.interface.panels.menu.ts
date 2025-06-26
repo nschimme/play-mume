@@ -7,7 +7,13 @@
  */
 
 import { DecafMUD } from "decafmud";
-import { PanelsInterface } from "./decafmud.interface.panels"; // Assuming PanelsInterface is exported
+// import { PanelsInterface } from "./decafmud.interface.panels"; // Not directly used in this file's functions
+
+// Type definitions for menu structures (mirrors what's in window-extensions.d.ts for clarity here)
+type SubMenuItem = string;
+type SubMenuArray = SubMenuItem[];
+export type ToolbarMenuItemTuple = [string, string, string, SubMenuArray];
+export type ToolbarMenusArray = ToolbarMenuItemTuple[];
 
 // These would ideally be imported or properly typed if they come from other TS files.
 // For now, declaring them as they are expected by this script.
@@ -23,9 +29,17 @@ declare function toggle_numpad(enabled: boolean): void;
 // declare var showmap: boolean; // Seems unused
 // declare function toggle_map(visible: boolean): void; // Seems unused
 
+// Exported Menu Constants for external use (e.g., by mume.menu.ts)
+export const MENU_FILE = 0;
+export const MENU_LOG = 1;
+export const MENU_OPTIONS = 2;
+export const MENU_HELP = 3;
+export const MI_SUBMENU = 3; // Index within a menu item tuple for the submenu array
+
 
 // --- Menu Structure ---
-const toolbar_menus: any[] = [
+// This structure matches ToolbarMenusArray in window-extensions.d.ts
+const toolbar_menus_local: ToolbarMenusArray = [ // Use ToolbarMenusArray type
   [ 'File', 'menu_file', 'Used for (re-)connecting.',
     ['Reconnect', 'menu_reconnect();']
   ],
@@ -53,12 +67,13 @@ const toolbar_menus: any[] = [
 // const MI_SUBMENU = 3; // Index of submenu items array in toolbar_menus structure
 
 // --- Menu Building and Management ---
-let open_menu_index: number = -1; // Renamed from open_menu to avoid conflict if 'open_menu' is a global
+let open_menu_index: number = -1;
 
 function build_menu(id: number): string {
   let ret = toolbar_menus[id][0] + `<ul id="sub${toolbar_menus[id][1]}" class="submenu">`;
-  const items = toolbar_menus[id][3];
+  const items = toolbar_menus_local[id][3]; // This is SubMenuArray
   for (let j = 0; j < items.length; j += 2) {
+    // items[j] is menu item text, items[j+1] is JS action string
     ret += `<li><a href="javascript:${items[j+1]}">${items[j]}</a></li>`;
   }
   ret += "</ul>";
@@ -70,36 +85,36 @@ function build_menu(id: number): string {
 // Making it part of the window scope for now, or PanelsInterface needs to import it.
 (window as any).get_menus = function(): any[] {
   const ret: any[] = [];
-  for (let i = 0; i < toolbar_menus.length; i++) {
-    ret.push(toolbar_menus[i][1]);      // CSS id
-    ret.push(build_menu(i));            // HTML content
-    ret.push(toolbar_menus[i][2]);      // Tooltip
+  for (let i = 0; i < toolbar_menus_local.length; i++) { // Use toolbar_menus_local
+    ret.push(toolbar_menus_local[i][1]);      // CSS id
+    ret.push(build_menu(i));            // HTML content (build_menu already uses toolbar_menus_local)
+    ret.push(toolbar_menus_local[i][2]);      // Tooltip
   }
   return ret;
 };
 
 (window as any).close_menus = function(): void {
-  for (let i = 0; i < toolbar_menus.length; i++) {
-    const menuname = "sub" + toolbar_menus[i][1];
+  for (let i = 0; i < toolbar_menus_local.length; i++) { // Use toolbar_menus_local
+    const menuname = "sub" + toolbar_menus_local[i][1];
     const menuElement = document.getElementById(menuname);
     if (menuElement) {
       menuElement.style.visibility = 'hidden';
     }
   }
   open_menu_index = -1;
-  const currentUI = DecafMUD.instances[0]?.ui as PanelsInterface;
+  const currentUI = DecafMUD.instances[0]?.ui as import("./decafmud.interface.panels").PanelsInterface | undefined; // More specific import if possible
   currentUI?.input?.focus();
 };
 
 (window as any).toggle_menu = function(index: number): void {
-  const menuid = "sub" + toolbar_menus[index][1];
+  const menuid = "sub" + toolbar_menus_local[index][1]; // Use toolbar_menus_local
   const menuElement = document.getElementById(menuid);
   if (!menuElement) return;
 
   if (open_menu_index === index) {
     menuElement.style.visibility = 'hidden';
     open_menu_index = -1;
-    const currentUI = DecafMUD.instances[0]?.ui as PanelsInterface;
+    const currentUI = DecafMUD.instances[0]?.ui as import("./decafmud.interface.panels").PanelsInterface | undefined;
     currentUI?.input?.focus();
   } else {
     (window as any).close_menus(); // Close other menus
@@ -108,6 +123,11 @@ function build_menu(id: number): string {
   }
 };
 
+// Assign the local, typed menu structure to the window object
+// so mume.menu.ts can modify it, and PanelsInterface can read it via get_menus (which reads the local one).
+if (typeof window !== 'undefined') {
+    (window as any).toolbar_menus = toolbar_menus_local;
+}
 
 // --- Popup Functionality (Duplicated from PanelsInterface, marked for refactor) ---
 // These functions are used by the menu actions. Ideally, they should call
@@ -304,12 +324,14 @@ ${txt}
   pop.appendChild(frm);
   (window as any).add_element_menu(frm, "p", `Font Size: <input name="txtfontsize" type="text" size="5" value="${get_fontsize()}">`);
   (window as any).add_element_menu(frm, "p", "(Select a value between 50 and 500 - the default size is 100.)");
-  (window as any).add_element_menu(frm, "p", `Font Family: <input name="txtfontfamily" type="text" size="20" value="${ui.el_display.style.fontFamily.split(',')[0].replace(/'/g, '') || ''}">`);
+  (window as any).add_element_menu(frm, "p", `Font Family: <input name="txtfontfamily" type="text" size="20" value="${(DecafMUD.instances[0]?.ui as import("./decafmud.interface.panels").PanelsInterface)?.el_display.style.fontFamily.split(',')[0].replace(/'/g, '') || ''}">`);
   (window as any).add_element_menu(frm, "p", "(Select a font that is supported by your browser, or leave empty for the current font.)");
+
+  const btnsContainer = (window as any).button_line_menu(frm);
 
   const savebtn = document.createElement("a");
   savebtn.className = "fakebutton";
-  savebtn.href = "javascript:change_font();"; // change_font needs to be global
+  savebtn.href = "javascript:change_font();";
   savebtn.innerHTML = "<big>Save</big>";
   frm.appendChild(savebtn);
   (window as any).add_element_menu(frm, "span", "&nbsp;&nbsp;&nbsp;");
@@ -353,19 +375,26 @@ ${txt}
   const frm = document.createElement("form") as HTMLFormElement;
   frm.name = "formmacros";
   pop.appendChild(frm);
-  (window as any).add_element_menu(frm, "p", `<input type="checkbox" name="cfkey" ${(fkeymacros ? "checked" : "")}>Enable f-key macros.`);
-  (window as any).add_element_menu(frm, "p", `<input type="checkbox" name="cnumpad" ${(numpadwalking ? "checked" : "")}>Enable numpad navigation.`);
+  (window as any).add_element_menu(frm, "p", `<input type="checkbox" name="cfkey" ${(window as any).fkeymacros ? "checked" : ""}>Enable f-key macros.`);
+  (window as any).add_element_menu(frm, "p", `<input type="checkbox" name="cnumpad" ${(window as any).numpadwalking ? "checked" : ""}>Enable numpad navigation.`);
 
-  const savebtn = ui.createButton("Save", () => (window as any).change_macros()); // Use PanelsInterface button creator if available
-  savebtn.className = "fakebutton"; savebtn.innerHTML = "<big>Save</big>"; // Keep style if createButton is different
-  savebtn.href="javascript:change_macros();"; // Keep if button is an anchor
-  frm.appendChild(savebtn);
+  const btnsContainer = (window as any).button_line_menu(frm); // Create a container for buttons
 
-  (window as any).add_element_menu(frm, "span", "&nbsp;&nbsp;&nbsp;");
-  const closebtn = ui.createButton("Cancel", () => (window as any).close_popup_menu());
-  closebtn.className = "fakebutton"; closebtn.innerHTML = "<big>Cancel</big>";
-  closebtn.href="javascript:close_popup_menu();";
-  frm.appendChild(closebtn);
+  const savebtn = document.createElement("a");
+  savebtn.className = "fakebutton";
+  savebtn.href = "javascript:change_macros();";
+  savebtn.innerHTML = "<big>Save</big>";
+  btnsContainer.appendChild(savebtn);
+
+  const spacer = document.createElement("span");
+  spacer.innerHTML = "&nbsp;&nbsp;&nbsp;";
+  btnsContainer.appendChild(spacer);
+
+  const closebtn = document.createElement("a");
+  closebtn.className = "fakebutton";
+  closebtn.href = "javascript:close_popup_menu();";
+  closebtn.innerHTML = "<big>Cancel</big>";
+  btnsContainer.appendChild(closebtn);
 };
 
 (window as any).change_macros = function(): void { // Must be global

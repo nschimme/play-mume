@@ -18,7 +18,7 @@
 import $ from 'jquery';
 import * as PIXI from 'pixi.js';
 import SparkMD5 from 'spark-md5';
-import { DecafMUD } from 'decafmud'; // Import DecafMUD
+import { DecafMUD } from '../DecafMUD/src/ts/decafmud'; // Import DecafMUD using relative path
 
 const ROOM_PIXELS = 48;
 const MAP_DATA_PATH = "mapdata/v1/";

@@ -100,6 +100,7 @@ export interface DecafMUDOptions {
     connect_timeout?: number; // Added based on usage
     reconnect_delay?: number; // Added based on usage
     reconnect_tries?: number; // Added based on usage
+    connectonsend?: boolean; // Added from original options
 }
 
 export interface DecafMUDSettings {
@@ -154,8 +155,9 @@ export interface DecafMUDInterface extends DecafMUDPlugin {
     connected?(): void;
     disconnected?(reconnecting: boolean): void;
     splashError?(text: string): boolean;
-    infoBar?(message: string, type?: string, duration?: number, actions?: any[][], onClick?: () => void, onClose?: () => void): void;
-    immediateInfoBar?(message: string, type?: string, duration?: number, actions?: any[][], onClick?: () => void, onClose?: () => void): void;
+    // Signature to match PanelsInterface implementation
+    infoBar?(message: string, type?: string, duration?: number, icon?: string, buttons?: [string, (e: Event) => void][], onClick?: (e: Event) => void, onClose?: (e: Event) => void): void;
+    immediateInfoBar?(message: string, type?: string, duration?: number, icon?: string, buttons?: [string, (e: Event) => void][], onClick?: (e: Event) => void, onClose?: (e: Event) => void): boolean | void; // PanelsInterface returns boolean
 }
 
 export interface DecafMUDSocket extends DecafMUDPlugin {
@@ -429,7 +431,10 @@ export class DecafMUD {
                     (console as any).debug(st, this.id, text);
                     return;
                 }
-                console.log(st, this.id, text);
+                // Fallback to console.log if debug is not available
+                if (typeof window !== 'undefined' && window.console && typeof window.console.log === 'function') {
+                    window.console.log(st, this.id, text);
+                }
         }
     }
 
@@ -1180,13 +1185,18 @@ export class DecafMUD {
         };
 
         if (this.ui && this.ui.infoBar) {
+            const buttons: [string, (e: Event) => void][] = [
+                [this.tr('Allow'), allowAction],
+                [this.tr('Deny'), denyAction]
+            ];
             this.ui.infoBar(
                 promptText,
-                'permission',
-                0, // duration (0 means sticky)
-                [['Allow'.tr(this), allowAction], ['Deny'.tr(this), denyAction]],
-                undefined, // onClick
-                closeAction  // onClose
+                'permission', // type/clss
+                0,            // duration
+                undefined,    // icon
+                buttons,      // buttons
+                undefined,    // onClick
+                closeAction   // onClose
             );
         } else {
             // Fallback if no infobar (e.g., confirm dialog)
@@ -1542,7 +1552,9 @@ declare global {
     interface Array<T> {
         indexOf(searchElement: T, fromIndex?: number): number;
     }
-     var String: StringConstructor & { logNonTranslated?: boolean };
+    interface StringConstructor {
+        logNonTranslated?: boolean;
+    }
 }
 
 // String.prototype.tr definition (simplified, assuming 'this' is the string)

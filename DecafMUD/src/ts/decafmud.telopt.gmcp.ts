@@ -167,19 +167,20 @@ class GMCPHandler implements DecafMUDTeloptHandler {
     /** Command to find a given function based on package string like "Core.Char.Vitals". */
     private getFunction(pckg: string): GMCPMessageHandler | undefined {
         const parts = pckg.split('.');
-        let currentLevel: GMCPPackage | GMCPMessageHandler = this.packages;
+        let currentLevel: any = this.packages; // Use 'any' for traversal
 
         for (const part of parts) {
-            if (typeof currentLevel === 'function' || currentLevel === undefined || typeof (currentLevel as GMCPPackage)[part] === 'undefined') {
-                return undefined; // Not found or trying to go deeper than a function
+            // Ensure currentLevel is an object and has the part before trying to access
+            if (typeof currentLevel !== 'object' || currentLevel === null || !Object.prototype.hasOwnProperty.call(currentLevel, part)) {
+                return undefined;
             }
-            currentLevel = (currentLevel as GMCPPackage)[part];
+            currentLevel = currentLevel[part];
         }
 
         if (typeof currentLevel === 'function') {
             return currentLevel as GMCPMessageHandler;
         }
-        return undefined; // Path led to an object/value, not a function
+        return undefined; // Path led to a non-function or was incomplete
     }
 }
 

@@ -92,10 +92,11 @@ export class Position {
     }
 
     public Bound(lower: Position | null, upper: Position | null): Position {
-        let newPos = this;
-        if(lower) newPos = newPos.Max(lower);
-        if(upper) newPos = newPos.Min(upper);
-        return newPos;
+        // Start with the current position's values but in a new base Position object
+        let currentPos = new Position(this.X, this.Y);
+        if (lower) currentPos = currentPos.Max(lower); // Max returns a new Position
+        if (upper) currentPos = currentPos.Min(upper); // Min returns a new Position
+        return currentPos;
     }
 
     public Check(): Position {

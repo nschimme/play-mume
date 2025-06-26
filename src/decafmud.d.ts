@@ -32,18 +32,24 @@ export {
     DecafMUDDisplay,
     DecafMUDEncoding,
     DecafMUDTextInputFilter
-} from '../../DecafMUD/src/ts/decafmud';
+} from '../DecafMUD/src/ts/decafmud'; // Adjusted relative path assuming src/ is base for this file
 
 // Keep other global declarations from the original d.ts if they are still needed
 // and not part of the DecafMUD class/module itself.
-// For example, if MENU_HELP etc. are truly global and unrelated to DecafMUD module.
 
-declare const MENU_HELP: number;
-declare const MI_SUBMENU: number;
-declare const MENU_OPTIONS: number;
+// MENU_* constants are now imported where needed (e.g., in mume.menu.ts)
+// declare const MENU_HELP: number; // REMOVED
+// declare const MI_SUBMENU: number; // REMOVED
+// declare const MENU_OPTIONS: number; // REMOVED
 
-declare function fkeys_enabled(): boolean;
-declare function numpad_enabled(): boolean;
+// fkeys_enabled and numpad_enabled are declared in window-extensions.d.ts as globals
+// as they are set on the window object by decafmud.interface.panels.settings.ts
+// So, their declarations can be removed from here if window-extensions.d.ts is consistently used for globals.
+// However, keeping them here doesn't hurt if some files might still expect these specific declares.
+// For cleaner separation, ideally all window globals go to window-extensions.d.ts.
+// Let's remove them from here assuming window-extensions.d.ts is the source of truth for window globals.
+// declare function fkeys_enabled(): boolean; // REMOVED
+// declare function numpad_enabled(): boolean; // REMOVED
 
 // It's also possible that the DecafMUD class itself will be assigned to the global window object
 // by the original JS plugins or by src/index.ts for compatibility.

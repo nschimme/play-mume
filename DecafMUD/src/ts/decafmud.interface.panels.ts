@@ -29,8 +29,8 @@ declare function toggle_menu(index: number): void;
 declare function close_menus(): void;
 declare var open_menu: number; // Assuming this is a global or accessible variable
 
-// TODO: Define dragObject if it's from dragelement.js
-declare var dragObject: any;
+// dragObject is now imported. No need for global declare here.
+// declare var dragObject: any;
 
 // TODO: Define tryExtraMacro if it's from mume.macros.ts or similar
 declare function tryExtraMacro(decaf: DecafMUD, keyCode: number): boolean;
