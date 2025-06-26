@@ -5,7 +5,7 @@
  * Copyright 2010, Stendec <stendec365@gmail.com>
  * Licensed under the MIT license.
  */
-import "./decafmud.language"; // For String.prototype.tr augmentation
+// import "./decafmud.language"; // For String.prototype.tr augmentation // Fully removed
 
 // TODO: Move these prototype extensions to a separate utility file or handle as global augmentations
 if ( String.prototype.endsWith === undefined ) {
@@ -422,7 +422,8 @@ export class DecafMUD {
     debugString(text: string, type: string = 'debug', obj?: any): void {
         if (typeof window === 'undefined' || !('console' in window)) { return; }
 
-        if (obj !== undefined) { text = text.tr(this, obj); }
+        // if (obj !== undefined) { text = text.tr(this, obj); } // Commented out tr
+        if (obj !== undefined) { text = text; } // Keep text as is if obj was defined
 
         const st = 'DecafMUD[%d]: %s';
         switch (type) {
@@ -450,8 +451,10 @@ export class DecafMUD {
             console.groupEnd();
         }
 
-        if (this.ui && this.ui.splashError && this.ui.splashError((text as any).tr(this))) { return; }
-        alert("DecafMUD Error\n\n" + (text as any).tr(this));
+        // if (this.ui && this.ui.splashError && this.ui.splashError((text as any).tr(this))) { return; } // Commented out tr
+        // alert("DecafMUD Error\n\n" + (text as any).tr(this)); // Commented out tr
+        if (this.ui && this.ui.splashError && this.ui.splashError(text)) { return; }
+        alert("DecafMUD Error\n\n" + text);
     }
 
     loadScript(filename: string, path?: string): void {
@@ -613,12 +616,15 @@ export class DecafMUD {
         } else if (nextModule) {
             if (nextModule.indexOf('decafmud') === 0) {
                 const parts = nextModule.split('.');
-                message = 'Loading the {0} module "{1}"...'.tr(this, parts[1], parts[2]);
+                // message = 'Loading the {0} module "{1}"...'.tr(this, parts[1], parts[2]); // Commented out tr
+                message = `Loading the ${parts[1]} module "${parts[2]}"...`;
             } else {
-                message = 'Loading: {0}'.tr(this, nextModule);
+                // message = 'Loading: {0}'.tr(this, nextModule); // Commented out tr
+                message = `Loading: ${nextModule}`;
             }
         } else if (perc === 100) {
-            message = "Loading complete.".tr(this);
+            // message = "Loading complete.".tr(this); // Commented out tr
+            message = "Loading complete.";
         }
 
         this.ui.updateSplash(perc, message);
@@ -635,7 +641,8 @@ export class DecafMUD {
 
         if (this.ui) {
             this.need.push('.'); // Placeholder for UI loading step in splash
-            this.updateSplash(true, "Initializing the user interface...".tr(this));
+            // this.updateSplash(true, "Initializing the user interface...".tr(this)); // Commented out tr
+            this.updateSplash(true, "Initializing the user interface...");
             this.ui.load();
         }
 
@@ -645,7 +652,8 @@ export class DecafMUD {
             this.socket.setup(0); // Argument seems to be unused in implementations
         } else {
             this.debugString(`Socket plugin "${this.options.socket}" not found.`, 'error');
-            this.error("Socket plugin not found: {0}".tr(this, this.options.socket || 'N/A'));
+            // this.error("Socket plugin not found: {0}".tr(this, this.options.socket || 'N/A')); // Commented out tr
+            this.error(`Socket plugin not found: ${this.options.socket || 'N/A'}`);
             return;
         }
 
@@ -667,11 +675,13 @@ export class DecafMUD {
 
     initFinal(): void {
         this.need.push('.'); // Placeholder for triggers
-        this.updateSplash(true, "Initializing triggers system...".tr(this));
+        // this.updateSplash(true, "Initializing triggers system...".tr(this)); // Commented out tr
+        this.updateSplash(true, "Initializing triggers system...");
         this.need.shift(); // Remove placeholder
 
         this.need.push('.'); // Placeholder for Telnet
-        this.updateSplash(true, "Initializing TELNET extensions...".tr(this));
+        // this.updateSplash(true, "Initializing TELNET extensions...".tr(this)); // Commented out tr
+        this.updateSplash(true, "Initializing TELNET extensions...");
         for (const k in DecafMUD.plugins.Telopt) {
             if (Object.prototype.hasOwnProperty.call(DecafMUD.plugins.Telopt, k)) {
                 const o = (DecafMUD.plugins.Telopt as any)[k];
@@ -685,7 +695,8 @@ export class DecafMUD {
         this.need.shift(); // Remove placeholder
 
         this.need.push('.'); // Placeholder for filters
-        this.updateSplash(true, "Initializing filters...".tr(this));
+        // this.updateSplash(true, "Initializing filters...".tr(this)); // Commented out tr
+        this.updateSplash(true, "Initializing filters...");
         if (this.options.textinputfilter && DecafMUD.plugins.TextInputFilter[this.options.textinputfilter]) {
             const textInputFilterCtor = DecafMUD.plugins.TextInputFilter[this.options.textinputfilter];
             this.textInputFilter = new textInputFilterCtor(this);
@@ -700,7 +711,8 @@ export class DecafMUD {
         // Example of IE warning, can be removed or adapted
         // if (typeof navigator !== 'undefined' && /MSIE/.test(navigator.userAgent) && this.ui && this.ui.infoBar) {
         //    const msg = 'You may experience poor performance...';
-        //    this.ui.infoBar(msg.tr(this));
+        //    // this.ui.infoBar(msg.tr(this)); // Commented out tr
+        //    this.ui.infoBar(msg);
         // }
 
         if (this.options.autoconnect && this.socket?.ready) {
@@ -789,7 +801,8 @@ export class DecafMUD {
 
         const host = this.socket?.host || 'unknown';
         const port = this.socket?.port || 0;
-        this.debugString("The socket has connected successfully to {0}:{1}.".tr(this, host, port), "info");
+        // this.debugString("The socket has connected successfully to {0}:{1}.".tr(this, host, port), "info"); // Commented out tr
+        this.debugString(`The socket has connected successfully to ${host}:${port}.`, "info");
 
         for (const k in this.telopt) {
             if (this.telopt[k] && typeof (this.telopt[k] as DecafMUDTeloptHandler).connect === 'function') {
@@ -836,11 +849,13 @@ export class DecafMUD {
                 const s = this.options.reconnect_delay! / 1000;
                 if (this.ui && this.ui.immediateInfoBar && s >= 0.25) {
                     this.ui.immediateInfoBar(
-                        "You have been disconnected. Reconnecting in {0} second{1}...".tr(this, s, (s === 1 ? '' : 's')),
+                        // "You have been disconnected. Reconnecting in {0} second{1}...".tr(this, s, (s === 1 ? '' : 's')), // Commented out tr
+                        `You have been disconnected. Reconnecting in ${s} second${s === 1 ? '' : 's'}...`,
                         'reconnecting',
                         s, // duration
                         undefined, // no actions initially for this specific message
-                        [['Reconnect Now'.tr(this), () => { clearTimeout(this.timer); this.socket?.connect(); }]],
+                        // [['Reconnect Now'.tr(this), () => { clearTimeout(this.timer); this.socket?.connect(); }]], // Commented out tr
+                        [['Reconnect Now', () => { clearTimeout(this.timer); this.socket?.connect(); }]],
                         undefined, // on click general
                         () => { clearTimeout(this.timer); } // on close
                     );
@@ -877,7 +892,8 @@ export class DecafMUD {
                 }
                 this.decompressor.push(byteArray, false); // false means not the final chunk
             } catch (e: any) {
-                this.error('MCCP2 decompression error: {0}'.tr(this, e.message || e));
+                // this.error('MCCP2 decompression error: {0}'.tr(this, e.message || e)); // Commented out tr
+                this.error(`MCCP2 decompression error: ${e.message || e}`);
                 // Attempt to disable compression. The `disconnect` method on TeloptCOMPRESSv2 handles this.
                 const compressHandler = this.telopt[DecafMUD.TN.COMPRESSv2] as TeloptCOMPRESSv2 | undefined;
                 compressHandler?.disconnect();
@@ -896,7 +912,8 @@ export class DecafMUD {
     }
 
     socketError(data: string, data2?: string): void {
-        this.debugString('Socket Err: {0}  d2="{1}"'.tr(this, data, data2 || ''), 'error');
+        // this.debugString('Socket Err: {0}  d2="{1}"'.tr(this, data, data2 || ''), 'error'); // Commented out tr
+        this.debugString(`Socket Err: ${data}  d2="${data2 || ''}"`, 'error');
     }
 
     // --- Data Processing ---
@@ -1178,8 +1195,10 @@ export class DecafMUD {
 
         if (this.ui && this.ui.infoBar) {
             const buttons: [string, (e: Event) => void][] = [
-                [this.tr('Allow'), allowAction],
-                [this.tr('Deny'), denyAction]
+                // [this.tr('Allow'), allowAction], // Commented out tr
+                // [this.tr('Deny'), denyAction] // Commented out tr
+                ['Allow', allowAction],
+                ['Deny', denyAction]
             ];
             this.ui.infoBar(
                 promptText,
@@ -1236,7 +1255,8 @@ export class DecafMUD {
             "It's easy to customize as well, using simple CSS and JavaScript," +
             " and free to use and modify, so long as your MU* is free to play!"
         ];
-        alert(abt.join('\n').tr(this, DecafMUD.version.toString()));
+        // alert(abt.join('\n').tr(this, DecafMUD.version.toString())); // Commented out tr
+        alert(abt.join('\n').replace('{0}', DecafMUD.version.toString()));
     }
 }
 

@@ -35,8 +35,9 @@ class DecafWebSocket implements DecafMUDSocket {
         }
 
         clearTimeout(this.decaf.timer); // Assuming decaf.timer is a general purpose timer
-        this.decaf.error(("Unable to create a WebSocket. Does your browser support them? If not, try {0}." as string).tr(this.decaf,
-            '<a href="http://www.google.com/chrome" target="_blank">Google Chrome</a>'));
+        // this.decaf.error(("Unable to create a WebSocket. Does your browser support them? If not, try {0}." as string).tr(this.decaf,
+        //     '<a href="http://www.google.com/chrome" target="_blank">Google Chrome</a>')); // Commented out tr
+        this.decaf.error(`Unable to create a WebSocket. Does your browser support them? If not, try <a href="http://www.google.com/chrome" target="_blank">Google Chrome</a>.`);
     }
 
     connect(): void {
@@ -88,7 +89,8 @@ class DecafWebSocket implements DecafMUDSocket {
             this.websocket.onerror = this.onError.bind(this); // Added error handler
 
         } catch (e: any) {
-            this.decaf.error(("Failed to create WebSocket: {0}" as string).tr(this.decaf, e.message || String(e)));
+            // this.decaf.error(("Failed to create WebSocket: {0}" as string).tr(this.decaf, e.message || String(e))); // Commented out tr
+            this.decaf.error(`Failed to create WebSocket: ${e.message || String(e)}`);
             // Ensure we call socketClosed or similar if an immediate error occurs
              if (this.decaf.connecting) { // If DecafMUD thinks it's in the process of connecting
                 this.decaf.socketClosed(); // Simulate a closure to allow reconnect logic etc.

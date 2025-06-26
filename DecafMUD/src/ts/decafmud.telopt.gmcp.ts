@@ -39,13 +39,16 @@ class GMCPHandler implements DecafMUDTeloptHandler {
                 this.pingAverage = Math.ceil((rtt + (this.pingAverage * (this.pingCount - 1))) / this.pingCount);
 
                 if (typeof window !== 'undefined' && console.debug) { // Check for console.debug
-                     console.debug(('PING: {0}ms over {1} pings' as string).tr(this.decaf, this.pingAverage, this.pingCount));
+                     // console.debug(('PING: {0}ms over {1} pings' as string).tr(this.decaf, this.pingAverage, this.pingCount)); // Commented out tr
+                     console.debug(`PING: ${this.pingAverage}ms over ${this.pingCount} pings`);
                 } else {
-                     this.decaf.debugString(('PING: {0}ms over {1} pings' as string).tr(this.decaf, this.pingAverage, this.pingCount));
+                     // this.decaf.debugString(('PING: {0}ms over {1} pings' as string).tr(this.decaf, this.pingAverage, this.pingCount)); // Commented out tr
+                     this.decaf.debugString(`PING: ${this.pingAverage}ms over ${this.pingCount} pings`);
                 }
             },
             Goodbye: (data?: any) => {
-                this.decaf.debugString(('Reason for disconnect: {0}' as string).tr(this.decaf, data));
+                // this.decaf.debugString(('Reason for disconnect: {0}' as string).tr(this.decaf, data)); // Commented out tr
+                this.decaf.debugString(`Reason for disconnect: ${data}`);
             }
         }
         // Other packages (Char, Room, etc.) would be added here by other plugins or configurations

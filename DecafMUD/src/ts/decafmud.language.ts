@@ -5,6 +5,7 @@
  * Copyright 2010, Stendec <stendec365@gmail.com>
  */
 
+/*
 import { DecafMUD } from "./decafmud"; // DecafMUD type is needed for decafInstance
 
 // Global augmentations for String prototype
@@ -16,8 +17,10 @@ declare global {
         logNonTranslated?: boolean;
     }
 }
+*/
 
 // String.prototype.tr definition
+/*
 String.prototype.tr = function(this: string, decafInstance: DecafMUD, ...formatArgs: any[]): string {
     let s = this.toString(); // The string to be translated
 
@@ -59,8 +62,8 @@ String.prototype.tr = function(this: string, decafInstance: DecafMUD, ...formatA
     }
     return s;
 };
-
-String.logNonTranslated = (typeof window !== 'undefined' && 'console' in window);
+*/
+// String.logNonTranslated = (typeof window !== 'undefined' && 'console' in window); // Also commented out
 
 // This file primarily modifies String.prototype and String global.
 // It might need to be imported once in a central place (like decafmud.ts or index.ts)
