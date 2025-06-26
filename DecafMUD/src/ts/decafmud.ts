@@ -179,7 +179,7 @@ export interface DecafMUDStorage extends DecafMUDPlugin {
 export interface DecafMUDDisplay extends DecafMUDPlugin {
     handleData(text: string): void;
     getSize?(): [number, number];
-    message?(text: string, type: string): void;
+    message?(text: string, className?: string, needLineArg?: boolean): void;
 }
 
 export interface DecafMUDEncoding {
@@ -375,6 +375,8 @@ export class DecafMUD {
     // For splash screen updates
     extra: number = 0;
 
+    // Method signature for updateSplash, to be used in constructor and other methods
+    // updateSplash(moduleName: string | null | true, nextModule?: string, perc?: number): void;
 
     constructor(options?: DecafMUDOptions) {
         this.options = {} as DecafMUDOptions;
@@ -610,7 +612,7 @@ export class DecafMUD {
         this.waitLoad(this.initSocket, this.updateSplash);
     }
 
-    updateSplash(moduleName: string | null, nextModule?: string, perc?: number): void {
+    updateSplash(moduleName: string | null | true, nextModule?: string, perc?: number): void {
         if (!this.ui) { return; }
 
         if (perc === undefined) {
@@ -889,7 +891,7 @@ export class DecafMUD {
             } catch (e: any) {
                 this.error(this.tr('MCCP2 decompression error: {0}', e.message || e));
                 // Attempt to disable compression. The `disconnect` method on TeloptCOMPRESSv2 handles this.
-                const compressHandler = this.telopt[TN.COMPRESSv2] as TeloptCOMPRESSv2 | undefined;
+                const compressHandler = this.telopt[DecafMUD.TN.COMPRESSv2] as TeloptCOMPRESSv2 | undefined;
                 compressHandler?.disconnect();
                 // Push the raw data to inbuf as a fallback, though it's likely corrupt/unreadable
                 this.inbuf.push(data);
@@ -1431,10 +1433,18 @@ class TeloptCHARSET implements DecafMUDTeloptHandler {
                 }
             }
 
-            if (chosenEncoding && originalCharsetName) {
-                this.decaf.setEncoding(chosenEncoding);
-                this.decaf.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.CHARSET + '\x02' + originalCharsetName + DecafMUD.TN.IAC + DecafMUD.TN.SE);
+            if (originalCharsetName) {
+                const finalChosenEncoding = chosenEncoding; // Assign to new const
+                if (typeof finalChosenEncoding === 'string') { // Check new const
+                    this.decaf.setEncoding(finalChosenEncoding); // Use new const
+                    this.decaf.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.CHARSET + '\x02' + originalCharsetName + DecafMUD.TN.IAC + DecafMUD.TN.SE);
+                } else {
+                    // This path implies originalCharsetName was set, but chosenEncoding was not (logic error above or unexpected state)
+                    this.decaf.debugString("Logic error: originalCharsetName set but finalChosenEncoding is not a string for: " + requestedCharsets.join(sep), "warn");
+                    this.decaf.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.CHARSET + '\x03' + DecafMUD.TN.IAC + DecafMUD.TN.SE); // REJECTED
+                }
             } else {
+                // originalCharsetName was not set, so no encoding was chosen.
                 this.decaf.debugString("No encoder for: " + requestedCharsets.join(sep));
                 this.decaf.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.CHARSET + '\x03' + DecafMUD.TN.IAC + DecafMUD.TN.SE); // REJECTED
             }

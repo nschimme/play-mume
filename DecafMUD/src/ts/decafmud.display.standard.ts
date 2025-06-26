@@ -112,7 +112,7 @@ class StandardDisplay implements DecafMUDDisplay {
         // Example of tr usage if it were here:
         // this.someProperty = ("Test string {0}").tr(this.decaf, "value");
 
-        this.message('<br><a href="https://github.com/MUME/DecafMUD">DecafMUD</a> v' + DecafMUD.version.toString() + ' by Stendec &lt;<a href="mailto:stendec365@gmail.com">stendec365@gmail.com</a>&gt;<br>');
+        this.message('<br><a href="https://github.com/MUME/DecafMUD">DecafMUD</a> v' + "0.10.0-beta" + ' by Stendec &lt;<a href="mailto:stendec365@gmail.com">stendec365@gmail.com</a>&gt;<br>');
         if (this.splash.length > 0) {
             this.message(this.splash + '<br>');
         }

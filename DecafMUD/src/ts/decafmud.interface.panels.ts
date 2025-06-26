@@ -364,7 +364,7 @@ class PanelsInterface implements DecafMUDInterface {
     // --- Status Notifications ---
     private print_msg(txt: string): void { // Used by connected/disconnected messages
         if (this.display && this.display.message) {
-            this.display.message(`<span class="c6">${txt}</span>`); // c6 is typically yellow
+            this.display.message(`<span class="c6">${txt}</span>`, 'system'); // c6 is typically yellow
         }
     }
 
@@ -377,9 +377,9 @@ class PanelsInterface implements DecafMUDInterface {
 
         if (this.options.connect_hint && this.display && this.display.message) {
             if (this.decaf.options.socket === "websocket") {
-                this.display.message("<span>" + ("You are connecting using <i>websockets</i> on port {0}. If this does not work (for example because the port is blocked or you have an older version of websockets), you can connecting with flash. To do so, open <a href=\"web_client.html?socket=flash\">the flash version</a> instead." as string).tr(this.decaf, this.decaf.options.set_socket?.wsport || 'N/A') + "</span>");
+                this.display.message("<span>" + ("You are connecting using <i>websockets</i> on port {0}. If this does not work (for example because the port is blocked or you have an older version of websockets), you can connecting with flash. To do so, open <a href=\"web_client.html?socket=flash\">the flash version</a> instead." as string).tr(this.decaf, this.decaf.options.set_socket?.wsport || 'N/A') + "</span>", 'system');
             } else {
-                 this.display.message("<span>" + ("You are connecting using <i>flash</i> on port {0}. To connect using websockets, make sure you have an up-to-date browser which supports this, and open <a href=\"web_client.html?socket=websocket\">the websocket version</a> instead." as string).tr(this.decaf, this.decaf.options.port || 'N/A') + "</span>");
+                 this.display.message("<span>" + ("You are connecting using <i>flash</i> on port {0}. To connect using websockets, make sure you have an up-to-date browser which supports this, and open <a href=\"web_client.html?socket=websocket\">the websocket version</a> instead." as string).tr(this.decaf, this.decaf.options.port || 'N/A') + "</span>", 'system');
             }
         }
         this.updateIcon(this.ico_connected, ("DecafMUD is attempting to connect." as string).tr(this.decaf), '', 'connectivity connecting');
@@ -568,18 +568,17 @@ class PanelsInterface implements DecafMUDInterface {
     }
 
     // InfoBar
-    infoBar(text: string, clss: string | number = 'info', timeout: number = 0, icon?: string, buttons?: [string, (e: Event) => void][], click?: (e: Event) => void, close?: (e: Event) => void): void {
-        if (typeof clss === 'number') { // Handle overloaded signature
-            const tempTimeout = timeout;
-            timeout = clss;
-            clss = typeof tempTimeout === 'string' ? tempTimeout : 'info'; // If tempTimeout was class
-        }
-        const ibarConfig = { text, class: clss, timeout, icon, buttons, click, close };
+    infoBar(text: string, clss: string = 'info', timeout: number = 0, icon?: string, buttons?: [string, (e: Event) => void][], click?: (e: Event) => void, close?: (e: Event) => void): void {
+        // Overload logic `if (typeof clss === 'number')` removed.
+        // Calls should now pass clss as string and timeout as number directly.
+        const ibarConfig = { text, class: clss || 'info', timeout, icon, buttons, click, close }; // Ensure clss has a default if undefined/empty
         this.infobars.push(ibarConfig);
         if (!this.ibar) this.createIBar();
     }
-    immediateInfoBar(text: string, clss?: string | number, timeout?: number, icon?: string, buttons?: [string, (e: Event) => void][], click?: (e: Event) => void, close?: (e: Event) => void): boolean {
+    immediateInfoBar(text: string, clss?: string, timeout?: number, icon?: string, buttons?: [string, (e: Event) => void][], click?: (e: Event) => void, close?: (e: Event) => void): boolean {
         if (this.ibar) return false;
+        // Ensure `clss` passed to infoBar is a string or undefined (which infoBar will default)
+        // `timeout` is already number | undefined.
         this.infoBar(text, clss, timeout, icon, buttons, click, close);
         return true;
     }
