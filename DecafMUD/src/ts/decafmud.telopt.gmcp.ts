@@ -6,7 +6,7 @@
  * Adapted for TypeScript by Jules
  */
 
-import { DecafMUD, DecafMUDTeloptHandler } from "./decafmud"; // This was already correct.
+import { DecafMUD, DecafMUDTeloptHandler } from "./decafmud";
 
 // Telnet constants are on DecafMUD.TN
 const { TN } = DecafMUD;
@@ -39,13 +39,13 @@ class GMCPHandler implements DecafMUDTeloptHandler {
                 this.pingAverage = Math.ceil((rtt + (this.pingAverage * (this.pingCount - 1))) / this.pingCount);
 
                 if (typeof window !== 'undefined' && console.debug) { // Check for console.debug
-                     console.debug(this.decaf.tr('PING: {0}ms over {1} pings', this.pingAverage, this.pingCount));
+                     console.debug(('PING: {0}ms over {1} pings' as string).tr(this.decaf, this.pingAverage, this.pingCount));
                 } else {
-                     this.decaf.debugString(this.decaf.tr('PING: {0}ms over {1} pings', this.pingAverage, this.pingCount));
+                     this.decaf.debugString(('PING: {0}ms over {1} pings' as string).tr(this.decaf, this.pingAverage, this.pingCount));
                 }
             },
             Goodbye: (data?: any) => {
-                this.decaf.debugString(this.decaf.tr('Reason for disconnect: {0}', data));
+                this.decaf.debugString(('Reason for disconnect: {0}' as string).tr(this.decaf, data));
             }
         }
         // Other packages (Char, Room, etc.) would be added here by other plugins or configurations

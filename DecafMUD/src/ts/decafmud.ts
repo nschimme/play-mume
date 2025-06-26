@@ -5,6 +5,7 @@
  * Copyright 2010, Stendec <stendec365@gmail.com>
  * Licensed under the MIT license.
  */
+import "./decafmud.language"; // For String.prototype.tr augmentation
 
 // TODO: Move these prototype extensions to a separate utility file or handle as global augmentations
 if ( String.prototype.endsWith === undefined ) {
@@ -421,7 +422,7 @@ export class DecafMUD {
     debugString(text: string, type: string = 'debug', obj?: any): void {
         if (typeof window === 'undefined' || !('console' in window)) { return; }
 
-        if (obj !== undefined) { text = this.tr(text, obj); } // Assuming tr is available or will be defined
+        if (obj !== undefined) { text = text.tr(this, obj); }
 
         const st = 'DecafMUD[%d]: %s';
         switch (type) {
@@ -449,28 +450,8 @@ export class DecafMUD {
             console.groupEnd();
         }
 
-        if (this.ui && this.ui.splashError && this.ui.splashError(this.tr(text))) { return; }
-        alert("DecafMUD Error\n\n" + this.tr(text));
-    }
-
-    tr(text: string, ...args: any[]): string {
-        // Simplified translation logic for now, assuming English or direct passthrough
-        // TODO: Implement full translation logic if DecafMUD.plugins.Language is populated
-        let s = text;
-        if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null && !Array.isArray(args[0])) {
-            const obj = args[0];
-            for (const i in obj) {
-                if (Object.prototype.hasOwnProperty.call(obj, i)) {
-                    s = s.replace(new RegExp('{' + i + '}', 'g'), obj[i]);
-                }
-            }
-        } else {
-            s = s.replace(/{(\d+)}/g, (match, p1) => {
-                const index = parseInt(p1, 10);
-                return index < args.length ? args[index] : match;
-            });
-        }
-        return s;
+        if (this.ui && this.ui.splashError && this.ui.splashError((text as any).tr(this))) { return; }
+        alert("DecafMUD Error\n\n" + (text as any).tr(this));
     }
 
     loadScript(filename: string, path?: string): void {
@@ -632,12 +613,12 @@ export class DecafMUD {
         } else if (nextModule) {
             if (nextModule.indexOf('decafmud') === 0) {
                 const parts = nextModule.split('.');
-                message = this.tr('Loading the {0} module "{1}"...', parts[1], parts[2]);
+                message = 'Loading the {0} module "{1}"...'.tr(this, parts[1], parts[2]);
             } else {
-                message = this.tr('Loading: {0}', nextModule);
+                message = 'Loading: {0}'.tr(this, nextModule);
             }
         } else if (perc === 100) {
-            message = this.tr("Loading complete.");
+            message = "Loading complete.".tr(this);
         }
 
         this.ui.updateSplash(perc, message);
@@ -654,7 +635,7 @@ export class DecafMUD {
 
         if (this.ui) {
             this.need.push('.'); // Placeholder for UI loading step in splash
-            this.updateSplash(true, this.tr("Initializing the user interface..."));
+            this.updateSplash(true, "Initializing the user interface...".tr(this));
             this.ui.load();
         }
 
@@ -664,7 +645,7 @@ export class DecafMUD {
             this.socket.setup(0); // Argument seems to be unused in implementations
         } else {
             this.debugString(`Socket plugin "${this.options.socket}" not found.`, 'error');
-            this.error(this.tr("Socket plugin not found: {0}", this.options.socket || 'N/A'));
+            this.error("Socket plugin not found: {0}".tr(this, this.options.socket || 'N/A'));
             return;
         }
 
@@ -686,11 +667,11 @@ export class DecafMUD {
 
     initFinal(): void {
         this.need.push('.'); // Placeholder for triggers
-        this.updateSplash(true, this.tr("Initializing triggers system..."));
+        this.updateSplash(true, "Initializing triggers system...".tr(this));
         this.need.shift(); // Remove placeholder
 
         this.need.push('.'); // Placeholder for Telnet
-        this.updateSplash(true, this.tr("Initializing TELNET extensions..."));
+        this.updateSplash(true, "Initializing TELNET extensions...".tr(this));
         for (const k in DecafMUD.plugins.Telopt) {
             if (Object.prototype.hasOwnProperty.call(DecafMUD.plugins.Telopt, k)) {
                 const o = (DecafMUD.plugins.Telopt as any)[k];
@@ -704,7 +685,7 @@ export class DecafMUD {
         this.need.shift(); // Remove placeholder
 
         this.need.push('.'); // Placeholder for filters
-        this.updateSplash(true, this.tr("Initializing filters..."));
+        this.updateSplash(true, "Initializing filters...".tr(this));
         if (this.options.textinputfilter && DecafMUD.plugins.TextInputFilter[this.options.textinputfilter]) {
             const textInputFilterCtor = DecafMUD.plugins.TextInputFilter[this.options.textinputfilter];
             this.textInputFilter = new textInputFilterCtor(this);
@@ -719,7 +700,7 @@ export class DecafMUD {
         // Example of IE warning, can be removed or adapted
         // if (typeof navigator !== 'undefined' && /MSIE/.test(navigator.userAgent) && this.ui && this.ui.infoBar) {
         //    const msg = 'You may experience poor performance...';
-        //    this.ui.infoBar(this.tr(msg));
+        //    this.ui.infoBar(msg.tr(this));
         // }
 
         if (this.options.autoconnect && this.socket?.ready) {
@@ -808,7 +789,7 @@ export class DecafMUD {
 
         const host = this.socket?.host || 'unknown';
         const port = this.socket?.port || 0;
-        this.debugString(this.tr("The socket has connected successfully to {0}:{1}.", host, port), "info");
+        this.debugString("The socket has connected successfully to {0}:{1}.".tr(this, host, port), "info");
 
         for (const k in this.telopt) {
             if (this.telopt[k] && typeof (this.telopt[k] as DecafMUDTeloptHandler).connect === 'function') {
@@ -855,7 +836,7 @@ export class DecafMUD {
                 const s = this.options.reconnect_delay! / 1000;
                 if (this.ui && this.ui.immediateInfoBar && s >= 0.25) {
                     this.ui.immediateInfoBar(
-                        this.tr("You have been disconnected. Reconnecting in {0} second{1}...", s, (s === 1 ? '' : 's')),
+                        "You have been disconnected. Reconnecting in {0} second{1}...".tr(this, s, (s === 1 ? '' : 's')),
                         'reconnecting',
                         s, // duration
                         undefined, // no actions initially for this specific message
@@ -896,7 +877,7 @@ export class DecafMUD {
                 }
                 this.decompressor.push(byteArray, false); // false means not the final chunk
             } catch (e: any) {
-                this.error(this.tr('MCCP2 decompression error: {0}', e.message || e));
+                this.error('MCCP2 decompression error: {0}'.tr(this, e.message || e));
                 // Attempt to disable compression. The `disconnect` method on TeloptCOMPRESSv2 handles this.
                 const compressHandler = this.telopt[DecafMUD.TN.COMPRESSv2] as TeloptCOMPRESSv2 | undefined;
                 compressHandler?.disconnect();
@@ -915,7 +896,7 @@ export class DecafMUD {
     }
 
     socketError(data: string, data2?: string): void {
-        this.debugString(this.tr('Socket Err: {0}  d2="{1}"', data, data2 || ''), 'error');
+        this.debugString('Socket Err: {0}  d2="{1}"'.tr(this, data, data2 || ''), 'error');
     }
 
     // --- Data Processing ---
@@ -1255,7 +1236,7 @@ export class DecafMUD {
             "It's easy to customize as well, using simple CSS and JavaScript," +
             " and free to use and modify, so long as your MU* is free to play!"
         ];
-        alert(this.tr(abt.join('\n'), DecafMUD.version.toString()));
+        alert(abt.join('\n').tr(this, DecafMUD.version.toString()));
     }
 }
 
@@ -1568,60 +1549,16 @@ declare global {
     interface String {
         endsWith(suffix: string): boolean;
         substr_count(needle: string): number;
-        tr(decafInstance: DecafMUD, ...formatArgs: any[]): string; // Renamed rest param for clarity
+        // tr(decafInstance: DecafMUD, ...formatArgs: any[]): string; // Moved to decafmud.language.ts
     }
     interface Array<T> {
         indexOf(searchElement: T, fromIndex?: number): number;
     }
-    interface StringConstructor {
-        logNonTranslated?: boolean;
-    }
+    // StringConstructor parts also moved
 }
 
-// String.prototype.tr definition
-String.prototype.tr = function(this: string, decafInstance: DecafMUD, ...formatArgs: any[]): string {
-    let s = this.toString(); // The string to be translated
-
-    // Use the provided decafInstance for language settings
-    const lang = decafInstance?.options.language; // decafInstance is now guaranteed to be DecafMUD
-    if (lang && lang !== 'en') {
-        const langPack = DecafMUD.plugins.Language[lang];
-        if (langPack && langPack[s]) {
-            s = langPack[s]; // Translated string
-        } else {
-            if (String.logNonTranslated && typeof console !== 'undefined' && console.warn) {
-                 const langName = langPack && langPack['English'] ? langPack['English'] : `"${lang}"`;
-                 console.warn(`DecafMUD[${decafInstance?.id || '?'}] i18n: No ${langName} translation for: ${s.replace(/\n/g, '\\n')}`);
-            }
-        }
-    }
-
-    // Replacement logic using formatArgs
-    // Check if the first formatArg is an object for keyed substitution
-    if (formatArgs.length === 1 &&
-        typeof formatArgs[0] === 'object' &&
-        formatArgs[0] !== null &&
-        !Array.isArray(formatArgs[0])) {
-        const replacements = formatArgs[0] as Record<string, any>;
-        for (const key in replacements) {
-            if (Object.prototype.hasOwnProperty.call(replacements, key)) {
-                const value = replacements[key];
-                s = s.replace(new RegExp('{' + key + '}', 'g'), typeof value !== 'undefined' ? String(value) : '');
-            }
-        }
-    } else { // Numbered arguments from formatArgs array
-        s = s.replace(/{(\d+)}/g, (matchString, p1) => {
-            const placeholderIndex = parseInt(p1, 10);
-            if (placeholderIndex >= 0 && placeholderIndex < formatArgs.length) {
-                const value = formatArgs[placeholderIndex];
-                return typeof value !== 'undefined' ? String(value) : ''; // Replace undefined with empty string
-            }
-            return matchString; // Keep placeholder if index out of bounds
-        });
-    }
-    return s;
-};
-String.logNonTranslated = (typeof window !== 'undefined' && 'console' in window);
+// String.prototype.tr definition MOVED to decafmud.language.ts
+// String.logNonTranslated MOVED to decafmud.language.ts
 
 // Make sure Zlib is declared if it's expected to be a global (for COMPRESSv2)
 // declare var Zlib: any;
