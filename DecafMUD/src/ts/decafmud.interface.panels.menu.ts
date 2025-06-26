@@ -70,8 +70,9 @@ const toolbar_menus_local: ToolbarMenusArray = [ // Use ToolbarMenusArray type
 let open_menu_index: number = -1;
 
 function build_menu(id: number): string {
-  let ret = toolbar_menus[id][0] + `<ul id="sub${toolbar_menus[id][1]}" class="submenu">`;
-  const items = toolbar_menus_local[id][3]; // This is SubMenuArray
+  // Corrected: toolbar_menus was a typo, should be toolbar_menus_local
+  let ret = toolbar_menus_local[id][0] + `<ul id="sub${toolbar_menus_local[id][1]}" class="submenu">`;
+  const items = toolbar_menus_local[id][3];
   for (let j = 0; j < items.length; j += 2) {
     // items[j] is menu item text, items[j+1] is JS action string
     ret += `<li><a href="javascript:${items[j+1]}">${items[j]}</a></li>`;

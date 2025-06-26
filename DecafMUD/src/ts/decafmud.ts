@@ -1548,7 +1548,7 @@ declare global {
     interface String {
         endsWith(suffix: string): boolean;
         substr_count(needle: string): number;
-        tr(decafInstanceOr প্রথমArg?: DecafMUD | any, ...args: any[]): string;
+            tr(decafInstanceOrFirstArg?: DecafMUD | unknown, ...args: any[]): string; // Changed 'any' to 'unknown'
     }
     interface Array<T> {
         indexOf(searchElement: T, fromIndex?: number): number;
@@ -1590,12 +1590,13 @@ String.prototype.tr = function(this: string, decafInstanceOrFirstArg?: DecafMUD 
     let actualArgumentsForReplacement: any[];
     // 'decaf' is the instance from the outer scope of String.prototype.tr,
     // 'decafInstanceOrFirstArg' is the first param passed to tr.
+    // 'args' is the ...args from the function signature.
     if (decafInstanceOrFirstArg instanceof DecafMUD && decaf === decafInstanceOrFirstArg) {
-        actualArgumentsForReplacement = restArgs; // These are the true substitution args
+        actualArgumentsForReplacement = args; // Corrected to use 'args'
     } else {
         // The first argument was not a DecafMUD instance OR not the one determined by tr's scope,
         // so it's part of the values to be substituted.
-        actualArgumentsForReplacement = [decafInstanceOrFirstArg, ...restArgs];
+        actualArgumentsForReplacement = [decafInstanceOrFirstArg, ...args]; // Corrected to use 'args'
     }
 
     // Replacement logic

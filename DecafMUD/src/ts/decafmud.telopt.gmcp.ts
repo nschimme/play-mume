@@ -6,7 +6,7 @@
  * Adapted for TypeScript by Jules
  */
 
-import { DecafMUD, DecafMUDTeloptHandler } from "decafmud";
+import { DecafMUD, DecafMUDTeloptHandler } from "./decafmud"; // This was already correct.
 
 // Telnet constants are on DecafMUD.TN
 const { TN } = DecafMUD;
