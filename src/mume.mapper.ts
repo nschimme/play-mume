@@ -18,6 +18,7 @@
 import $ from 'jquery';
 import * as PIXI from 'pixi.js';
 import SparkMD5 from 'spark-md5';
+import { DecafMUD } from 'decafmud'; // Import DecafMUD
 
 const ROOM_PIXELS = 48;
 const MAP_DATA_PATH = "mapdata/v1/";
@@ -1809,10 +1810,10 @@ export class MumeXmlParser
     private plainText!: string;
     private mode!: MumeXmlMode;
     private xmlDesirableBytes: number = 0;
-    private decaf: DecafMUDInstance;
+    private decaf: DecafMUD; // Changed from DecafMUDInstance
     private scouting!: ScoutingState
 
-    constructor( decaf: DecafMUDInstance )
+    constructor( decaf: DecafMUD ) // Changed from DecafMUDInstance
     {
         this.decaf = decaf;
         this.clear();
@@ -1859,7 +1860,11 @@ export class MumeXmlParser
                 // Wait until we're done with the pre-play to request XML mode +
                 // gratuitous descs. Hopefully, the first screen won't be split
                 // across filterInputText() calls, or we'll have to keep state.
-                this.decaf.socket.write( "~$#EX2\n1G\n" );
+                if (this.decaf.socket) {
+                    this.decaf.socket.write( "~$#EX2\n1G\n" );
+                } else {
+                    console.error("MumeXmlParser: DecafMUD socket not available to send XML negotiation.");
+                }
                 this.setXmlModeDesirable();
                 console.log( "Negotiating MUME XML mode" );
             }

@@ -3,18 +3,19 @@
  *
  * This file is originally from Discworld.
  */
+import { DecafMUD } from "decafmud";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Potentially used by global event handlers or index.html
-function tryExtraMacro(decaf: DecafMUDInstance, keycode: number): number {
+function tryExtraMacro(decaf: DecafMUD, keycode: number): number {
   // f-key macros
-  if (112 <= keycode && keycode <= 121 && fkeys_enabled()) {
+  if (112 <= keycode && keycode <= 121 && window.fkeys_enabled && window.fkeys_enabled()) {
     const cmd = "f" + (keycode-111);
     decaf.sendInput(cmd);
     return 1;
   }
 
   // numpad walking
-  if (numpad_enabled()) {
+  if (window.numpad_enabled && window.numpad_enabled()) {
     switch (keycode) {
       case 96:  decaf.sendInput("kp0");     return 1;
       case 97:  decaf.sendInput("kp1");     return 1;
