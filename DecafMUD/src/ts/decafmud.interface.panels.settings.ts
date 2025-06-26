@@ -6,7 +6,7 @@
  * Adapted for TypeScript by Jules.
  */
 
-import { DecafMUD } from "decafmud";
+import { DecafMUD } from "./decafmud";
 import { PanelsInterface } from "./decafmud.interface.panels";
 
 // Global settings variables

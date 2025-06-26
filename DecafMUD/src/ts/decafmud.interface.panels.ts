@@ -7,7 +7,7 @@
  * then decafmud.interface.discworld.js, then evolved into panels.
  */
 
-import { DecafMUD, DecafMUDInterface, DecafMUDDisplay } from "decafmud";
+import { DecafMUD, DecafMUDInterface, DecafMUDDisplay } from "./decafmud";
 import { dragObject, Position } from "./dragelement"; // Import necessary classes
 
 // Helper to add events

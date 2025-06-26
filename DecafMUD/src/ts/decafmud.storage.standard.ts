@@ -6,7 +6,7 @@
  * Adapted for TypeScript by Jules
  */
 
-import { DecafMUD, DecafMUDStorage } from "decafmud";
+import { DecafMUD, DecafMUDStorage } from "./decafmud";
 
 class StandardStorage implements DecafMUDStorage {
     private decaf: DecafMUD;

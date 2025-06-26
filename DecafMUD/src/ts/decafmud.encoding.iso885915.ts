@@ -6,7 +6,7 @@
  * Adapted for TypeScript by Jules
  */
 
-import { DecafMUD, DecafMUDEncoding } from "decafmud";
+import { DecafMUD, DecafMUDEncoding } from "./decafmud";
 
 // ISO-8859-1 --> ISO-8859-15 replacements
 const replaces: { [key: string]: string } = {

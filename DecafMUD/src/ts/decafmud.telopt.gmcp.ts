@@ -15,7 +15,7 @@ const { TN } = DecafMUD;
 type GMCPMessageHandler = (this: GMCPHandler, data?: any) => void;
 
 interface GMCPPackage {
-    [key: string]: GMCPPackage | GMCPMessageHandler | number | string | boolean;
+    [key: string]: GMCPPackage | GMCPMessageHandler | number | string | boolean | undefined; // Added undefined
     ' version'?: number; // Optional version for packages like Core
 }
 

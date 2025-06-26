@@ -6,7 +6,7 @@
  * Adapted for TypeScript by Jules
  */
 
-import { DecafMUD, DecafMUDDisplay, DecafMUDInterface } from "./decafmud"; // Changed to relative path
+import { DecafMUD, DecafMUDDisplay, DecafMUDInterface } from "./decafmud";
 
 const addEvent = function(node: HTMLElement | Window, etype: string, func: EventListenerOrEventListenerObject): void {
     if (node.addEventListener) {

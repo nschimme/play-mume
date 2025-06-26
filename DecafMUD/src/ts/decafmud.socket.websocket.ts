@@ -6,7 +6,7 @@
  * Adapted for TypeScript by Jules
  */
 
-import { DecafMUD, DecafMUDSocket } from "decafmud";
+import { DecafMUD, DecafMUDSocket } from "./decafmud";
 
 class DecafWebSocket implements DecafMUDSocket {
     private decaf: DecafMUD;

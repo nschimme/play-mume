@@ -832,8 +832,9 @@ export class DecafMUD {
         }
 
         this.inbuf = [];
-        this.decompressStream = undefined;
-        this.startCompressV2 = false;
+        this.decompressor = null; // Corrected: was decompressStream
+        this.isCompressed = false;  // Also reset isCompressed flag
+        this.startCompressV2 = false; // This flag is largely redundant but reset for safety
 
         if (this.options.autoreconnect) {
             this.connect_try++;
@@ -1585,18 +1586,39 @@ String.prototype.tr = function(this: string, decafInstanceOrFirstArg?: DecafMUD 
         }
     }
 
+    // Reconstruct what the original 'arguments' object and 'off' would represent
+    let actualArgumentsForReplacement: any[];
+    // 'decaf' is the instance from the outer scope of String.prototype.tr,
+    // 'decafInstanceOrFirstArg' is the first param passed to tr.
+    if (decafInstanceOrFirstArg instanceof DecafMUD && decaf === decafInstanceOrFirstArg) {
+        actualArgumentsForReplacement = restArgs; // These are the true substitution args
+    } else {
+        // The first argument was not a DecafMUD instance OR not the one determined by tr's scope,
+        // so it's part of the values to be substituted.
+        actualArgumentsForReplacement = [decafInstanceOrFirstArg, ...restArgs];
+    }
+
     // Replacement logic
-    if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null && !Array.isArray(args[0])) {
-        const obj = args[0];
-        for (const i in obj) {
-            if (Object.prototype.hasOwnProperty.call(obj, i)) {
-                s = s.replace(new RegExp('{' + i + '}', 'g'), obj[i]);
+    // Check if the first actual argument for replacement is an object for keyed substitution
+    if (actualArgumentsForReplacement.length === 1 &&
+        typeof actualArgumentsForReplacement[0] === 'object' &&
+        actualArgumentsForReplacement[0] !== null &&
+        !Array.isArray(actualArgumentsForReplacement[0])) {
+        const replacements = actualArgumentsForReplacement[0] as Record<string, any>;
+        for (const key in replacements) {
+            if (Object.prototype.hasOwnProperty.call(replacements, key)) {
+                const value = replacements[key];
+                s = s.replace(new RegExp('{' + key + '}', 'g'), typeof value !== 'undefined' ? String(value) : '');
             }
         }
     } else { // Numbered arguments
-        s = s.replace(/{(\d+)}/g, (match, p1) => {
-            const index = parseInt(p1, 10);
-            return index < args.length ? args[index] : match;
+        s = s.replace(/{(\d+)}/g, (matchString, p1) => {
+            const placeholderIndex = parseInt(p1, 10);
+            if (placeholderIndex >= 0 && placeholderIndex < actualArgumentsForReplacement.length) {
+                const value = actualArgumentsForReplacement[placeholderIndex];
+                return typeof value !== 'undefined' ? String(value) : ''; // Replace undefined with empty string
+            }
+            return matchString; // Keep placeholder if index out of bounds
         });
     }
     return s;
