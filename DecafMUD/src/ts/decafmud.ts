@@ -520,13 +520,20 @@ export class DecafMUD {
                 if (mainPart === 'Telopt' && parts.length > 1) {
                      // Special handling for Telopt: parts[1] is the Telnet code (e.g., TTYPE, NAWS)
                     const teloptKey = (DecafMUD.TN as any)[parts[1].toUpperCase()];
-                    check = () => teloptKey !== undefined && (DecafMUD.plugins.Telopt as any)[teloptKey] !== undefined;
+                    check = () => { // Error on 1384
+                        if (teloptKey === undefined) return false;
+                        return (DecafMUD.plugins.Telopt as any)[teloptKey!] !== undefined; // Use teloptKey!
+                    };
                 } else {
                     check = () => {
                         let base = (DecafMUD.plugins as any)[mainPart];
                         if (!base) return false;
-                        if (parts.length > 1) {
-                            return base[parts[1]] !== undefined;
+                        if (parts.length > 1) { // Error on 1385
+                            const key = parts[1];
+                            if (typeof key === 'string') {
+                                return base[key!] !== undefined; // Use key!
+                            }
+                            return false;
                         }
                         return true;
                     };
@@ -1433,22 +1440,24 @@ class TeloptCHARSET implements DecafMUDTeloptHandler {
                 }
             }
 
-            if (originalCharsetName) {
-                const finalChosenEncoding = chosenEncoding; // Assign to new const
-                if (typeof finalChosenEncoding === 'string') { // Check new const
-                    this.decaf.setEncoding(finalChosenEncoding); // Use new const
-                    this.decaf.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.CHARSET + '\x02' + originalCharsetName + DecafMUD.TN.IAC + DecafMUD.TN.SE);
-                } else {
-                    // This path implies originalCharsetName was set, but chosenEncoding was not (logic error above or unexpected state)
-                    this.decaf.debugString("Logic error: originalCharsetName set but finalChosenEncoding is not a string for: " + requestedCharsets.join(sep), "warn");
-                    this.decaf.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.CHARSET + '\x03' + DecafMUD.TN.IAC + DecafMUD.TN.SE); // REJECTED
-                }
+            // originalCharsetName is string | undefined
+            // chosenEncoding is string | undefined
+
+            if (originalCharsetName && typeof chosenEncoding === 'string') {
+                // Both are confirmed strings here
+                this.decaf.setEncoding(chosenEncoding!); // Use non-null assertion
+                this.decaf.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.CHARSET + '\x02' + originalCharsetName + DecafMUD.TN.IAC + DecafMUD.TN.SE);
             } else {
-                // originalCharsetName was not set, so no encoding was chosen.
-                this.decaf.debugString("No encoder for: " + requestedCharsets.join(sep));
+                // Either originalCharsetName was not found, or chosenEncoding was not a string (e.g. no mapping)
+                if (!originalCharsetName) {
+                     this.decaf.debugString("No encoder for requested charsets: " + requestedCharsets.join(sep));
+                } else { // originalCharsetName was found, but chosenEncoding was not (logic error or no valid internal mapping)
+                    this.decaf.debugString("Logic error: originalCharsetName '" + originalCharsetName + "' set but chosenEncoding ('" + chosenEncoding + "') is not a string for: " + requestedCharsets.join(sep), "warn");
+                }
                 this.decaf.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.SB + DecafMUD.TN.CHARSET + '\x03' + DecafMUD.TN.IAC + DecafMUD.TN.SE); // REJECTED
             }
         } else if (command === 2) { // ACCEPTED
+            // Server accepted a charset we previously offered. `value` is the accepted charset name.
             let acceptedEncodingKey: string | undefined = undefined;
             for (const k in DecafMUD.plugins.Encoding) {
                 if (DecafMUD.plugins.Encoding[k]?.proper === value) {
