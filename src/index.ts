@@ -21,7 +21,7 @@ import Split from 'split.js';
 
 import { DecafMUD } from 'decafmud'; // Import the DecafMUD class
 // Make DecafMUD global for existing JS plugins until they are converted
-(window as any).DecafMUD = DecafMUD;
+window.DecafMUD = DecafMUD; // Relies on global Window augmentation in window-extensions.d.ts
 
 // import 'script-loader!../DecafMUD/src/js/inflate_stream.min.js'; // REMOVED - inflate_stream.min.js should be loaded via <script> tag in index.html
 
