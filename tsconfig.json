@@ -10,10 +10,18 @@
         "preserveConstEnums": true,
         "outDir": "built",
         "esModuleInterop": true,
-        "skipLibCheck": true
+        "skipLibCheck": true,
+        "baseUrl": ".", // This is important for paths to work correctly
+        "paths": {
+            "decafmud": ["DecafMUD/src/ts/decafmud"],
+            "decafmud/*": ["DecafMUD/src/ts/*"]
+            // You might also want paths for other modules in src if needed
+            // e.g., "@/*": ["src/*"]
+        }
     },
     "include": [
         "src/**/*",
-        "libs/*.d.ts",
-    ],
+        "DecafMUD/src/ts/**/*.ts", // Added the new DecafMUD TypeScript files
+        "libs/*.d.ts"
+    ]
 }

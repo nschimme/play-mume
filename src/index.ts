@@ -19,17 +19,77 @@ import '../play.scss';
 import $ from 'jquery';
 import Split from 'split.js';
 
-import 'script-loader!../DecafMUD/src/js/decafmud.js';
-import 'script-loader!../DecafMUD/src/js/inflate_stream.min.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.display.standard.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.encoding.iso885915.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.socket.websocket.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.storage.standard.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.telopt.gmcp.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.menu.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.settings.js';
-import 'script-loader!../DecafMUD/src/js/dragelement.js';
+import { DecafMUD } from 'decafmud'; // Import the DecafMUD class
+// Make DecafMUD global for existing JS plugins until they are converted
+(window as any).DecafMUD = DecafMUD;
+
+// import 'script-loader!../DecafMUD/src/js/inflate_stream.min.js'; // REMOVED - inflate_stream.min.js should be loaded via <script> tag in index.html
+
+// Import the new TypeScript display plugin.
+// The plugin itself will register with DecafMUD.plugins.Display.standard
+import '../../DecafMUD/src/ts/decafmud.display.standard';
+import '../../DecafMUD/src/ts/decafmud.encoding.iso885915';
+
+
+import '../../DecafMUD/src/ts/decafmud.encoding.iso885915';
+import '../../DecafMUD/src/ts/decafmud.socket.websocket';
+
+
+import '../../DecafMUD/src/ts/decafmud.socket.websocket';
+import '../../DecafMUD/src/ts/decafmud.storage.standard';
+
+
+// The following will be converted one by one
+// import 'script-loader!../DecafMUD/src/js/decafmud.display.standard.js'; // REMOVED
+import '../../DecafMUD/src/ts/decafmud.storage.standard';
+import '../../DecafMUD/src/ts/decafmud.telopt.gmcp';
+
+
+// The following will be converted one by one
+// import 'script-loader!../DecafMUD/src/js/decafmud.display.standard.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.encoding.iso885915.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.socket.websocket.js'; // REMOVED
+import '../../DecafMUD/src/ts/decafmud.telopt.gmcp';
+import '../../DecafMUD/src/ts/decafmud.interface.panels';
+
+
+// The following will be converted one by one
+// import 'script-loader!../DecafMUD/src/js/decafmud.display.standard.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.encoding.iso885915.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.socket.websocket.js'; // REMOVED
+import '../../DecafMUD/src/ts/decafmud.interface.panels';
+import '../../DecafMUD/src/ts/decafmud.interface.panels.menu';
+
+
+// The following will be converted one by one
+// import 'script-loader!../DecafMUD/src/js/decafmud.display.standard.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.encoding.iso885915.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.socket.websocket.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.storage.standard.js'; // REMOVED
+import '../../DecafMUD/src/ts/decafmud.interface.panels.menu';
+import '../../DecafMUD/src/ts/decafmud.interface.panels.settings';
+
+
+// The following will be converted one by one
+// import 'script-loader!../DecafMUD/src/js/decafmud.display.standard.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.encoding.iso885915.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.socket.websocket.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.storage.standard.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.telopt.gmcp.js'; // REMOVED
+import '../../DecafMUD/src/ts/decafmud.interface.panels.settings';
+import '../../DecafMUD/src/ts/dragelement';
+
+
+// The following will be converted one by one
+// import 'script-loader!../DecafMUD/src/js/decafmud.display.standard.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.encoding.iso885915.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.socket.websocket.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.storage.standard.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.telopt.gmcp.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.menu.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.settings.js'; // REMOVED
+// import 'script-loader!../DecafMUD/src/js/dragelement.js'; // REMOVED
 
 import { throttle } from './utils';
 import './errorhandler';
