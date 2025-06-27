@@ -726,7 +726,7 @@ class DecafMUD {
             if ( dbg ) { // Log if not handled or if handler didn't return false
                 if ( code === TN.MSSP && typeof window !== 'undefined' && 'console' in window && console.groupCollapsed !== undefined ) {
                     console.groupCollapsed('DecafMUD[' + this.id + ']: RCVD IAC SB MSSP ... IAC SE'); // Replaced template literal
-                    console.dir(readMSDP(seq)[0]);
+                    // console.dir(readMSDP(seq)[0]); // Temporarily commented out for TS1160 diagnosis
                     console.groupEnd();
                 } else {
                     this.debugString('RCVD ' + (DecafMUD as any).debugIAC(TN.IAC + TN.SB + code + seq + TN.IAC + TN.SE));
