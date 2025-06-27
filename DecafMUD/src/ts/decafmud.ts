@@ -11,6 +11,8 @@
  * @author Stendec <stendec365@gmail.com>
  * @version 0.9.0
  */
+import '../scss/decafmud.scss'; // Import DecafMUD's own SCSS
+
 import * as pako from 'pako';
 import { GmcpTelopt } from './plugins/telopt/gmcp';
 import { StandardDisplay } from './plugins/display/standard';
