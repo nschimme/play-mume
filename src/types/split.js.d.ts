@@ -4,7 +4,7 @@
 // or expand these definitions based on the library's API.
 
 declare module 'split.js' {
-  interface Options {
+  export interface SplitOptions { // Renamed to avoid conflict if 'Options' is too generic
     sizes?: number[];
     minSize?: number | number[];
     maxSize?: number | number[];
@@ -23,15 +23,16 @@ declare module 'split.js' {
     onDragEnd?: (sizes: number[]) => void;
   }
 
-  interface Instance {
+  export interface SplitInstance { // Renamed to avoid conflict
     setSizes(sizes: number[]): void;
     getSizes(): number[];
     collapse(index: number): void;
     destroy(preserveStyles?: boolean, preserveGutters?: boolean): void;
   }
 
-  export default function Split(
-    elements: (string | HTMLElement)[],
-    options?: Options
-  ): Instance;
+  const Split: {
+    (elements: (string | HTMLElement)[], options?: SplitOptions): SplitInstance;
+  };
+
+  export default Split;
 }

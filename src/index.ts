@@ -20,9 +20,7 @@ import $ from 'jquery';
 import Split from 'split.js';
 
 // Import the main DecafMUD class
-// Note: The path might need adjustment based on webpack's resolution and tsconfig outDirs.
-// Assuming webpack can resolve this path relative to the DecafMUD submodule's TS sources.
-import { DecafMUD } from '../../DecafMUD/src/ts/decafmud';
+import { DecafMUD } from '@decafmud/decafmud';
 
 // The following script-loader imports are being removed as their functionalities
 // should now be part of the main DecafMUD ES6 module or explicitly imported if necessary.
@@ -47,9 +45,10 @@ import './errorhandler';
 import './mume.macros';
 import './mume.menu';
 import { MumeMap, MumeXmlParser } from './mume.mapper';
+import { type SplitInstance } from 'split.js'; // Import the type
 
 let globalMapWindow: Window | null | undefined;
-let _globalSplit: Split.Instance | undefined;
+let _globalSplit: SplitInstance | undefined; // Use the imported type
 let globalMap: MumeMap | undefined;
 
 function canvasFitParent(): void {
