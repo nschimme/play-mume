@@ -1889,6 +1889,18 @@ DecafMUD.plugins.Telopt[DecafMUD.TN.MSDP] = tMSDP;
 // Register the converted GMCP plugin
 DecafMUD.plugins.Telopt[DecafMUD.TN.GMCP] = GmcpTelopt;
 
+// Register ZMP Telopt plugin
+import { ZmpTelopt } from './plugins/telopt/zmp';
+DecafMUD.plugins.Telopt[DecafMUD.TN.ZMP] = ZmpTelopt;
+
+// Register CP437 Encoding plugin
+import { cp437Encoding } from './plugins/encoding/cp437';
+DecafMUD.plugins.Encoding.cp437 = cp437Encoding;
+
+// Register ISO-8859-15 Encoding plugin
+import { iso885915Encoding } from './plugins/encoding/iso885915';
+DecafMUD.plugins.Encoding.iso885915 = iso885915Encoding;
+
 // Register the converted StandardDisplay plugin
 DecafMUD.plugins.Display.standard = StandardDisplay;
 
