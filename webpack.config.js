@@ -13,8 +13,23 @@ module.exports = {
     rules: [
       {
         test: /\.tsx?$/,
-        use: 'ts-loader',
-        exclude: /node_modules/,
+        exclude: [/node_modules/, path.resolve(__dirname, 'DecafMUD/src/ts')],
+        use: {
+          loader: 'ts-loader',
+          options: {
+            configFile: 'tsconfig.json' // For src directory
+          }
+        }
+      },
+      {
+        test: /\.tsx?$/,
+        include: path.resolve(__dirname, 'DecafMUD/src/ts'),
+        use: {
+          loader: 'ts-loader',
+          options: {
+            configFile: 'DecafMUD/src/ts/tsconfig.json' // For DecafMUD/src/ts directory
+          }
+        }
       },
       {
         test: /\.scss$/i,
@@ -60,6 +75,7 @@ module.exports = {
               '**/build/**',
               '**/docs/**',
               '**/flash/**',
+              '**/js/**', // Ignore the old JS source files
             ],
           },
         },

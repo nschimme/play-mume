@@ -1,0 +1,16 @@
+{
+  "name": "decafmud",
+  "version": "1.0.0",
+  "description": "DecafMUD is an extensible, translatable MUD client written in JavaScript.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
