@@ -725,7 +725,7 @@ class DecafMUD {
             }
             if ( dbg ) { // Log if not handled or if handler didn't return false
                 if ( code === TN.MSSP && typeof window !== 'undefined' && 'console' in window && console.groupCollapsed !== undefined ) {
-                    console.groupCollapsed(`DecafMUD[${this.id}]: RCVD IAC SB MSSP ... IAC SE`);
+                    console.groupCollapsed('DecafMUD[' + this.id + ']: RCVD IAC SB MSSP ... IAC SE'); // Replaced template literal
                     console.dir(readMSDP(seq)[0]);
                     console.groupEnd();
                 } else {
