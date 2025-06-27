@@ -1,25 +1,41 @@
 // Based on code from http://www.switchonthecode.com/tutorials/javascript-draggable-elements
-// Converted to TypeScript
+// Heavily typed and modernized for TypeScript ES6 module structure.
 
-// --- Helper Functions ---
+export function hookEvent(element: HTMLElement | null | string, eventName: string, callback: (event: Event) => any): void {
+    let el: HTMLElement | null;
+    if (typeof element === "string") {
+        el = document.getElementById(element);
+    } else {
+        el = element;
+    }
 
-function hookEvent(element: HTMLElement | Document, eventName: string, callback: (event: Event) => any): void {
-    if (element.addEventListener) {
-        element.addEventListener(eventName, callback, false);
-    } else if ((element as any).attachEvent) { // For older IE
-        (element as any).attachEvent("on" + eventName, callback);
+    if (!el) return;
+
+    if (el.addEventListener) {
+        el.addEventListener(eventName, callback, false);
+    } else if ((el as any).attachEvent) { // For older IE
+        (el as any).attachEvent("on" + eventName, callback);
     }
 }
 
-function unhookEvent(element: HTMLElement | Document, eventName: string, callback: (event: Event) => any): void {
-    if (element.removeEventListener) {
-        element.removeEventListener(eventName, callback, false);
-    } else if ((element as any).detachEvent) { // For older IE
-        (element as any).detachEvent("on" + eventName, callback);
+export function unhookEvent(element: HTMLElement | null | string, eventName: string, callback: (event: Event) => any): void {
+    let el: HTMLElement | null;
+    if (typeof element === "string") {
+        el = document.getElementById(element);
+    } else {
+        el = element;
+    }
+
+    if (!el) return;
+
+    if (el.removeEventListener) {
+        el.removeEventListener(eventName, callback, false);
+    } else if ((el as any).detachEvent) { // For older IE
+        (el as any).detachEvent("on" + eventName, callback);
     }
 }
 
-function cancelEvent(e: Event): false {
+export function cancelEvent(e: Event): false {
     const event = e || window.event; // window.event for older IE
     if (event.stopPropagation) {
         event.stopPropagation();
@@ -27,17 +43,15 @@ function cancelEvent(e: Event): false {
     if (event.preventDefault) {
         event.preventDefault();
     }
-    (event as any).cancelBubble = true; // IE
-    // event.cancel = true; // This is not a standard property
-    (event as any).returnValue = false; // IE
+    (event as any).cancelBubble = true; // Older IE
+    // event.cancel = true; // Not a standard property
+    (event as any).returnValue = false; // Older IE
     return false;
 }
 
-// --- Position Class ---
-
 export class Position {
-    public X: number;
-    public Y: number;
+    X: number;
+    Y: number;
 
     constructor(x: number, y: number) {
         this.X = x;
@@ -46,105 +60,76 @@ export class Position {
 
     public Add(val: Position | null): Position {
         const newPos = new Position(this.X, this.Y);
-        if (val != null) {
-            if (!isNaN(val.X)) {
-                newPos.X += val.X;
-            }
-            if (!isNaN(val.Y)) {
-                newPos.Y += val.Y;
-            }
+        if (val) {
+            if (!isNaN(val.X)) newPos.X += val.X;
+            if (!isNaN(val.Y)) newPos.Y += val.Y;
         }
         return newPos;
     }
 
     public Subtract(val: Position | null): Position {
         const newPos = new Position(this.X, this.Y);
-        if (val != null) {
-            if (!isNaN(val.X)) {
-                newPos.X -= val.X;
-            }
-            if (!isNaN(val.Y)) {
-                newPos.Y -= val.Y;
-            }
+        if (val) {
+            if (!isNaN(val.X)) newPos.X -= val.X;
+            if (!isNaN(val.Y)) newPos.Y -= val.Y;
         }
         return newPos;
     }
 
     public Min(val: Position | null): Position {
         const newPos = new Position(this.X, this.Y);
-        if (val == null) {
-            return newPos;
-        }
+        if (!val) return newPos;
 
-        if (!isNaN(val.X) && this.X > val.X) {
-            newPos.X = val.X;
-        }
-        if (!isNaN(val.Y) && this.Y > val.Y) {
-            newPos.Y = val.Y;
-        }
+        if (!isNaN(val.X) && this.X > val.X) newPos.X = val.X;
+        if (!isNaN(val.Y) && this.Y > val.Y) newPos.Y = val.Y;
+
         return newPos;
     }
 
     public Max(val: Position | null): Position {
         const newPos = new Position(this.X, this.Y);
-        if (val == null) {
-            return newPos;
-        }
+        if (!val) return newPos;
 
-        if (!isNaN(val.X) && this.X < val.X) {
-            newPos.X = val.X;
-        }
-        if (!isNaN(val.Y) && this.Y < val.Y) {
-            newPos.Y = val.Y;
-        }
+        if (!isNaN(val.X) && this.X < val.X) newPos.X = val.X;
+        if (!isNaN(val.Y) && this.Y < val.Y) newPos.Y = val.Y;
+
         return newPos;
     }
 
     public Bound(lower: Position | null, upper: Position | null): Position {
-        let newPos = this;
-        if (lower) newPos = newPos.Max(lower);
-        if (upper) newPos = newPos.Min(upper);
+        let newPos = this.Max(lower);
+        newPos = newPos.Min(upper);
         return newPos;
     }
 
     public Check(): Position {
         const newPos = new Position(this.X, this.Y);
-        if (isNaN(newPos.X)) {
-            newPos.X = 0;
-        }
-        if (isNaN(newPos.Y)) {
-            newPos.Y = 0;
-        }
+        if (isNaN(newPos.X)) newPos.X = 0;
+        if (isNaN(newPos.Y)) newPos.Y = 0;
         return newPos;
     }
 
-    public Apply(elementIdOrElement: string | HTMLElement | null): void {
-        let element: HTMLElement | null;
-        if (typeof elementIdOrElement === "string") {
-            element = document.getElementById(elementIdOrElement);
+    public Apply(element: HTMLElement | null | string): void {
+        let el: HTMLElement | null;
+        if (typeof element === "string") {
+            el = document.getElementById(element);
         } else {
-            element = elementIdOrElement;
+            el = element;
         }
+        if (!el) return;
 
-        if (element == null) {
-            return;
-        }
-        if (!isNaN(this.X)) {
-            element.style.left = this.X + 'px';
-        }
-        if (!isNaN(this.Y)) {
-            element.style.top = this.Y + 'px';
-        }
+        if (!isNaN(this.X)) el.style.left = this.X + 'px';
+        if (!isNaN(this.Y)) el.style.top = this.Y + 'px';
     }
 }
 
-function absoluteCursorPosition(eventObj: MouseEvent): Position {
-    const e = eventObj || window.event as MouseEvent; // window.event for older IE
+export function absoluteCursorPosition(eventObj: MouseEvent): Position {
+    const e = eventObj || (window.event as MouseEvent); // window.event for older IE
 
-    if (isNaN(window.scrollX)) { // Older IE check
+    if (isNaN(window.scrollX)) { // Older IE
         return new Position(
-            e.clientX + (document.documentElement?.scrollLeft || document.body.scrollLeft),
-            e.clientY + (document.documentElement?.scrollTop || document.body.scrollTop)
+            e.clientX + (document.documentElement?.scrollLeft || document.body?.scrollLeft || 0),
+            e.clientY + (document.documentElement?.scrollTop || document.body?.scrollTop || 0)
         );
     } else {
         return new Position(e.clientX + window.scrollX, e.clientY + window.scrollY);
@@ -167,13 +152,13 @@ export class DragObject {
     private disposed: boolean = false;
 
     // Bound event handlers
-    private boundDragStart: (event: MouseEvent) => false;
-    private boundDragGo: (event: MouseEvent) => false;
-    private boundDragStopHook: (event: MouseEvent) => false;
+    private boundDragStart: (event: Event) => false | void;
+    private boundDragGo: (event: Event) => false | void;
+    private boundDragStopHook: (event: Event) => false | void;
 
     constructor(
-        elementIdOrElement: string | HTMLElement,
-        attachElementIdOrElement?: string | HTMLElement | null,
+        element: HTMLElement | string,
+        attachElement?: HTMLElement | string | null,
         lowerBound?: Position | null,
         upperBound?: Position | null,
         startCallback?: (event: MouseEvent, el: HTMLElement) => void,
@@ -181,22 +166,19 @@ export class DragObject {
         endCallback?: (el: HTMLElement) => void,
         attachLater: boolean = false
     ) {
-        let tempElement: HTMLElement | null;
-        if (typeof elementIdOrElement === "string") {
-            tempElement = document.getElementById(elementIdOrElement);
+        let elTarget: HTMLElement | null;
+        if (typeof element === "string") {
+            elTarget = document.getElementById(element);
         } else {
-            tempElement = elementIdOrElement;
+            elTarget = element;
         }
+        if (!elTarget) throw new Error("Draggable element not found or null.");
+        this.element = elTarget;
 
-        if (tempElement == null) {
-            throw new Error("Draggable element not found or is null.");
-        }
-        this.element = tempElement;
-
-        if (lowerBound != null && upperBound != null) {
+        if (lowerBound && upperBound) {
             const temp = lowerBound.Min(upperBound);
-            this.upperBound = lowerBound.Max(upperBound); // Max of original values
-            this.lowerBound = temp; // Min of original values
+            this.upperBound = lowerBound.Max(upperBound);
+            this.lowerBound = temp;
         } else {
             this.lowerBound = lowerBound || null;
             this.upperBound = upperBound || null;
@@ -206,39 +188,34 @@ export class DragObject {
         this.moveCallback = moveCallback || null;
         this.endCallback = endCallback || null;
 
-        let tempAttachElement: HTMLElement | null = null;
-        if (typeof attachElementIdOrElement === "string") {
-            tempAttachElement = document.getElementById(attachElementIdOrElement);
-        } else if (attachElementIdOrElement instanceof HTMLElement) {
-            tempAttachElement = attachElementIdOrElement;
+        let attachElTarget: HTMLElement | null;
+        if (typeof attachElement === "string") {
+            attachElTarget = document.getElementById(attachElement);
+        } else {
+            attachElTarget = attachElement || null;
         }
-        this.attachElement = tempAttachElement || this.element;
+        this.attachElement = attachElTarget || this.element;
 
         // Bind methods to this instance
-        this.boundDragStart = this.dragStart.bind(this);
-        this.boundDragGo = this.dragGo.bind(this);
-        this.boundDragStopHook = this.dragStopHook.bind(this);
+        this.boundDragStart = this.dragStart.bind(this) as (event: Event) => false | void;
+        this.boundDragGo = this.dragGo.bind(this) as (event: Event) => false | void;
+        this.boundDragStopHook = this.dragStopHook.bind(this) as (event: Event) => false | void;
 
         if (!attachLater) {
             this.StartListening();
         }
     }
 
-    private dragStart(eventObj: MouseEvent): false {
-        if (this.dragging || !this.listening || this.disposed) return false; // Should not happen if called by event
+    private dragStart(eventObj: MouseEvent): false | void {
+        if (this.dragging || !this.listening || this.disposed) return;
         this.dragging = true;
 
-        if (this.startCallback != null) {
+        if (this.startCallback) {
             this.startCallback(eventObj, this.element);
         }
 
         this.cursorStartPos = absoluteCursorPosition(eventObj);
-
-        // Ensure style is set for parsing - might need to getComputedStyle if not inline
-        this.elementStartPos = new Position(
-            parseInt(this.element.style.left || '0'),
-            parseInt(this.element.style.top || '0')
-        );
+        this.elementStartPos = new Position(parseInt(this.element.style.left || "0"), parseInt(this.element.style.top || "0"));
         this.elementStartPos = this.elementStartPos.Check();
 
         hookEvent(document, "mousemove", this.boundDragGo);
@@ -247,25 +224,24 @@ export class DragObject {
         return cancelEvent(eventObj);
     }
 
-    private dragGo(eventObj: MouseEvent): false {
-        if (!this.dragging || this.disposed) return false; // Should not happen
+    private dragGo(eventObj: MouseEvent): false | void {
+        if (!this.dragging || this.disposed) return;
 
         let newPos = absoluteCursorPosition(eventObj);
         if (this.elementStartPos && this.cursorStartPos) {
-             newPos = newPos.Add(this.elementStartPos).Subtract(this.cursorStartPos);
+            newPos = newPos.Add(this.elementStartPos).Subtract(this.cursorStartPos);
         }
-
         newPos = newPos.Bound(this.lowerBound, this.upperBound);
         newPos.Apply(this.element);
 
-        if (this.moveCallback != null) {
+        if (this.moveCallback) {
             this.moveCallback(newPos, this.element);
         }
 
         return cancelEvent(eventObj);
     }
 
-    private dragStopHook(eventObj: MouseEvent): false {
+    private dragStopHook(eventObj: MouseEvent): false | void {
         this.dragStop();
         return cancelEvent(eventObj);
     }
@@ -274,11 +250,9 @@ export class DragObject {
         if (!this.dragging || this.disposed) return;
         unhookEvent(document, "mousemove", this.boundDragGo);
         unhookEvent(document, "mouseup", this.boundDragStopHook);
-
         this.cursorStartPos = null;
         this.elementStartPos = null;
-
-        if (this.endCallback != null) {
+        if (this.endCallback) {
             this.endCallback(this.element);
         }
         this.dragging = false;
@@ -287,14 +261,8 @@ export class DragObject {
     public Dispose(): void {
         if (this.disposed) return;
         this.StopListening(true);
-        // Nullify references to DOM elements and callbacks to help GC
-        // this.element = null; // Cannot assign to 'element' because it is a read-only property.
-        // this.attachElement = null; // Same here
-        this.lowerBound = null;
-        this.upperBound = null;
-        this.startCallback = null;
-        this.moveCallback = null;
-        this.endCallback = null;
+        // Nullify properties to help GC, though TS might complain if not declared as nullable initially
+        // For simplicity, we'll rely on scope and GC.
         this.disposed = true;
     }
 
@@ -304,7 +272,7 @@ export class DragObject {
         hookEvent(this.attachElement, "mousedown", this.boundDragStart);
     }
 
-    public StopListening(stopCurrentDragging?: boolean): void {
+    public StopListening(stopCurrentDragging: boolean = false): void {
         if (!this.listening || this.disposed) return;
         unhookEvent(this.attachElement, "mousedown", this.boundDragStart);
         this.listening = false;

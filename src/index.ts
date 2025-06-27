@@ -19,17 +19,28 @@ import '../play.scss';
 import $ from 'jquery';
 import Split from 'split.js';
 
-import 'script-loader!../DecafMUD/src/js/decafmud.js';
-import 'script-loader!../DecafMUD/src/js/inflate_stream.min.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.display.standard.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.encoding.iso885915.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.socket.websocket.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.storage.standard.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.telopt.gmcp.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.menu.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.settings.js';
-import 'script-loader!../DecafMUD/src/js/dragelement.js';
+// Import the main DecafMUD class
+// Note: The path might need adjustment based on webpack's resolution and tsconfig outDirs.
+// Assuming webpack can resolve this path relative to the DecafMUD submodule's TS sources.
+import { DecafMUD } from '../../DecafMUD/src/ts/decafmud';
+
+// The following script-loader imports are being removed as their functionalities
+// should now be part of the main DecafMUD ES6 module or explicitly imported if necessary.
+// import 'script-loader!../DecafMUD/src/js/decafmud.js'; // Core, replaced by ES6 import
+// import 'script-loader!../DecafMUD/src/js/inflate_stream.min.js'; // Handled by pako import in DecafMUD
+// import 'script-loader!../DecafMUD/src/js/decafmud.display.standard.js'; // Should be part of DecafMUD core plugins
+// import 'script-loader!../DecafMUD/src/js/decafmud.encoding.iso885915.js'; // Should be part of DecafMUD core plugins
+// import 'script-loader!../DecafMUD/src/js/decafmud.socket.websocket.js'; // Should be part of DecafMUD core plugins
+// import 'script-loader!../DecafMUD/src/js/decafmud.storage.standard.js'; // Should be part of DecafMUD core plugins
+// import 'script-loader!../DecafMUD/src/js/decafmud.telopt.gmcp.js'; // Should be part of DecafMUD core plugins
+
+// These interface related scripts might need special handling or conversion to TS modules.
+// For now, their direct loading is removed. Their functionality will be addressed in Step 4.
+// import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.menu.js';
+// import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.js';
+// import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.settings.js';
+// import 'script-loader!../DecafMUD/src/js/dragelement.js';
+
 
 import { throttle } from './utils';
 import './errorhandler';

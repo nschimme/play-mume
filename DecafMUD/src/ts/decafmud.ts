@@ -15,6 +15,12 @@ import * as pako from 'pako';
 import { GmcpTelopt } from './plugins/telopt/gmcp';
 import { StandardDisplay } from './plugins/display/standard';
 import { WebSocketSocket } from './plugins/socket/websocket';
+import { TTypeTelopt } from './plugins/telopt/ttype';
+import { EchoTelopt } from './plugins/telopt/echo';
+import { NawsTelopt } from './plugins/telopt/naws';
+import { CharsetTelopt } from './plugins/telopt/charset';
+import { CompressV2Telopt } from './plugins/telopt/compressv2';
+import { MsdpTelopt } from './plugins/telopt/msdp';
 
 // Simple string formatting utility to replace {key} or {0} placeholders
 function formatString(text: string, ...args: any[]): string {
@@ -165,37 +171,767 @@ class DecafMUD {
     }
 
     // Placeholder for prototype methods that will be moved in later
-    initSplash!: () => void;
-    debugString!: (text: string, type?: string, obj?: any) => void;
-    require!: (moduleName: string, check?: () => boolean) => void;
-    waitLoad!: (next: () => void, itemloaded?: (module: string | true, next_mod?: string, perc?: number) => void, tr?: number) => void;
-    setEncoding!: (enc: string) => void;
-    decode!: (data: string) => [string, string];
-    encode!: (data: string) => string;
-    disableMCCP2!: () => void;
-    readIAC!: (data: string) => string | false;
-    handleIACSimple!: (seq: string) => void;
-    sendIAC!: (seq: string) => void;
-    getEnc!: (enc: string) => string;
-    processBuffer!: () => void;
-    handleInputText!: (text: string) => void;
-    connect!: () => void;
-    connectFail!: () => void;
-    reconnect!: () => void;
-    socketReady!: () => void;
-    socketConnected!: () => void;
-    socketClosed!: () => void;
-    socketData!: (data: string | ArrayBuffer | Uint8Array) => void;
-    socketError!: (data: any, data2: any) => void;
-    sendInput!: (input: string) => void;
-    error!: (text: string) => void;
-    loadScript!: (filename: string, path?: string) => void;
-    updateSplash!: (module: string | true | null, next_mod?: string, perc?: number) => void;
-    initSocket!: () => void;
-    initUI!: () => void;
-    initFinal!: () => void;
-    about!: () => void;
-    requestPermission!: (option: string, prompt: string, callback: (allowed: boolean) => void) => void;
+    // initSplash!: () => void;             // Definition below
+    // debugString!: (text: string, type?: string, obj?: any) => void; // Definition below
+    // require!: (moduleName: string, check?: () => boolean) => void; // Definition below - marked for removal
+    // waitLoad!: (next: () => void, itemloaded?: (module: string | true, next_mod?: string, perc?: number) => void, tr?: number) => void; // Definition below - marked for removal
+    // setEncoding!: (enc: string) => void; // Definition below
+    // decode!: (data: string) => [string, string]; // Definition below
+    // encode!: (data: string) => string; // Definition below
+    // disableMCCP2!: () => void; // Definition below
+    // readIAC!: (data: string) => string | false; // Definition below
+    // handleIACSimple!: (seq: string) => void; // Definition below
+    // sendIAC!: (seq: string) => void; // Definition below
+    // getEnc!: (enc: string) => string; // Definition below
+    // processBuffer!: () => void; // Definition below
+    // handleInputText!: (text: string) => void; // Definition below
+    // connect!: () => void; // Definition below
+    // connectFail!: () => void; // Definition below
+    // reconnect!: () => void; // Definition below
+    // socketReady!: () => void; // Definition below
+    // socketConnected!: () => void; // Definition below
+    // socketClosed!: () => void; // Definition below
+    // socketData!: (data: string | ArrayBuffer | Uint8Array) => void; // Definition below
+    // socketError!: (data: any, data2: any) => void; // Definition below
+    // sendInput!: (input: string) => void; // Definition below
+    // error!: (text: string) => void; // Definition below
+    // loadScript!: (filename: string, path?: string) => void; // Definition below - marked for removal
+    // updateSplash!: (module: string | true | null, next_mod?: string, perc?: number) => void; // Definition below
+    // initSocket!: () => void; // Definition below
+    // initUI!: () => void; // Definition below
+    // initFinal!: () => void; // Definition below
+    // about!: () => void; // Definition below
+    // requestPermission!: (option: string, prompt: string, callback: (allowed: boolean) => void) => void; // Definition below
+
+    about() {
+        var abt = ["DecafMUD v{0} \u00A9 2010 Stendec"];
+
+        abt.push("Updated and improved by Pit from Discworld.");
+        abt.push("Further bugfixes and improvements by Waba from MUME.");
+        abt.push("https://github.com/MUME/DecafMUD\n");
+
+        abt.push("DecafMUD is a web-based MUD client written in JavaScript, rather" +
+            " than a plugin like Flash or Java, making it load faster and react as" +
+            " you'd expect a website to.\n");
+
+        abt.push("It's easy to customize as well, using simple CSS and JavaScript," +
+            " and free to use and modify, so long as your MU* is free to play!");
+
+        // Show the about dialog with a simple alert.
+        alert(formatString(abt.join('\n'), (DecafMUD as any).version.toString()));
+    }
+
+    debugString(text: string, type?: string, obj?: any) { // Added types
+        // Return if we don't have the console or a debug pane.
+        if (typeof window === 'undefined' || !('console' in window) ) { return; }
+
+        // Set the type to debug by default
+        if ( type === undefined ) { type = 'debug'; }
+
+        // Prepare the string.
+        if ( obj !== undefined ) { text = formatString(text, obj); }
+
+        // Firebug / Console Logging
+        if (typeof window === 'undefined' || !('console' in window )) { return; }
+        var st = 'DecafMUD[%d]: %s';
+        switch(type) {
+            case 'info':	console.info(st, this.id, text); return;
+            case 'warn':	console.warn(st, this.id, text); return;
+            case 'error':	console.error(st, this.id, text); return;
+            default:
+                if ( 'debug' in console ) {
+                    console.debug(st, this.id, text);
+                    return;
+                }
+                console.log(st, this.id, text);
+        }
+    }
+
+    error(text: string) { // Added type
+        // Print to debug
+        this.debugString(text, 'error');
+
+        // If we have console grouping, log the options.
+        if ( typeof window !== 'undefined' && 'console' in window && console.groupCollapsed !== undefined ) {
+            console.groupCollapsed('DecafMUD['+this.id+'] Instance State');
+            console.dir(this);
+            console.groupEnd();
+        }
+
+        // If we have a UI, try splashError.
+        if ( this.ui && this.ui.splashError(text) ) { return; }
+
+        // TODO: Check the Interface and stuff
+        alert(formatString("DecafMUD Error\n\n{0}", text));
+    }
+
+    /** @deprecated Will be removed in favor of ES6 module imports. */
+    loadScript(filename: string, path?: string) {
+        // This function will likely need to be re-evaluated with module imports.
+        // For now, keep existing logic but add types.
+        let scriptPath = path;
+        if ( scriptPath === undefined ) {
+            if ( this.options.jslocation !== undefined ) { scriptPath = this.options.jslocation; }
+            if ( scriptPath === undefined || typeof scriptPath === 'string' && scriptPath.length === 0 ) {
+                // Attempt to discover the path.
+                var obj = document.querySelector('script[src*="decafmud.js"]');
+                if ( obj === null ) {
+                    obj = document.querySelector('script[src*="decafmud.min.js"]'); }
+                if ( obj !== null && obj instanceof HTMLScriptElement) {
+                    scriptPath = obj.src.substring(0,obj.src.lastIndexOf('/')+1); }
+            }
+        }
+
+        // Now that we have a path, create a script element to load our script
+        // and add it to the header so that it's loaded.
+        var script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = (scriptPath || '') + filename;
+        document.getElementsByTagName('head')[0].appendChild(script);
+
+        // Debug that we've loaded it.
+        this.debugString('Loading script: ' + filename);
+    }
+
+    /** @deprecated Will be removed in favor of ES6 module imports. */
+    require(moduleName: string, check?: () => boolean) {
+        // Language loading part fully removed.
+
+        let checker = check;
+        if ( checker === undefined ) {
+            // Build a checker
+            if ( moduleName.toLowerCase().indexOf('decafmud') === 0 ) {
+                var parts = moduleName.split('.');
+                if ( parts.length < 2 ) { return; }
+                parts.shift();
+                parts[0] = parts[0][0].toUpperCase() + parts[0].substr(1);
+
+                // If it's a telopt, search DecafMUD.TN for it.
+                if ( parts[0] === 'Telopt' ) {
+                    for(var k in (DecafMUD as any).TN) { // Cast
+                        if ( parts[1].toUpperCase() === k.toUpperCase() ) {
+                            parts[1] = (DecafMUD as any).TN[k];
+                            break; }
+                    }
+                }
+
+                checker = function(this: DecafMUD) {
+                    if ( (DecafMUD as any).plugins[parts[0]] !== undefined ) {
+                        if ( parts.length > 1 ) {
+                            return (DecafMUD as any).plugins[parts[0]][parts[1]] !== undefined;
+                        } else { return true; }
+                    }
+                    return false;
+                };
+            } else {
+                throw new Error("Can't build checker for non-DecafMUD module!");
+            }
+        }
+
+        // Increment required.
+        this.required++;
+
+        // Call the checker. If we already have it, return now.
+        if ( checker.call(this) ) { return; }
+
+        // Load the script.
+        this.loadScript(moduleName+'.js');
+
+        // Finally, push to need for waitLoad to work.
+        this.need.push([moduleName,checker]);
+    }
+
+    /** @deprecated Will be removed in favor of ES6 module imports. */
+    waitLoad(next: () => void, itemloaded?: (module: string | true, next_mod?: string, perc?: number) => void, tr?: number) {
+        clearTimeout(this.loadTimer);
+        let tries = tr === undefined ? 0 : tr;
+
+        if ( tries > this.options.wait_tries ) {
+            // Language timeout check removed
+            this.error(formatString("Timed out attempting to load the module: {0}", (this.need[0] as any[])[0]));
+            return;
+        }
+
+        while( this.need.length ) {
+            if ( typeof this.need[0] === 'string' ) {
+                this.need.shift();
+            } else {
+                if ( (this.need[0] as any[])[1].call(this) ) {
+                    if ( itemloaded !== undefined ) {
+                        if ( this.need.length > 1 ) {
+                            itemloaded.call(this,(this.need[0] as any[])[0] as string, (this.need[1] as any[])[0] as string);
+                        } else {
+                            itemloaded.call(this,(this.need[0]as any[])[0] as string);
+                        }
+                    }
+                    this.need.shift();
+                    tries = 0;
+                } else { break; }
+            }
+        }
+
+        // If this.need is empty, call next. If not, call it again in a bit.
+        if ( this.need.length === 0 ) {
+            next.call(this);
+        } else {
+            var decaf = this;
+            this.loadTimer = setTimeout(function(){decaf.waitLoad(next,itemloaded,tries+1)},this.options.wait_delay);
+        }
+    }
+
+    initSplash() {
+        // Create the UI if we're using one. Which we always should be.
+        if ( this.options.interface !== undefined ) {
+            this.debugString(formatString('Attempting to initialize the interface plugin "{0}".',this.options.interface));
+            this.ui = new (DecafMUD as any).plugins.Interface[this.options.interface](this);
+            this.ui.initSplash();
+        }
+
+        // Set the number of extra steps predicted after this step of loading for
+        // the sake of updating the progress bar.
+        this.extra = 3;
+
+        // Require plugins for: storage, socket, encoding, triggers, telopt
+        this.require('decafmud.storage.'+this.options.storage);
+        this.require('decafmud.socket.'+this.options.socket);
+        this.require('decafmud.encoding.'+this.options.encoding);
+
+        // Load them. This is the total number of required things thus far.
+        if ( this.ui && this.need.length > 0 ) { this.updateSplash(null, (this.need[0] as any[])[0] as string,0); }
+        this.waitLoad(this.initSocket.bind(this), this.updateSplash.bind(this));
+    }
+
+    updateSplash(module: string | true | null, next_mod?: string, perc?: number) {
+        if ( ! this.ui ) { return; }
+
+        let currentPercentage = perc;
+        // Calculate the percentage.
+        if ( currentPercentage === undefined ) {
+            currentPercentage = Math.min(100,Math.floor(100*(((this.extra+this.required)-this.need.length)/(this.required+this.extra)))); }
+
+        let message = next_mod;
+        if ( module === true ) {
+            // Don't do anything with message if module is true (it's passed directly)
+        } else if ( message !== undefined ) {
+            if ( message.indexOf('decafmud') === 0 ) {
+                var parts = message.split('.');
+                message = formatString('Loading the {0} module "{1}"...', parts[1],parts[2]);
+            } else {
+                message = formatString('Loading: {0}',message);
+            }
+        } else if ( currentPercentage == 100 ) {
+            message = "Loading complete.";
+        }
+
+        this.ui.updateSplash(currentPercentage, message);
+    }
+
+    initSocket() {
+        this.extra = 1;
+        // Create the master storage object.
+        this.store = new (DecafMUD as any).plugins.Storage[this.options.storage](this);
+        this.storage = this.store;
+
+        if ( this.ui ) {
+            // Push a junk element to need so the status bar shows properly.
+            this.need.push(['.', () => true]);
+            this.updateSplash(true,"Initializing the user interface...");
+
+            // Set up the UI.
+            this.ui.load();
+        }
+
+        // Attempt to create the socket.
+        this.debugString(formatString('Creating a socket using the "{0}" plugin.',this.options.socket));
+        this.socket = new (DecafMUD as any).plugins.Socket[this.options.socket](this);
+        this.socket.setup(0);
+
+        // Load the latest round.
+        this.waitLoad(this.initUI.bind(this), this.updateSplash.bind(this));
+    }
+
+    initUI() {
+        // Finish setting up the UI.
+        if ( this.ui ) {
+            this.ui.setup(); }
+
+        // Now, require all our plugins.
+        for(var i=0; i<this.options.plugins.length; i++) {
+            this.require('decafmud.'+this.options.plugins[i]); }
+
+        this.waitLoad(this.initFinal.bind(this), this.updateSplash.bind(this));
+    }
+
+    initFinal() {
+        var textInputFilterCtor, o;
+
+        this.need.push(['.', () => true]);
+        this.updateSplash(true,"Initializing triggers system...");
+        this.need.shift();
+
+        this.need.push(['.', () => true]);
+        this.updateSplash(true,"Initializing TELNET extensions...");
+        this.need.shift(); // Added missing shift
+
+
+        for(var k in (DecafMUD as any).plugins.Telopt) { // Cast
+            if (Object.hasOwnProperty.call((DecafMUD as any).plugins.Telopt, k)) {
+                o = (DecafMUD as any).plugins.Telopt[k];
+                if ( typeof o === 'function' ) { // Check if it's a constructor
+                    this.telopt[k] = new (o as TeloptPluginConstructor)(this);
+                } else if (typeof o === 'boolean' || o === undefined) { // Handle simple boolean flags like BINARY
+                    this.telopt[k] = o;
+                } else if (typeof o === 'object' && o !== null && typeof (o as any)._sb === 'function') { // Already an instance? (Less likely with new pattern)
+                     this.telopt[k] = o; // This case might need review based on how plugins are structured
+                }
+            }
+        }
+
+        this.need.push(['.', () => true]);
+        this.updateSplash(true,"Initializing filters...");
+        this.need.shift();
+
+
+        textInputFilterCtor = (DecafMUD as any).plugins.TextInputFilter[this.options.textinputfilter];
+        if ( textInputFilterCtor )
+            this.textInputFilter = new textInputFilterCtor(this);
+
+        // We're loaded. Try to connect.
+        this.loaded = true;
+        if (this.ui) { this.ui.endSplash(); }
+
+        if ( (!this.options.autoconnect) || (!this.socket.ready)) { return; }
+        this.connect();
+    }
+
+    connect() {
+        if ( this.connecting || this.connected ) { return; }
+        if ( this.socket_ready !== true ) { throw "The socket isn't ready yet."; }
+
+        this.connecting = true;
+        this.connect_try = 0;
+        this.debugString("Attempting to connect...","info");
+
+        // Show that we're connecting
+        if ( this.ui && this.ui.connecting ) {
+            this.ui.connecting(); }
+
+        // Set a timer so we can try again.
+        var decaf = this;
+        this.conn_timer = setTimeout(function(){decaf.connectFail();},this.options.connect_timeout);
+
+        this.socket.connect();
+    }
+
+    connectFail() {
+        clearTimeout(this.conn_timer);
+
+        this.connect_try += 1;
+        // On the last one, just ride it out.
+        if ( this.connect_try > this.options.reconnect_tries ) { return; }
+
+        // Retry.
+        this.socket.close();
+        this.socket.connect();
+
+        // Set the timer.
+        var decaf = this;
+        this.conn_timer = setTimeout(function(){decaf.connectFail();},this.options.connect_timeout);
+    }
+
+    reconnect() {
+      this.connect_try++;
+        var d = this;
+        if ( d.ui && d.ui.connecting ) {
+          d.ui.connecting();
+        }
+        d.socket.connect();
+    }
+
+    socketReady() {
+        this.debugString("The socket is ready.");
+        this.socket_ready = true;
+
+        if ( this.loaded && this.options.autoconnect ) {
+            this.connect();
+        }
+    }
+
+    socketConnected() {
+        this.connecting = false; this.connected = true; this.connect_try = 0;
+        clearTimeout(this.conn_timer);
+
+        var host = this.socket.host, port = this.socket.port;
+
+        this.debugString(formatString("The socket has connected successfully to {0}:{1}.",host,port),"info");
+
+        for(var k in this.telopt) {
+            if (Object.hasOwnProperty.call(this.telopt, k)) {
+                if ( this.telopt[k] && this.telopt[k].connect ) {
+                    this.telopt[k].connect(); }
+            }
+        }
+
+        if ( this.textInputFilter && this.textInputFilter.connected ) {
+            this.textInputFilter.connected();
+        }
+
+        if ( this.ui && this.ui.connected ) {
+            this.ui.connected(); }
+    }
+
+    socketClosed() {
+        clearTimeout(this.conn_timer);
+        this.connecting = false; this.connected = false;
+        this.debugString("The socket has disconnected.","info");
+
+        for(var k in this.telopt) {
+            if (Object.hasOwnProperty.call(this.telopt, k)) {
+                if ( this.telopt[k] && this.telopt[k].disconnect ) {
+                    this.telopt[k].disconnect(); }
+            }
+        }
+
+        this.inbuf = [];
+        this.decompressStream = undefined;
+        this.startCompressV2 = false;
+
+        if ( this.options.autoreconnect ) {
+            this.connect_try++;
+            if ( this.connect_try < this.options.reconnect_tries ) {
+                if ( this.ui && this.ui.disconnected ) {
+                    this.ui.disconnected(true); }
+
+                var d = this;
+
+                var s = this.options.reconnect_delay / 1000;
+                if ( this.ui && this.ui.immediateInfoBar && s >= 0.25 ) {
+                    this.ui.immediateInfoBar(formatString("You have been disconnected. Reconnecting in {0} second{1}...", s, (s === 1 ? '' : 's')),
+                        'reconnecting',
+                        s,
+                        undefined,
+                        [['Reconnect Now',function(){ clearTimeout(d.timer); d.socket.connect(); }]],
+                        undefined,
+                        function(){ clearTimeout(d.timer);  }
+                    ); }
+
+                this.timer = setTimeout(function(){
+                    d.debugString('Attempting to connect...','info');
+                    if ( d.ui && d.ui.connecting ) {
+                        d.ui.connecting(); }
+                    d.socket.connect();
+                }, this.options.reconnect_delay);
+                return;
+            }
+        }
+
+        if ( this.ui && this.ui.disconnected ) {
+            this.ui.disconnected(false); }
+    }
+
+    socketData(data: string | ArrayBuffer | Uint8Array) {
+        // Push the text onto the inbuf.
+
+        if (this.decompressStream !== undefined) {
+            // Decompress it first!
+            try {
+                let dataToDecompress: Uint8Array | string;
+                if (typeof data === 'string') {
+                    var arr = new Uint8Array(data.length);
+                    for(var i=0; i<data.length; i++) {
+                        arr[i] = data.charCodeAt(i);
+                    }
+                    dataToDecompress = arr;
+                } else if (data instanceof ArrayBuffer) {
+                    dataToDecompress = new Uint8Array(data);
+                } else {
+                    dataToDecompress = data;
+                }
+
+                this.decompressStream.push(dataToDecompress, false);
+
+                if (this.decompressStream.err) {
+                    throw new Error(this.decompressStream.msg || 'Unknown pako error');
+                }
+            } catch (e: any) {
+                this.error(formatString('MCCP2 compression disabled because {0}', e.message));
+                this.disableMCCP2();
+                return;
+            }
+        } else {
+            this.inbuf.push(data);
+        }
+
+        if ( this.loaded ) {
+            this.processBuffer();
+        }
+    }
+
+    socketError(data: any,data2: any) {
+        this.debugString(formatString('Socket Err: {0}  d2="{1}"',data,data2),'error');
+    }
+
+    getEnc(enc: string): string {
+        enc = enc.replace(/-/g,'').toLowerCase();
+        return enc;
+    }
+
+    setEncoding(enc: string) {
+        let currentEnc = this.getEnc(enc);
+        if ( (DecafMUD as any).plugins.Encoding[currentEnc] === undefined ) {
+            throw new Error(`"${currentEnc}" isn't a valid encoding scheme, or it isn't loaded.`); }
+        this.debugString("Switching to character encoding: " + currentEnc);
+        this.options.encoding = currentEnc;
+        this.decode = (DecafMUD as any).plugins.Encoding[currentEnc].decode;
+        this.encode = (DecafMUD as any).plugins.Encoding[currentEnc].encode;
+    }
+
+    sendInput(input: string) {
+        if ( !this.socket || !this.socket.connected ) {
+            this.debugString("Cannot send input: not connected");
+            return;
+        }
+        this.socket.write(this.encode(input + '\r\n').replace(iac_reg, '\xFF\xFF'));
+        if ( this.ui ) {
+            this.ui.displayInput(input); }
+    }
+
+    decode(data: string): [string, string] { // Default implementation, overridden by setEncoding
+        return (DecafMUD as any).plugins.Encoding[this.options.encoding].decode(data);
+    }
+
+    encode(data: string): string { // Default implementation, overridden by setEncoding
+        return (DecafMUD as any).plugins.Encoding[this.options.encoding].encode(data);
+    }
+
+    processBuffer() {
+        var enc, data_str, ind, out;
+
+        let accumulatedData = "";
+
+        if (this.decompressStream) {
+            if (this.decompressStream.result && (this.decompressStream.result as any).length > 0) {
+                let chunk = this.decompressStream.result;
+                if (typeof chunk !== 'string') {
+                    chunk = String.fromCharCode.apply(null, chunk as unknown as number[]);
+                }
+                accumulatedData += chunk;
+                this.decompressStream.chunks = [];
+                // @ts-ignore: pako types might not show result as nullable like this
+                this.decompressStream.result = null;
+            }
+        }
+
+        let stringifiedInbuf = "";
+        for (const item of this.inbuf) {
+            if (typeof(item) === 'string') {
+                stringifiedInbuf += item;
+            } else if (item instanceof Uint8Array) {
+                stringifiedInbuf += Array.from(item).map(charCode=>String.fromCharCode(charCode)).join('');
+            } else if (item instanceof ArrayBuffer) {
+                stringifiedInbuf += Array.from(new Uint8Array(item)).map(charCode=>String.fromCharCode(charCode)).join('');
+            }
+        }
+        this.inbuf = [];
+
+        data_str = stringifiedInbuf + accumulatedData;
+
+        var IAC = (DecafMUD as any).TN.IAC, left='';
+
+        while ( data_str.length > 0 ) {
+            ind = data_str.indexOf(IAC);
+            if ( ind === -1 ) {
+                if (this.decompressStream) {
+                    this.handleInputText(data_str);
+                    data_str = "";
+                } else {
+                    enc = this.decode(data_str);
+                    this.handleInputText(enc[0]);
+                    if (enc[1]) this.inbuf.push(enc[1]);
+                    data_str = "";
+                }
+                break;
+            } else if ( ind > 0 ) {
+                let text_before_iac = data_str.substring(0,ind);
+                if (this.decompressStream) {
+                    this.handleInputText(text_before_iac);
+                } else {
+                    enc = this.decode(text_before_iac);
+                    this.handleInputText(enc[0]);
+                    left = enc[1];
+                }
+                data_str = data_str.substring(ind);
+            }
+
+            out = this.readIAC(data_str);
+
+            if (this.startCompressV2 && this.decompressStream && out !== false && typeof out === 'string') {
+                try {
+                    const outAsBytes = new Uint8Array(out.length);
+                    for (let k = 0; k < out.length; k++) {
+                        outAsBytes[k] = out.charCodeAt(k);
+                    }
+                    this.decompressStream.push(outAsBytes, false);
+                    if (this.decompressStream.err) {
+                        throw new Error(this.decompressStream.msg || 'Unknown pako error during initial block decompression');
+                    }
+                    let initialDecompressed = this.decompressStream.result;
+                    if (typeof initialDecompressed !== 'string') {
+                        initialDecompressed = String.fromCharCode.apply(null, initialDecompressed as unknown as number[]);
+                    }
+                    // @ts-ignore
+                    this.decompressStream.result = null;
+                    this.decompressStream.chunks = [];
+                    out = initialDecompressed;
+                    this.startCompressV2 = false; // Compression starts after this first block
+                } catch (e: any) {
+                    this.error(formatString('MCCP2 compression disabled because {0}', e.message));
+                    this.disableMCCP2();
+                    out = ''; // Clear out to prevent processing potentially corrupt data
+                }
+            }
+
+
+            if ( out === false ) {
+                this.inbuf.push(left + data_str);
+                break;
+            }
+            data_str = left + (out as string); // out should be string here
+            left = '';
+        }
+    }
+
+    handleInputText(text: string) {
+        if ( this.textInputFilter && this.textInputFilter.filterInputText) {
+            text = this.textInputFilter.filterInputText(text);
+        }
+        if ( this.display && this.display.handleData) {
+            this.display.handleData(text);
+        }
+    }
+
+    readIAC(data: string): string | false {
+        const { TN } = (DecafMUD as any);
+        if ( data.length < 2 ) { return false; }
+        if ( data.charCodeAt(1) === 255 ) { // IAC IAC
+            if(this.display) this.display.handleData('\xFF');
+            return data.substring(2);
+        } else if ( data.charCodeAt(1) === TN.GA.charCodeAt(0) || data.charCodeAt(1) === 241 ) { // GA or old EOR
+            return data.substring(2);
+        } else if ( "\xFB\xFC\xFD\xFE".indexOf(data.charAt(1)) !== -1 ) { // WILL, WONT, DO, DONT
+            if ( data.length < 3 ) { return false; }
+            var seq = data.substring(0,3);
+            this.debugString('RCVD ' + (DecafMUD as any).debugIAC(seq));
+            this.handleIACSimple(seq);
+            return data.substring(3);
+        } else if ( data.charAt(1) === TN.SB ) { // Subnegotiation
+            var seq = '', l_str = TN.IAC + TN.SE;
+            var code = data.charAt(2);
+            let current_data = data.substring(3);
+            if ( current_data.length === 0 ) { return false; } // Not enough data for code + SE
+            while(current_data.length > 0) {
+                var ind = current_data.indexOf(l_str);
+                if ( ind === -1 ) { return false; } // SE not found
+                // Handle escaped IAC (IAC IAC SE)
+                if ( ind > 0 && current_data.charAt(ind-1) === TN.IAC ) {
+                    seq += current_data.substring(0,ind+1); // include the first IAC of IAC IAC
+                    current_data = current_data.substring(ind+1); // Continue search after the first IAC
+                    continue;
+                }
+                seq += current_data.substring(0,ind); // content before SE
+                current_data = current_data.substring(ind + l_str.length); // The rest of the data
+                data = current_data; // Update data to be the remainder
+                break;
+            }
+            var dbg = true; // Debug by default
+            if ( this.telopt[code] !== undefined && this.telopt[code]._sb !== undefined ) {
+                if ( this.telopt[code]._sb(seq) === false ) { dbg = false; }
+            }
+            if ( dbg ) { // Log if not handled or if handler didn't return false
+                if ( code === TN.MSSP && typeof window !== 'undefined' && 'console' in window && console.groupCollapsed !== undefined ) {
+                    console.groupCollapsed(`DecafMUD[${this.id}]: RCVD IAC SB MSSP ... IAC SE`);
+                    console.dir(readMSDP(seq)[0]);
+                    console.groupEnd();
+                } else {
+                    this.debugString('RCVD ' + (DecafMUD as any).debugIAC(TN.IAC + TN.SB + code + seq + TN.IAC + TN.SE));
+                }
+            }
+            return data; // Return the rest of the buffer
+        }
+        // Unknown IAC sequence, skip the IAC byte and continue.
+        this.debugString('RCVD Unknown IAC sequence: ' + data.charCodeAt(1), 'warn');
+        return data.substring(1);
+    }
+
+    sendIAC(seq: string) {
+        this.debugString('SENT ' + (DecafMUD as any).debugIAC(seq));
+        if ( this.socket ) { this.socket.write(seq); }
+    }
+
+    handleIACSimple(seq: string) {
+        var t_local = (DecafMUD as any).TN, o = this.telopt[seq.charAt(2)],
+            c = seq.charAt(2);
+        if ( o === undefined ) { // We don't support this option
+            if ( seq.charAt(1) === t_local.DO ) { // They said DO, we say WONT
+                this.sendIAC(t_local.IAC + t_local.WONT + c); }
+            else if ( seq.charAt(1) === t_local.WILL ) { // They said WILL, we say DONT
+                this.sendIAC(t_local.IAC + t_local.DONT + c); }
+            return;
+        }
+
+        // We have a handler for this option
+        switch(seq.charAt(1)) {
+            case t_local.DO:
+                if (!( o._do && o._do() === false )) { // If no _do or _do didn't return false
+                    this.sendIAC(t_local.IAC + t_local.WILL + c); } // We say WILL
+                return;
+            case t_local.DONT:
+                if (!( o._dont && o._dont() === false )) {
+                    this.sendIAC(t_local.IAC + t_local.WONT + c); }
+                return;
+            case t_local.WILL:
+                if (!( o._will && o._will() === false )) {
+                    this.sendIAC(t_local.IAC + t_local.DO + c); }
+                return;
+            case t_local.WONT:
+                if (!( o._wont && o._wont() === false )) {
+                    this.sendIAC(t_local.IAC + t_local.DONT + c); }
+                return;
+        }
+    }
+
+    disableMCCP2() {
+        this.sendIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.DONT + (DecafMUD as any).TN.COMPRESSv2);
+        this.startCompressV2 = false;
+        this.decompressStream = undefined; // Ensures pako instance is cleared
+        this.inbuf = []; // Clear input buffer as it might contain compressed data
+    }
+
+    requestPermission(option: string, promptText: string, callback: (allowed: boolean) => void) {
+        var cur = this.store.get(option);
+        if ( cur !== undefined && cur !== null ) {
+            callback.call(this, !!(cur));
+            return; }
+        var decaf = this;
+        var closer = function(e?: any) {
+                callback.call(decaf, false);
+            },
+            help_allow = function() {
+                decaf.store.set(option, true);
+                callback.call(decaf, true);
+            },
+            help_deny = function() {
+                decaf.store.set(option, false);
+                callback.call(decaf, false);
+            };
+        if ( this.ui && this.ui.infoBar ) {
+            this.ui.infoBar(promptText, 'permission', 0, undefined, // Changed prompt to promptText
+                [['Allow', help_allow], ['Deny', help_deny]], undefined, closer);
+            return; }
+        // Fallback if no UI infobar (e.g. confirm or always deny)
+        // For now, let's default to denying if no UI for permission.
+        callback.call(this, false);
+    }
 }
 
 // Instance Information - These are now static properties of the DecafMUD class
@@ -698,315 +1434,162 @@ const iacToWord = function(c: string) { // Changed var to const, added type
 // TELOPTS
 ///////////////////////////////////////////////////////////////////////////////
 
-/** Handles the telopt TTYPE. */
-var tTTYPE = function(this: any, decaf: DecafMUD) { this.decaf = decaf; this.current = -1; }
-tTTYPE.prototype._dont = tTTYPE.prototype.disconnect = function() { this.current = -1; }
-tTTYPE.prototype._sb = function(data: string) {
-	if ( data !== (DecafMUD as any).TN.ECHO ) { return; }
-	this.current = (this.current + 1) % this.decaf.options.ttypes.length;
-	this.decaf.debugString('RCVD ' + (DecafMUD as any).debugIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.TTYPE + (DecafMUD as any).TN.ECHO + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE));
-	this.decaf.sendIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.TTYPE + (DecafMUD as any).TN.IS + this.decaf.options.ttypes[this.current] + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE);
-
-	return false;
-}
+// Moved to import { TTypeTelopt } from './plugins/telopt/ttype';
+// /** Handles the telopt TTYPE. */
+// var tTTYPE = function(this: any, decaf: DecafMUD) { this.decaf = decaf; this.current = -1; }
+// tTTYPE.prototype._dont = tTTYPE.prototype.disconnect = function() { this.current = -1; }
+// tTTYPE.prototype._sb = function(data: string) {
+// 	if ( data !== (DecafMUD as any).TN.ECHO ) { return; }
+// 	this.current = (this.current + 1) % this.decaf.options.ttypes.length;
+// 	this.decaf.debugString('RCVD ' + (DecafMUD as any).debugIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.TTYPE + (DecafMUD as any).TN.ECHO + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE));
+// 	this.decaf.sendIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.TTYPE + (DecafMUD as any).TN.IS + this.decaf.options.ttypes[this.current] + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE);
+// 	return false;
+// }
 // DecafMUD.plugins.Telopt[t.TTYPE] = tTTYPE; // This will be handled after class definition
 
-/** Handles the telopt ECHO. */
-var tECHO = function(this: any, decaf: DecafMUD) { this.decaf = decaf; }
-tECHO.prototype._will = function() {
-	if ( this.decaf.ui ) { this.decaf.ui.localEcho(false); } }
-tECHO.prototype._wont = tECHO.prototype.disconnect = function() {
-	if ( this.decaf.ui ) { this.decaf.ui.localEcho(true); } }
-// DecafMUD.plugins.Telopt[t.ECHO] = tECHO;
+// Moved to import { EchoTelopt } from './plugins/telopt/echo';
+// /** Handles the telopt ECHO. */
+// var tECHO = function(this: any, decaf: DecafMUD) { this.decaf = decaf; }
+// tECHO.prototype._will = function() {
+// 	if ( this.decaf.ui ) { this.decaf.ui.localEcho(false); } }
+// tECHO.prototype._wont = tECHO.prototype.disconnect = function() {
+// 	if ( this.decaf.ui ) { this.decaf.ui.localEcho(true); } }
+// // DecafMUD.plugins.Telopt[t.ECHO] = tECHO;
 
+// Moved to import { NawsTelopt } from './plugins/telopt/naws';
+// /** Handles the telopt NAWS. */
+// var tNAWS = function(this: any, decaf: DecafMUD) { this.decaf = decaf; this.enabled = false; this.last = undefined; }
+// tNAWS.prototype._do = function() { this.last = undefined; this.enabled = true;
+// 	var n=this; setTimeout(function(){n.send();},0); }
+// tNAWS.prototype._dont = tNAWS.prototype.disconnect = function() { this.enabled = false; }
+// tNAWS.prototype.send = function() {
+// 	if ((!this.decaf.display) || (!this.enabled)) { return; }
+// 	var sz = this.decaf.display.getSize();
+// 	if ( this.last !== undefined && this.last[0] == sz[0] && this.last[1] == sz[1] ) { return; }
+// 	this.last = sz;
+// 	var data = String.fromCharCode(Math.floor(sz[0] / 255));
+// 	data += String.fromCharCode(sz[0] % 255);
+// 	data += String.fromCharCode(Math.floor(sz[1] / 255));
+// 	data += String.fromCharCode(sz[1] % 255);
+// 	data = (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.NAWS + data.replace(/\xFF/g,'\xFF\xFF') + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE;
+// 	this.decaf.sendIAC(data);
+// }
+// // DecafMUD.plugins.Telopt[t.NAWS] = tNAWS;
 
-/** Handles the telopt NAWS. */
-var tNAWS = function(this: any, decaf: DecafMUD) { this.decaf = decaf; this.enabled = false; this.last = undefined; }
-tNAWS.prototype._do = function() { this.last = undefined; this.enabled = true;
-	var n=this; setTimeout(function(){n.send();},0); }
-tNAWS.prototype._dont = tNAWS.prototype.disconnect = function() { this.enabled = false; }
-tNAWS.prototype.send = function() {
-	if ((!this.decaf.display) || (!this.enabled)) { return; }
-	var sz = this.decaf.display.getSize();
-	if ( this.last !== undefined && this.last[0] == sz[0] && this.last[1] == sz[1] ) { return; }
-	this.last = sz;
-	var data = String.fromCharCode(Math.floor(sz[0] / 255));
-	data += String.fromCharCode(sz[0] % 255);
-	data += String.fromCharCode(Math.floor(sz[1] / 255));
-	data += String.fromCharCode(sz[1] % 255);
-	data = (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.NAWS + data.replace(/\xFF/g,'\xFF\xFF') + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE;
-	this.decaf.sendIAC(data);
-}
-// DecafMUD.plugins.Telopt[t.NAWS] = tNAWS;
+// Moved to import { CharsetTelopt } from './plugins/telopt/charset';
+// /** Handles the telopt CHARSET. */
+// var tCHARSET = function(this: any, decaf: DecafMUD) { this.decaf = decaf; }
+// tCHARSET.prototype._dont = function() { return false; }
+// tCHARSET.prototype._will = function() { var c = this; setTimeout(function() {
+// 	var cs: string[] = [], done: string[] = [];
+// 	var enc = c.decaf.options.encoding;
+// 	if ( enc !== 'iso88591' && (DecafMUD as any).plugins.Encoding[enc] !== undefined && (DecafMUD as any).plugins.Encoding[enc].proper !== undefined ) {
+// 		cs.push((DecafMUD as any).plugins.Encoding[enc].proper);
+// 		done.push(enc);
+// 	}
+// 	for(var i=0;i< c.decaf.options.encoding_order.length;i++) {
+// 		var currentEnc = c.decaf.options.encoding_order[i];
+// 		if ( (DecafMUD as any).plugins.Encoding[currentEnc] === undefined || (DecafMUD as any).plugins.Encoding[currentEnc].proper === undefined || done.indexOf(currentEnc) !== -1 ) { continue; }
+// 		cs.push((DecafMUD as any).plugins.Encoding[currentEnc].proper);
+// 		done.push(currentEnc);
+// 	}
+// 	for(var k in (DecafMUD as any).plugins.Encoding) {
+//         if (Object.prototype.hasOwnProperty.call((DecafMUD as any).plugins.Encoding, k)) {
+// 		    if ( done.indexOf(k) !== -1 || (DecafMUD as any).plugins.Encoding[k].proper === undefined ) { continue; }
+// 		    cs.push((DecafMUD as any).plugins.Encoding[k].proper);
+//         }
+// 	}
+// 	c.decaf.sendIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.CHARSET + (DecafMUD as any).TN.ECHO + ' ' + cs.join(' ') + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE);
+// },0); }
+// tCHARSET.prototype._sb = function(data: string) {
+// 	this.decaf.debugString('RCVD ' + (DecafMUD as any).debugIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.CHARSET + data + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE));
+// 	if ( data.charCodeAt(0) === 1 ) {
+// 		let dataStr = data.substring(1);
+// 		if ( dataStr.indexOf('TTABLE ') === 0 ) {
+// 			dataStr = dataStr.substring(8); }
+// 		var sep = dataStr.charAt(0);
+// 		var encodings = dataStr.substring(1).split(sep);
+// 		var e: string | undefined, o: string | undefined;
+// 		for (var currentEncOrder of this.decaf.options.encoding_order) {
+// 			let currentPluginEnc = (DecafMUD as any).plugins.Encoding[currentEncOrder];
+// 			if (currentPluginEnc === undefined || currentPluginEnc.proper === undefined)
+// 				continue;
+// 			if (encodings.includes(currentEncOrder)) {
+// 				o = currentEncOrder;
+// 				e = currentEncOrder;
+// 				break;
+// 			}
+// 			if (encodings.includes(currentPluginEnc.proper)) {
+// 				o = currentPluginEnc.proper;
+// 				e = currentEncOrder;
+// 				break;
+// 			}
+// 		}
+// 		if (e === undefined) {
+// 			for(var i=0; i < encodings.length; i++) {
+// 				o = encodings[i];
+// 				for(var k in (DecafMUD as any).plugins.Encoding) {
+//                     if (Object.prototype.hasOwnProperty.call((DecafMUD as any).plugins.Encoding, k)) {
+// 					    if ( o === k || o === (DecafMUD as any).plugins.Encoding[k].proper ) {
+// 						    e = k;
+// 						    break;
+// 					    }
+//                     }
+// 				}
+// 				if ( e ) { break; }
+// 			}
+// 		}
+// 		if ( e !== undefined ) {
+// 			this.decaf.setEncoding(e);
+// 			this.decaf.sendIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.CHARSET + '\x02' + o + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE);
+// 		} else {
+// 			this.decaf.debugString("No encoder for: " + encodings.join(sep));
+// 			this.decaf.sendIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.CHARSET + '\x03' + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE);
+// 		}
+// 	} else if ( data.charCodeAt(0) === 2 ) {
+// 		let acceptedEnc = data.substring(1);
+// 		var e: string | undefined = undefined;
+// 		for(var k in (DecafMUD as any).plugins.Encoding) {
+//             if (Object.prototype.hasOwnProperty.call((DecafMUD as any).plugins.Encoding, k)) {
+// 			    if ( (DecafMUD as any).plugins.Encoding[k].proper === acceptedEnc ) {
+// 				    e = k;
+// 				    break;
+// 			    }
+//             }
+// 		}
+// 		if ( e !== undefined ) { this.decaf.setEncoding(e); }
+// 	}
+// 	return false;
+// }
+// // DecafMUD.plugins.Telopt[t.CHARSET] = tCHARSET;
 
+// Moved to import { CompressV2Telopt } from './plugins/telopt/compressv2';
+// /** Handles the telopt COMPRESSv2 (MCCP2) */
+// var tCOMPRESSv2 = function(this: any, decaf: DecafMUD) {  // Added this type
+// 	// Thanks, https://mudhalla.net/tintin/protocols/mccp/
+// 	this.decaf = decaf;
+// 	this.decaf.startCompressV2 = false;
+// }
+// tCOMPRESSv2.prototype._will = function() {
+// 	if (this.decaf.options.socket == 'flash') { // Flash support will be removed later
+// 		this.decaf.debugString('Flash COMPRESSv2 support has not been implemented');
+// 		return false;
+// 	}
+// 	return true;
+// }
+// tCOMPRESSv2.prototype._sb = function() {
+// 	this.decaf.debugString('RCVD ' + (DecafMUD as any).debugIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.COMPRESSv2 + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE ));
+// 	this.decaf.startCompressV2 = true;
+// 	this.decaf.decompressStream = new pako.Inflate({ to: 'string' });
+//  }
+// // DecafMUD.plugins.Telopt[t.COMPRESSv2] = tCOMPRESSv2;
 
-/** Handles the telopt CHARSET. */
-var tCHARSET = function(this: any, decaf: DecafMUD) { this.decaf = decaf; }
-tCHARSET.prototype._dont = function() { return false; }
-tCHARSET.prototype._will = function() { var c = this; setTimeout(function() {
-	var cs: string[] = [], done: string[] = [];
-	var enc = c.decaf.options.encoding;
-	if ( enc !== 'iso88591' && (DecafMUD as any).plugins.Encoding[enc] !== undefined && (DecafMUD as any).plugins.Encoding[enc].proper !== undefined ) {
-		cs.push((DecafMUD as any).plugins.Encoding[enc].proper);
-		done.push(enc);
-	}
-	for(var i=0;i< c.decaf.options.encoding_order.length;i++) {
-		var currentEnc = c.decaf.options.encoding_order[i];
-		if ( (DecafMUD as any).plugins.Encoding[currentEnc] === undefined || (DecafMUD as any).plugins.Encoding[currentEnc].proper === undefined || done.indexOf(currentEnc) !== -1 ) { continue; }
-		cs.push((DecafMUD as any).plugins.Encoding[currentEnc].proper);
-		done.push(currentEnc);
-	}
-	for(var k in (DecafMUD as any).plugins.Encoding) {
-        if (Object.prototype.hasOwnProperty.call((DecafMUD as any).plugins.Encoding, k)) {
-		    if ( done.indexOf(k) !== -1 || (DecafMUD as any).plugins.Encoding[k].proper === undefined ) { continue; }
-		    cs.push((DecafMUD as any).plugins.Encoding[k].proper);
-        }
-	}
-	c.decaf.sendIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.CHARSET + (DecafMUD as any).TN.ECHO + ' ' + cs.join(' ') + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE);
-},0); }
-tCHARSET.prototype._sb = function(data: string) {
-	this.decaf.debugString('RCVD ' + (DecafMUD as any).debugIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.CHARSET + data + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE));
-	if ( data.charCodeAt(0) === 1 ) {
-		let dataStr = data.substring(1);
-		if ( dataStr.indexOf('TTABLE ') === 0 ) {
-			dataStr = dataStr.substring(8); }
-		var sep = dataStr.charAt(0);
-		var encodings = dataStr.substring(1).split(sep);
-		var e: string | undefined, o: string | undefined;
-		for (var currentEncOrder of this.decaf.options.encoding_order) {
-			let currentPluginEnc = (DecafMUD as any).plugins.Encoding[currentEncOrder];
-			if (currentPluginEnc === undefined || currentPluginEnc.proper === undefined)
-				continue;
-			if (encodings.includes(currentEncOrder)) {
-				o = currentEncOrder;
-				e = currentEncOrder;
-				break;
-			}
-			if (encodings.includes(currentPluginEnc.proper)) {
-				o = currentPluginEnc.proper;
-				e = currentEncOrder;
-				break;
-			}
-		}
-		if (e === undefined) {
-			for(var i=0; i < encodings.length; i++) {
-				o = encodings[i];
-				for(var k in (DecafMUD as any).plugins.Encoding) {
-                    if (Object.prototype.hasOwnProperty.call((DecafMUD as any).plugins.Encoding, k)) {
-					    if ( o === k || o === (DecafMUD as any).plugins.Encoding[k].proper ) {
-						    e = k;
-						    break;
-					    }
-                    }
-				}
-				if ( e ) { break; }
-			}
-		}
-		if ( e !== undefined ) {
-			this.decaf.setEncoding(e);
-			this.decaf.sendIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.CHARSET + '\x02' + o + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE);
-		} else {
-			this.decaf.debugString("No encoder for: " + encodings.join(sep));
-			this.decaf.sendIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.CHARSET + '\x03' + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE);
-		}
-	} else if ( data.charCodeAt(0) === 2 ) {
-		let acceptedEnc = data.substring(1);
-		var e: string | undefined = undefined;
-		for(var k in (DecafMUD as any).plugins.Encoding) {
-            if (Object.prototype.hasOwnProperty.call((DecafMUD as any).plugins.Encoding, k)) {
-			    if ( (DecafMUD as any).plugins.Encoding[k].proper === acceptedEnc ) {
-				    e = k;
-				    break;
-			    }
-            }
-		}
-		if ( e !== undefined ) { this.decaf.setEncoding(e); }
-	}
-	return false;
-}
-// DecafMUD.plugins.Telopt[t.CHARSET] = tCHARSET;
+// DecafMUD.prototype.disableMCCP2 method was moved into the DecafMUD class body.
 
+// readMSDP and writeMSDP are now local to the msdp.ts module.
+// All tMSDP related code (var tMSDP, prototype assignments, config_vars) removed.
+// Moved to import { MsdpTelopt } from './plugins/telopt/msdp';
 
-/** Handles the telopt COMPRESSv2 (MCCP2) */
-var tCOMPRESSv2 = function(this: any, decaf: DecafMUD) {  // Added this type
-	// Thanks, https://mudhalla.net/tintin/protocols/mccp/
-	this.decaf = decaf;
-	this.decaf.startCompressV2 = false;
-}
-tCOMPRESSv2.prototype._will = function() {
-	if (this.decaf.options.socket == 'flash') { // Flash support will be removed later
-		this.decaf.debugString('Flash COMPRESSv2 support has not been implemented');
-		return false;
-	}
-	return true;
-}
-tCOMPRESSv2.prototype._sb = function() {
-	this.decaf.debugString('RCVD ' + (DecafMUD as any).debugIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.COMPRESSv2 + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE ));
-	this.decaf.startCompressV2 = true;
-	this.decaf.decompressStream = new pako.Inflate({ to: 'string' });
- }
-// DecafMUD.plugins.Telopt[t.COMPRESSv2] = tCOMPRESSv2;
-
-DecafMUD.prototype.disableMCCP2 = function() {
-	this.sendIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.DONT + (DecafMUD as any).TN.COMPRESSv2);
-	this.startCompressV2 = false;
-	this.decompressStream = undefined; // Ensures pako instance is cleared
-	this.inbuf = [];
-}
-
-/** Read a string of MSDP-formatted variables and return an object with those
- *  variables in an easy-to-use format. This calls itself recursively, and
- *  returns an array. The first item being the object, and the second being
- *  any left over string.
- * @param {String} data The MSDP-formatted data to read.
- * @returns {Array} */
-const msdp = /[\x01\x02\x03\x04]/; // Changed var to const
-const readMSDP = function(data: string): [Record<string, any>, string] {
-	var out: Record<string, any> = {};
-	var variable: string | undefined = undefined;
-	let currentData = data;
-
-	while ( currentData.length > 0 ) {
-		var c = currentData.charCodeAt(0);
-
-		if ( c === 1 ) {
-			var ind = currentData.substring(1).search(msdp);
-			if ( ind === -1 ) {
-				variable = currentData.substring(1);
-				currentData = '';
-			} else {
-				variable = currentData.substring(1, ind + 1);
-				currentData = currentData.substring(ind + 1 + 1);
-			}
-			out[variable] = undefined;
-			continue;
-		} else if ( c === 4 ) {
-			currentData = currentData.substring(1);
-			break;
-		}
-
-		if ( variable === undefined ) {
-			return [out, ''];
-		}
-
-		if ( c === 2 ) {
-			let val: any;
-			if ( currentData.charCodeAt(1) === 3 ) {
-				var o = readMSDP(currentData.substring(2));
-				val = o[0];
-				currentData = o[1];
-			} else {
-				var ind = currentData.substring(1).search(msdp), inner_val = '';
-				if ( ind === -1 ) {
-					inner_val = currentData.substring(1);
-					currentData = '';
-				} else {
-					inner_val = currentData.substring(1, ind + 1);
-					currentData = currentData.substring(ind + 1 + 1);
-				}
-				val = inner_val;
-			}
-			if ( out[variable] === undefined ) {
-				out[variable] = val;
-			} else if ( typeof out[variable] === 'object' && out[variable].push !== undefined ) {
-				out[variable].push(val);
-			} else {
-				out[variable] = [out[variable], val];
-			}
-			continue;
-		}
-		break;
-	}
-	return [out, currentData];
-};
-
-/** Convert a variable to a string of valid MSDP-formatted data.
- * @param {any} obj The variable to convert. */
-const writeMSDP = function(obj: any): string {
-	var type = typeof obj;
-	if ( type === 'string' || type === 'number' ) { return obj.toString(); }
-	else if ( type === 'boolean' ) { return obj ? '1' : '0'; }
-	else if ( type === 'undefined' || obj === null) { return ''; }
-
-	else if ( type === 'object' ) {
-		var out_str = '';
-		for(var k in obj) {
-			if (Object.hasOwnProperty.call(obj, k)) {
-				if ( obj[k] === undefined || obj[k] === null || typeof obj[k] === 'function' ) { continue; }
-
-				out_str += '\x01' + k;
-				if ( typeof obj[k] === 'object' && obj[k] !== null) {
-					if ( Array.isArray(obj[k]) ) {
-						var v = obj[k], l = obj[k].length;
-						for(var i=0;i<l;i++) {
-							out_str += '\x02' + writeMSDP(v[i]); }
-					} else if ( obj[k].nodeType === undefined ) {
-						out_str += '\x02\x03' + writeMSDP(obj[k]) + '\x04';
-					}
-				} else {
-					out_str += '\x02' + writeMSDP(obj[k]);
-				}
-			}
-		}
-		return out_str;
-	}
-	return obj.toString();
-};
-
-/** Handles the telopt MSDP. */
-var tMSDP = function(this: any, decaf: DecafMUD) {
-    this.decaf = decaf;
-    this.commands = [];
-    this.variables = [];
-    this.reportable = [];
-}
-tMSDP.prototype.connect = function() {
-	this.commands = ['LIST'];
-	this.variables = [];
-	this.reportable = [];
-}
-tMSDP.config_vars = {
-	'CLIENT_NAME'		: 'decafmud',
-	'CLIENT_VERSION'	: (DecafMUD as any).version.toString(), // Cast
-	'PLUGIN_ID'			: '0',
-	'ANSI_COLORS'		: '1',
-	'UTF_8'				: '1',
-	'XTERM_256_COLORS'	: '1'
-}
-tMSDP.prototype._will = function() { var m = this; setTimeout(function() {
-	m.decaf.sendIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.MSDP + '\x01LIST\x02COMMANDS' + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE);
-	m.decaf.sendIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.MSDP + '\x01LIST\x02VARIABLES' + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE);
-	m.decaf.sendIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.MSDP + '\x01LIST\x02CONFIGURABLE_VARIABLES' + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE);
-	m.decaf.sendIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.MSDP + '\x01LIST\x02REPORTABLE_VARIABLES' + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE);
-},0); }
-tMSDP.prototype._sb = function(data: string) {
-	var [msdp_out, ] = readMSDP(data);
-    var ret = false;
-	if ( typeof window !== 'undefined' && 'console' in window && console.groupCollapsed ) {
-		console.groupCollapsed(`DecafMUD[${this.decaf.id}]: RCVD IAC SB MSDP ... IAC SE`);
-		console.dir(msdp_out);
-		console.groupEnd();
-	} else { ret = true; }
-	if ( msdp_out['COMMANDS'] !== undefined && Array.isArray(msdp_out['COMMANDS']) ) {
-		for(var i=0; i< msdp_out['COMMANDS'].length;i++) {
-			(this.commands as string[]).push(msdp_out['COMMANDS'][i]); }
-	}
-	if ( msdp_out['VARIABLES'] !== undefined && Array.isArray(msdp_out['VARIABLES'])) {
-		for(var i=0; i< msdp_out['VARIABLES'].length;i++) {
-			(this.variables as string[]).push(msdp_out['VARIABLES'][i]); }
-	}
-	if ( msdp_out['CONFIGURABLE_VARIABLES'] !== undefined && Array.isArray(msdp_out['CONFIGURABLE_VARIABLES']) ) {
-		var o = msdp_out['CONFIGURABLE_VARIABLES'];
-		var ot: Record<string, string> = {};
-		for(var i=0;i<o.length;i++) {
-			if ( (tMSDP.config_vars as Record<string,string>)[o[i]] !== undefined ) {
-				ot[o[i]] = (tMSDP.config_vars as Record<string,string>)[o[i]]; }
-		}
-		this.decaf.sendIAC((DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SB + (DecafMUD as any).TN.MSDP + writeMSDP(ot) + (DecafMUD as any).TN.IAC + (DecafMUD as any).TN.SE);
-	}
-	return ret;
-}
-// DecafMUD.plugins.Telopt[t.MSDP] = tMSDP;
 
 // DecafMUD.plugins.Telopt[t.BINARY] = true;
 // DecafMUD.plugins.Telopt[t.MSSP] = typeof window !== 'undefined' && 'console' in window;
@@ -1879,12 +2462,12 @@ DecafMUD.prototype.requestPermission = function(option: string, prompt: string, 
 
 // Assign telopt handlers after class definition
 // Assign telopt handlers after class definition
-DecafMUD.plugins.Telopt[DecafMUD.TN.TTYPE] = tTTYPE;
-DecafMUD.plugins.Telopt[DecafMUD.TN.ECHO] = tECHO;
-DecafMUD.plugins.Telopt[DecafMUD.TN.NAWS] = tNAWS;
-DecafMUD.plugins.Telopt[DecafMUD.TN.CHARSET] = tCHARSET;
-DecafMUD.plugins.Telopt[DecafMUD.TN.COMPRESSv2] = tCOMPRESSv2;
-DecafMUD.plugins.Telopt[DecafMUD.TN.MSDP] = tMSDP;
+DecafMUD.plugins.Telopt[DecafMUD.TN.TTYPE] = TTypeTelopt;
+DecafMUD.plugins.Telopt[DecafMUD.TN.ECHO] = EchoTelopt;
+DecafMUD.plugins.Telopt[DecafMUD.TN.NAWS] = NawsTelopt;
+DecafMUD.plugins.Telopt[DecafMUD.TN.CHARSET] = CharsetTelopt;
+DecafMUD.plugins.Telopt[DecafMUD.TN.COMPRESSv2] = CompressV2Telopt;
+DecafMUD.plugins.Telopt[DecafMUD.TN.MSDP] = MsdpTelopt;
 
 // Register the converted GMCP plugin
 DecafMUD.plugins.Telopt[DecafMUD.TN.GMCP] = GmcpTelopt;
@@ -1892,6 +2475,10 @@ DecafMUD.plugins.Telopt[DecafMUD.TN.GMCP] = GmcpTelopt;
 // Register ZMP Telopt plugin
 import { ZmpTelopt } from './plugins/telopt/zmp';
 DecafMUD.plugins.Telopt[DecafMUD.TN.ZMP] = ZmpTelopt;
+
+// Register Panels Interface plugin
+import { PanelsInterface } from './plugins/interface/panels';
+DecafMUD.plugins.Interface.panels = PanelsInterface;
 
 // Register CP437 Encoding plugin
 import { cp437Encoding } from './plugins/encoding/cp437';
