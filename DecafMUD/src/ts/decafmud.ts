@@ -82,16 +82,16 @@ class DecafMUD {
     public id: number; // Changed from any
     public options: any;
     public settings: any;
-    public need: [string, () => boolean][]; // More specific type
+    // public need: [string, () => boolean][]; // More specific type - REMOVED
     public inbuf: (string | ArrayBuffer | Uint8Array)[]; // More specific type
     public telopt: any;
     public loaded: boolean;
     public connecting: boolean;
     public connected: boolean;
-    public loadTimer: any; // Consider NodeJS.Timeout or number
+    // public loadTimer: any; // Consider NodeJS.Timeout or number - REMOVED
     public timer: any;     // Consider NodeJS.Timeout or number
     public connect_try: number;
-    public required: number;
+    // public required: number; - REMOVED
     public ui: any; // Define specific UI interface later
     public store: any; // Define specific Storage interface later
     public storage: any; // Alias for store
@@ -102,7 +102,7 @@ class DecafMUD {
     public startCompressV2: boolean;
     public socket_ready: boolean;
     public conn_timer: any; // Consider NodeJS.Timeout or number
-    public extra: number;
+    // public extra: number; - REMOVED
     public loaded_plugs: any;
     public cconnect_try: number; // from original, might be a typo for connect_try, assuming it is connect_try
 
@@ -136,7 +136,7 @@ class DecafMUD {
         this.settings = {};
         extend_obj(this.settings, DecafMUD.settings); // Access static settings
 
-        this.need = [];
+        // this.need = []; // REMOVED
         this.inbuf = [];
         this.telopt = {};
 
@@ -147,15 +147,15 @@ class DecafMUD {
         this.loaded = false;
         this.connecting = false;
         this.connected = false;
-        this.loadTimer = null;
+        // this.loadTimer = null; // REMOVED
         this.timer = null;
         this.connect_try = 0;
         this.cconnect_try = 0; // Assuming this was intended and is same as connect_try for now
-        this.required = 0;
+        // this.required = 0; // REMOVED
         this.startCompressV2 = false;
         this.socket_ready = false;
         this.conn_timer = null;
-        this.extra = 0;
+        // this.extra = 0; // REMOVED
         this.loaded_plugs = {};
 
         this.debugString('Created new instance.', 'info');
@@ -166,15 +166,14 @@ class DecafMUD {
             console.groupEnd();
         }
 
-        this.require('decafmud.interface.' + this.options.interface);
-        this.waitLoad(this.initSplash.bind(this)); // Bind this for all callbacks
+        // All plugins are now imported statically, so we can proceed to initSplash directly.
+        // The old require/waitLoad mechanism is being removed.
+        this.initSplash();
     }
 
     // Placeholder for prototype methods that will be moved in later
     // initSplash!: () => void;             // Definition below
     // debugString!: (text: string, type?: string, obj?: any) => void; // Definition below
-    // require!: (moduleName: string, check?: () => boolean) => void; // Definition below - marked for removal
-    // waitLoad!: (next: () => void, itemloaded?: (module: string | true, next_mod?: string, perc?: number) => void, tr?: number) => void; // Definition below - marked for removal
     // setEncoding!: (enc: string) => void; // Definition below
     // decode!: (data: string) => [string, string]; // Definition below
     // encode!: (data: string) => string; // Definition below
@@ -195,8 +194,7 @@ class DecafMUD {
     // socketError!: (data: any, data2: any) => void; // Definition below
     // sendInput!: (input: string) => void; // Definition below
     // error!: (text: string) => void; // Definition below
-    // loadScript!: (filename: string, path?: string) => void; // Definition below - marked for removal
-    // updateSplash!: (module: string | true | null, next_mod?: string, perc?: number) => void; // Definition below
+    // updateSplash!: (percentage: number, message?: string) => void; // Definition below - changed signature
     // initSocket!: () => void; // Definition below
     // initUI!: () => void; // Definition below
     // initFinal!: () => void; // Definition below
@@ -265,242 +263,118 @@ class DecafMUD {
         alert(formatString("DecafMUD Error\n\n{0}", text));
     }
 
-    /** @deprecated Will be removed in favor of ES6 module imports. */
-    loadScript(filename: string, path?: string) {
-        // This function will likely need to be re-evaluated with module imports.
-        // For now, keep existing logic but add types.
-        let scriptPath = path;
-        if ( scriptPath === undefined ) {
-            if ( this.options.jslocation !== undefined ) { scriptPath = this.options.jslocation; }
-            if ( scriptPath === undefined || typeof scriptPath === 'string' && scriptPath.length === 0 ) {
-                // Attempt to discover the path.
-                var obj = document.querySelector('script[src*="decafmud.js"]');
-                if ( obj === null ) {
-                    obj = document.querySelector('script[src*="decafmud.min.js"]'); }
-                if ( obj !== null && obj instanceof HTMLScriptElement) {
-                    scriptPath = obj.src.substring(0,obj.src.lastIndexOf('/')+1); }
-            }
-        }
-
-        // Now that we have a path, create a script element to load our script
-        // and add it to the header so that it's loaded.
-        var script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.src = (scriptPath || '') + filename;
-        document.getElementsByTagName('head')[0].appendChild(script);
-
-        // Debug that we've loaded it.
-        this.debugString('Loading script: ' + filename);
-    }
-
-    /** @deprecated Will be removed in favor of ES6 module imports. */
-    require(moduleName: string, check?: () => boolean) {
-        // Language loading part fully removed.
-
-        let checker = check;
-        if ( checker === undefined ) {
-            // Build a checker
-            if ( moduleName.toLowerCase().indexOf('decafmud') === 0 ) {
-                var parts = moduleName.split('.');
-                if ( parts.length < 2 ) { return; }
-                parts.shift();
-                parts[0] = parts[0][0].toUpperCase() + parts[0].substr(1);
-
-                // If it's a telopt, search DecafMUD.TN for it.
-                if ( parts[0] === 'Telopt' ) {
-                    for(var k in (DecafMUD as any).TN) { // Cast
-                        if ( parts[1].toUpperCase() === k.toUpperCase() ) {
-                            parts[1] = (DecafMUD as any).TN[k];
-                            break; }
-                    }
-                }
-
-                checker = function(this: DecafMUD) {
-                    if ( (DecafMUD as any).plugins[parts[0]] !== undefined ) {
-                        if ( parts.length > 1 ) {
-                            return (DecafMUD as any).plugins[parts[0]][parts[1]] !== undefined;
-                        } else { return true; }
-                    }
-                    return false;
-                };
-            } else {
-                throw new Error("Can't build checker for non-DecafMUD module!");
-            }
-        }
-
-        // Increment required.
-        this.required++;
-
-        // Call the checker. If we already have it, return now.
-        if ( checker.call(this) ) { return; }
-
-        // Load the script.
-        this.loadScript(moduleName+'.js');
-
-        // Finally, push to need for waitLoad to work.
-        this.need.push([moduleName,checker]);
-    }
-
-    /** @deprecated Will be removed in favor of ES6 module imports. */
-    waitLoad(next: () => void, itemloaded?: (module: string | true, next_mod?: string, perc?: number) => void, tr?: number) {
-        clearTimeout(this.loadTimer);
-        let tries = tr === undefined ? 0 : tr;
-
-        if ( tries > this.options.wait_tries ) {
-            // Language timeout check removed
-            this.error(formatString("Timed out attempting to load the module: {0}", (this.need[0] as any[])[0]));
-            return;
-        }
-
-        while( this.need.length ) {
-            if ( typeof this.need[0] === 'string' ) {
-                this.need.shift();
-            } else {
-                if ( (this.need[0] as any[])[1].call(this) ) {
-                    if ( itemloaded !== undefined ) {
-                        if ( this.need.length > 1 ) {
-                            itemloaded.call(this,(this.need[0] as any[])[0] as string, (this.need[1] as any[])[0] as string);
-                        } else {
-                            itemloaded.call(this,(this.need[0]as any[])[0] as string);
-                        }
-                    }
-                    this.need.shift();
-                    tries = 0;
-                } else { break; }
-            }
-        }
-
-        // If this.need is empty, call next. If not, call it again in a bit.
-        if ( this.need.length === 0 ) {
-            next.call(this);
-        } else {
-            var decaf = this;
-            this.loadTimer = setTimeout(function(){decaf.waitLoad(next,itemloaded,tries+1)},this.options.wait_delay);
-        }
-    }
+    // loadScript, require, waitLoad methods are removed.
 
     initSplash() {
-        // Create the UI if we're using one. Which we always should be.
-        if ( this.options.interface !== undefined ) {
-            this.debugString(formatString('Attempting to initialize the interface plugin "{0}".',this.options.interface));
+        // Create the UI.
+        if (this.options.interface !== undefined && (DecafMUD as any).plugins.Interface[this.options.interface]) {
+            this.debugString(formatString('Initializing the interface plugin "{0}".', this.options.interface));
             this.ui = new (DecafMUD as any).plugins.Interface[this.options.interface](this);
-            this.ui.initSplash();
+            if (this.ui.initSplash) this.ui.initSplash();
+            this.updateSplash(10, "Interface loaded."); // Initial progress
+        } else {
+            this.error(`Interface plugin "${this.options.interface}" not found or failed to load.`);
+            return; // Stop initialization if UI can't load
         }
-
-        // Set the number of extra steps predicted after this step of loading for
-        // the sake of updating the progress bar.
-        this.extra = 3;
-
-        // Require plugins for: storage, socket, encoding, triggers, telopt
-        this.require('decafmud.storage.'+this.options.storage);
-        this.require('decafmud.socket.'+this.options.socket);
-        this.require('decafmud.encoding.'+this.options.encoding);
-
-        // Load them. This is the total number of required things thus far.
-        if ( this.ui && this.need.length > 0 ) { this.updateSplash(null, (this.need[0] as any[])[0] as string,0); }
-        this.waitLoad(this.initSocket.bind(this), this.updateSplash.bind(this));
+        // Since plugins are pre-loaded, directly proceed to next initialization step.
+        this.initSocket();
     }
 
-    updateSplash(module: string | true | null, next_mod?: string, perc?: number) {
-        if ( ! this.ui ) { return; }
-
-        let currentPercentage = perc;
-        // Calculate the percentage.
-        if ( currentPercentage === undefined ) {
-            currentPercentage = Math.min(100,Math.floor(100*(((this.extra+this.required)-this.need.length)/(this.required+this.extra)))); }
-
-        let message = next_mod;
-        if ( module === true ) {
-            // Don't do anything with message if module is true (it's passed directly)
-        } else if ( message !== undefined ) {
-            if ( message.indexOf('decafmud') === 0 ) {
-                var parts = message.split('.');
-                message = formatString('Loading the {0} module "{1}"...', parts[1],parts[2]);
-            } else {
-                message = formatString('Loading: {0}',message);
-            }
-        } else if ( currentPercentage == 100 ) {
-            message = "Loading complete.";
-        }
-
-        this.ui.updateSplash(currentPercentage, message);
+    updateSplash(percentage: number, message?: string) { // Signature changed
+        if (!this.ui || !this.ui.updateSplash) { return; }
+        this.ui.updateSplash(percentage, message);
     }
 
     initSocket() {
-        this.extra = 1;
         // Create the master storage object.
+        if (!(DecafMUD as any).plugins.Storage[this.options.storage]) {
+            this.error(`Storage plugin "${this.options.storage}" not found.`);
+            return;
+        }
         this.store = new (DecafMUD as any).plugins.Storage[this.options.storage](this);
         this.storage = this.store;
+        this.updateSplash(25, "Storage initialized.");
 
-        if ( this.ui ) {
-            // Push a junk element to need so the status bar shows properly.
-            this.need.push(['.', () => true]);
-            this.updateSplash(true,"Initializing the user interface...");
-
-            // Set up the UI.
+        if (this.ui && this.ui.load) {
+            // ui.load() was originally for the UI to load its own dependencies.
+            // This might be simplified or removed if all UI assets are bundled/imported directly.
+            // For now, call it if it exists, assuming it does synchronous setup.
             this.ui.load();
+            this.updateSplash(30, "UI loaded.");
         }
 
         // Attempt to create the socket.
-        this.debugString(formatString('Creating a socket using the "{0}" plugin.',this.options.socket));
+        if (!(DecafMUD as any).plugins.Socket[this.options.socket]) {
+            this.error(`Socket plugin "${this.options.socket}" not found.`);
+            return;
+        }
+        this.debugString(formatString('Creating a socket using the "{0}" plugin.', this.options.socket));
         this.socket = new (DecafMUD as any).plugins.Socket[this.options.socket](this);
-        this.socket.setup(0);
+        if (this.socket.setup) this.socket.setup(0); // Assuming setup is synchronous
+        this.updateSplash(40, "Socket initialized.");
 
-        // Load the latest round.
-        this.waitLoad(this.initUI.bind(this), this.updateSplash.bind(this));
+        this.initUI();
     }
 
     initUI() {
         // Finish setting up the UI.
-        if ( this.ui ) {
-            this.ui.setup(); }
+        if (this.ui && this.ui.setup) {
+            this.ui.setup();
+            this.updateSplash(50, "UI setup complete.");
+        }
 
-        // Now, require all our plugins.
-        for(var i=0; i<this.options.plugins.length; i++) {
-            this.require('decafmud.'+this.options.plugins[i]); }
+        // The old loop for `this.options.plugins` to `this.require` is removed.
+        // Essential plugins are expected to be imported and registered statically.
+        // Optional/dynamic plugins would need a new loading mechanism if required.
 
-        this.waitLoad(this.initFinal.bind(this), this.updateSplash.bind(this));
+        this.initFinal();
     }
 
     initFinal() {
         var textInputFilterCtor, o;
 
-        this.need.push(['.', () => true]);
-        this.updateSplash(true,"Initializing triggers system...");
-        this.need.shift();
-
-        this.need.push(['.', () => true]);
-        this.updateSplash(true,"Initializing TELNET extensions...");
-        this.need.shift(); // Added missing shift
-
-
-        for(var k in (DecafMUD as any).plugins.Telopt) { // Cast
+        this.updateSplash(60, "Initializing TELNET extensions...");
+        for (var k in (DecafMUD as any).plugins.Telopt) { // Cast
             if (Object.hasOwnProperty.call((DecafMUD as any).plugins.Telopt, k)) {
                 o = (DecafMUD as any).plugins.Telopt[k];
-                if ( typeof o === 'function' ) { // Check if it's a constructor
+                if (typeof o === 'function') { // Check if it's a constructor
                     this.telopt[k] = new (o as TeloptPluginConstructor)(this);
                 } else if (typeof o === 'boolean' || o === undefined) { // Handle simple boolean flags like BINARY
                     this.telopt[k] = o;
-                } else if (typeof o === 'object' && o !== null && typeof (o as any)._sb === 'function') { // Already an instance? (Less likely with new pattern)
-                     this.telopt[k] = o; // This case might need review based on how plugins are structured
+                } else if (typeof o === 'object' && o !== null && typeof (o as any)._sb === 'function') { // Already an instance?
+                    this.telopt[k] = o;
                 }
             }
         }
+        this.updateSplash(75, "TELNET extensions initialized.");
 
-        this.need.push(['.', () => true]);
-        this.updateSplash(true,"Initializing filters...");
-        this.need.shift();
+        if (this.options.textinputfilter && (DecafMUD as any).plugins.TextInputFilter) {
+            textInputFilterCtor = (DecafMUD as any).plugins.TextInputFilter[this.options.textinputfilter];
+            if (textInputFilterCtor) {
+                this.textInputFilter = new textInputFilterCtor(this);
+                this.updateSplash(85, "Text input filter initialized.");
+            } else {
+                this.debugString(`Text input filter "${this.options.textinputfilter}" not found.`, "warn");
+                this.updateSplash(85, "Text input filter not found (skipped).");
+            }
+        } else {
+            this.updateSplash(85, "No text input filter configured.");
+        }
 
-
-        textInputFilterCtor = (DecafMUD as any).plugins.TextInputFilter[this.options.textinputfilter];
-        if ( textInputFilterCtor )
-            this.textInputFilter = new textInputFilterCtor(this);
 
         // We're loaded. Try to connect.
         this.loaded = true;
-        if (this.ui) { this.ui.endSplash(); }
+        if (this.ui && this.ui.endSplash) {
+            this.ui.endSplash(); // This will typically set final splash message to 100%
+        } else {
+            this.updateSplash(100, "Loading complete.");
+        }
 
-        if ( (!this.options.autoconnect) || (!this.socket.ready)) { return; }
+
+        if ((!this.options.autoconnect) || (!this.socket_ready)) { // Changed from this.socket.ready
+            this.debugString("Autoconnect disabled or socket not ready.", "info");
+            return;
+        }
         this.connect();
     }
 
@@ -1664,258 +1538,16 @@ DecafMUD.prototype.error = function(text: string) { // Added type
 // Module Loading
 ///////////////////////////////////////////////////////////////////////////////
 
-DecafMUD.prototype.loadScript = function(filename: string, path?: string) {
-	// This function will likely need to be re-evaluated with module imports.
-	// For now, keep existing logic but add types.
-	let scriptPath = path;
-	if ( scriptPath === undefined ) {
-		if ( this.options.jslocation !== undefined ) { scriptPath = this.options.jslocation; }
-		if ( scriptPath === undefined || typeof scriptPath === 'string' && scriptPath.length === 0 ) {
-			// Attempt to discover the path.
-			var obj = document.querySelector('script[src*="decafmud.js"]');
-			if ( obj === null ) {
-				obj = document.querySelector('script[src*="decafmud.min.js"]'); }
-			if ( obj !== null && obj instanceof HTMLScriptElement) {
-				scriptPath = obj.src.substring(0,obj.src.lastIndexOf('/')+1); }
-		}
-	}
-
-	// Now that we have a path, create a script element to load our script
-	// and add it to the header so that it's loaded.
-	var script = document.createElement('script');
-	script.type = 'text/javascript';
-	script.src = (scriptPath || '') + filename;
-	document.getElementsByTagName('head')[0].appendChild(script);
-
-	// Debug that we've loaded it.
-	this.debugString('Loading script: ' + filename);
-}
-
-DecafMUD.prototype.require = function(moduleName: string, check?: () => boolean) {
-	// Language loading part fully removed.
-
-	let checker = check;
-	if ( checker === undefined ) {
-		// Build a checker
-		if ( moduleName.toLowerCase().indexOf('decafmud') === 0 ) {
-			var parts = moduleName.split('.');
-			if ( parts.length < 2 ) { return; }
-			parts.shift();
-			parts[0] = parts[0][0].toUpperCase() + parts[0].substr(1);
-
-			// If it's a telopt, search DecafMUD.TN for it.
-			if ( parts[0] === 'Telopt' ) {
-				for(var k in (DecafMUD as any).TN) { // Cast
-					if ( parts[1].toUpperCase() === k.toUpperCase() ) {
-						parts[1] = (DecafMUD as any).TN[k];
-						break; }
-				}
-			}
-
-			checker = function(this: DecafMUD) {
-				if ( (DecafMUD as any).plugins[parts[0]] !== undefined ) {
-					if ( parts.length > 1 ) {
-						return (DecafMUD as any).plugins[parts[0]][parts[1]] !== undefined;
-					} else { return true; }
-				}
-				return false;
-			};
-		} else {
-			throw new Error("Can't build checker for non-DecafMUD module!");
-		}
-	}
-
-	// Increment required.
-	this.required++;
-
-	// Call the checker. If we already have it, return now.
-	if ( checker.call(this) ) { return; }
-
-	// Load the script.
-	this.loadScript(moduleName+'.js');
-
-	// Finally, push to need for waitLoad to work.
-	this.need.push([moduleName,checker]);
-}
-
-DecafMUD.prototype.waitLoad = function(next: () => void, itemloaded?: (module: string | true, next_mod?: string, perc?: number) => void, tr?: number) {
-	clearTimeout(this.loadTimer);
-	let tries = tr === undefined ? 0 : tr;
-
-	if ( tries > this.options.wait_tries ) {
-		// Language timeout check removed
-		this.error(formatString("Timed out attempting to load the module: {0}", (this.need[0] as any[])[0]));
-		return;
-	}
-
-	while( this.need.length ) {
-		if ( typeof this.need[0] === 'string' ) {
-			this.need.shift();
-		} else {
-			if ( (this.need[0] as any[])[1].call(this) ) {
-				if ( itemloaded !== undefined ) {
-					if ( this.need.length > 1 ) {
-						itemloaded.call(this,(this.need[0] as any[])[0] as string, (this.need[1] as any[])[0] as string);
-					} else {
-						itemloaded.call(this,(this.need[0]as any[])[0] as string);
-					}
-				}
-				this.need.shift();
-				tries = 0;
-			} else { break; }
-		}
-	}
-
-	// If this.need is empty, call next. If not, call it again in a bit.
-	if ( this.need.length === 0 ) {
-		next.call(this);
-	} else {
-		var decaf = this;
-		this.loadTimer = setTimeout(function(){decaf.waitLoad(next,itemloaded,tries+1)},this.options.wait_delay);
-	}
-}
+// DecafMUD.prototype.loadScript, require, waitLoad removed.
 
 ///////////////////////////////////////////////////////////////////////////////
 // Initialization
 ///////////////////////////////////////////////////////////////////////////////
 
-DecafMUD.prototype.initSplash = function() {
-	// Create the UI if we're using one. Which we always should be.
-	if ( this.options.interface !== undefined ) {
-		this.debugString(formatString('Attempting to initialize the interface plugin "{0}".',this.options.interface));
-		this.ui = new (DecafMUD as any).plugins.Interface[this.options.interface](this);
-		this.ui.initSplash();
-	}
+// DecafMUD.prototype.initSplash, updateSplash, initSocket, initUI, initFinal removed
+// as they are now part of the class structure and have been refactored.
 
-	// Set the number of extra steps predicted after this step of loading for
-	// the sake of updating the progress bar.
-	this.extra = 3;
-
-	// Require plugins for: storage, socket, encoding, triggers, telopt
-	this.require('decafmud.storage.'+this.options.storage);
-	this.require('decafmud.socket.'+this.options.socket);
-	this.require('decafmud.encoding.'+this.options.encoding);
-
-	// Load them. This is the total number of required things thus far.
-	if ( this.ui && this.need.length > 0 ) { this.updateSplash(null, (this.need[0] as any[])[0] as string,0); }
-	this.waitLoad(this.initSocket, this.updateSplash);
-}
-
-DecafMUD.prototype.updateSplash = function(module: string | true | null, next_mod?: string, perc?: number) {
-	if ( ! this.ui ) { return; }
-
-	let currentPercentage = perc;
-	// Calculate the percentage.
-	if ( currentPercentage === undefined ) {
-		currentPercentage = Math.min(100,Math.floor(100*(((this.extra+this.required)-this.need.length)/(this.required+this.extra)))); }
-
-	let message = next_mod;
-	if ( module === true ) {
-		// Don't do anything with message if module is true (it's passed directly)
-	} else if ( message !== undefined ) {
-		if ( message.indexOf('decafmud') === 0 ) {
-			var parts = message.split('.');
-			message = formatString('Loading the {0} module "{1}"...', parts[1],parts[2]);
-		} else {
-			message = formatString('Loading: {0}',message);
-		}
-	} else if ( currentPercentage == 100 ) {
-		message = "Loading complete.";
-	}
-
-	this.ui.updateSplash(currentPercentage, message);
-
-}
-
-DecafMUD.prototype.initSocket = function() {
-	this.extra = 1;
-	// Create the master storage object.
-	this.store = new (DecafMUD as any).plugins.Storage[this.options.storage](this);
-	this.storage = this.store;
-
-	if ( this.ui ) {
-		// Push a junk element to need so the status bar shows properly.
-		this.need.push(['.', () => true]);
-		this.updateSplash(true,"Initializing the user interface...");
-
-		// Set up the UI.
-		this.ui.load();
-	}
-
-	// Attempt to create the socket.
-	this.debugString(formatString('Creating a socket using the "{0}" plugin.',this.options.socket));
-	this.socket = new (DecafMUD as any).plugins.Socket[this.options.socket](this);
-	this.socket.setup(0);
-
-	// Load the latest round.
-	this.waitLoad(this.initUI, this.updateSplash);
-}
-
-DecafMUD.prototype.initUI = function() {
-	// Finish setting up the UI.
-	if ( this.ui ) {
-		this.ui.setup(); }
-
-	// Now, require all our plugins.
-	for(var i=0; i<this.options.plugins.length; i++) {
-		this.require('decafmud.'+this.options.plugins[i]); }
-
-	this.waitLoad(this.initFinal, this.updateSplash);
-}
-
-DecafMUD.prototype.initFinal = function() {
-
-	var textInputFilterCtor, o;
-
-	this.need.push(['.', () => true]);
-	this.updateSplash(true,"Initializing triggers system...");
-	this.need.shift();
-
-	this.need.push(['.', () => true]);
-	this.updateSplash(true,"Initializing TELNET extensions...");
-	this.need.shift(); // Added missing shift
-
-
-	for(var k in (DecafMUD as any).plugins.Telopt) { // Cast
-		if (Object.hasOwnProperty.call((DecafMUD as any).plugins.Telopt, k)) {
-			o = (DecafMUD as any).plugins.Telopt[k];
-			if ( typeof o === 'function' ) {
-				this.telopt[k] = new o(this);
-			} else {
-				this.telopt[k] = o;
-			}
-		}
-	}
-
-	this.need.push(['.', () => true]);
-	this.updateSplash(true,"Initializing filters...");
-	this.need.shift();
-
-
-	textInputFilterCtor = (DecafMUD as any).plugins.TextInputFilter[this.options.textinputfilter];
-	if ( textInputFilterCtor )
-		this.textInputFilter = new textInputFilterCtor(this);
-
-	// We're loaded. Try to connect.
-	this.loaded = true;
-	if (this.ui) { this.ui.endSplash(); }
-
-		/*
-	// If this is IE, show a warning.
-	if ( /MSIE/.test(navigator.userAgent) && this.ui.infoBar ) {
-		var msg = 'You may experience poor performance and UI glitches using ' +
-			'DecafMUD with Microsoft Internet Explorer. We recommend switching ' +
-			'to <a href="http://www.google.com/chrome">Google Chrome</a> or ' +
-			'<a href="http://www.getfirefox.com">Mozilla Firefox</a> for ' +
-			'the best experience.';
-		this.ui.infoBar(msg);
-	}*/
-
-	if ( (!this.options.autoconnect) || (!this.socket.ready)) { return; }
-	this.connect();
-}
-
-DecafMUD.prototype.connect = function() {
+DecafMUD.prototype.connect = function() { // This connect and below were outside class, now should be part of class or removed if duplicate
 	if ( this.connecting || this.connected ) { return; }
 	if ( this.socket_ready !== true ) { throw "The socket isn't ready yet."; }
 
@@ -2540,6 +2172,7 @@ DecafMUD.plugins.Encoding.utf8 = {
     }
 };
 
+// DecafMUD.prototype.loaded_plugs = {}; // REMOVED - instance property now
 
 export { DecafMUD, DecafMUD as Decaf }; // Export DecafMUD also as Decaf for backward compatibility if any old script relied on that name.
 export { DecafMUD as default }; // Export as default

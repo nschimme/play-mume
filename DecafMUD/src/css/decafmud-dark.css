@@ -205,3 +205,105 @@
 	border-left: none;
 	border-right: 1px solid #444;
 }
+
+/* PanelsInterface specific dark styles */
+
+/* Dark Sidebar additions */
+.decafmud.interface .side-pane { /* Ensure higher specificity or that it overrides general .side-pane if defined in decafmud.css with same specificity */
+    border-color: #444;
+    background-color: #1a1a1a; /* Slightly lighter than pure black for depth */
+    color: #ccc;
+}
+
+.decafmud.interface .side-pane .progresstable td {
+    color: #bbb;
+}
+
+.decafmud.interface .side-pane .progress-outer {
+    background-color: #222;
+    border-color: #555;
+}
+
+.decafmud.interface .side-pane .progress-inner {
+    background-color: #006000; /* Darker Green */
+}
+
+.decafmud.interface .side-pane .progress-text {
+    color: #eee;
+    text-shadow: 1px 1px #000;
+}
+
+.decafmud.interface .side-pane .mapdiv {
+    border-color: #333;
+    background-color: #0a0a0a; /* Very dark for map area */
+    color: #aaa;
+}
+
+/* Dark Submenu styles */
+.decafmud.toolbar ul.submenu {
+    background-color: #2a2a2a; /* Dark background for dropdown */
+    border-color: #444;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+}
+
+.decafmud.toolbar ul.submenu li a {
+    color: #ccc; /* Light text for items */
+}
+
+.decafmud.toolbar ul.submenu li a:hover,
+.decafmud.toolbar ul.submenu li a:focus {
+    background-color: #3a3a3a;
+    color: #fff;
+}
+
+/* Dark Popup content styling */
+.decafmud .window .popupTextarea {
+    background-color: #222;
+    color: #ddd;
+    border-color: #444;
+}
+
+.decafmud .window .popupTextdiv {
+    background-color: #1e1e1e;
+    color: #ccc;
+    border-color: #333;
+}
+
+.decafmud .window .prettybutton {
+    border-color: #555;
+    background-color: #333;
+    color: #ddd;
+}
+
+.decafmud .window .prettybutton:hover {
+    background-color: #444;
+    border-color: #666;
+}
+
+.decafmud .window .window-header .headertext {
+    color: #eee; /* Header text color for dark popups */
+}
+
+
+/* Dark Size Display */
+.decafmud .size-display {
+    background-color: rgba(10,10,10,0.7);
+    color: #ddd;
+}
+
+/* Dark InfoBar buttons */
+.decafmud.infobar .buttons button {
+    border-color: #555;
+    background-color: #333;
+    color: #ddd;
+}
+.decafmud.infobar .buttons button:hover {
+    background-color: #444;
+    border-color: #666;
+}
+
+/* Ensure .decafmud.interface prefix for dark theme overrides if .side-pane was too general */
+.decafmud.interface .mud-pane.side-pane {
+    background-color: #111; /* Example specific dark override */
+    border-color: #222;
+}
