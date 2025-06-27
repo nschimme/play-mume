@@ -1,0 +1,19 @@
+// Main DecafMUD SCSS file (MIT Licensed)
+
+// Core variables and mixins (if any, can be defined in a separate partial e.g., _variables.scss)
+// @import "variables";
+
+// Base styles from decafmud.css (and potentially main.css)
+@import "base";
+
+// PanelsInterface specific styles
+@import "panels_interface";
+
+// Dark theme overrides from decafmud-dark.css
+@import "theme_dark";
+
+// Mud-specific colors from mud-colors.css (if they are to be bundled here)
+// Alternatively, mud-colors.css might be kept separate if it's very dynamic or user-configured
+// For now, let's assume it can be imported if it contains general color definitions.
+// If it's purely dynamic, it should be linked separately in HTML.
+@import "mud_colors";

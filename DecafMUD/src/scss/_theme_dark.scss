@@ -1,0 +1,327 @@
+// SCSS Partial for DecafMUD Dark Theme (MIT Licensed)
+// Based on decafmud-dark.css
+
+// Variables could be defined here or in a separate _variables_dark.scss
+// Example:
+// $dark-bg: #000;
+// $dark-border: #333;
+// $dark-text: #ccc;
+// $dark-pane-bg: #1a1a1a;
+// $dark-button-bg: #333;
+// $dark-button-hover-bg: #444;
+
+.decafmud.interface { // Assuming this class or a more specific one like .theme-dark is applied to enable the dark theme
+	background: #000; // $dark-bg;
+	border-color: #333; // $dark-border;
+    color: #ccc; // $dark-text; Default text color for the interface
+
+    // General mud-pane in dark theme (el_display, sidebar)
+    .mud-pane {
+        // background-color: #0d0d0d; // Slightly off-black for main display areas
+        color: #ccc; // $dark-text;
+        border-color: #222; // For any internal borders if mud-pane itself had one
+    }
+    .mud-pane:focus {
+        outline-color: #444; // Darker outline
+    }
+
+    // Input area
+    .input-cont {
+        border-top-color: #333; // $dark-border;
+    }
+    .input {
+        background: transparent; // Usually inherits from container
+        color: #FFF; // Bright text for input
+        &.blur { // class for blurred input from PanelsInterface JS
+            color: #aaa;
+        }
+    }
+
+    // Scroll Helpers (from original decafmud-dark.css)
+    @-webkit-keyframes attention-pulse { // Keep vendor prefix for now
+        from {
+            background-color: rgba(24,24,24,0.75);
+        }
+        to {
+            background-color: rgba(92,47,1,0.75); // Original orange-ish pulse
+        }
+    }
+    @-webkit-keyframes connecting-pulse {
+        from { background-color: #7D0101; } // Dark red
+        to { background-color: #7D7D01; } // Dark yellow/olive
+    }
+
+    .scroll-point { // Used by StandardDisplay
+        border-color: #444;
+    }
+    .scrollbutton { // PanelsInterface scroll button
+        background-color: rgba(24,24,24,0.75); // Default state from original .scroll-button
+        color: #ccc;
+        border: 1px solid #444;
+        -webkit-animation-name: attention-pulse;
+        -webkit-animation-duration: 1s;
+        -webkit-animation-iteration-count: infinite;
+        -webkit-animation-direction: alternate;
+        -webkit-animation-timing-function: ease-in-out;
+        &:hover, &:focus {
+            -webkit-animation-name: none;
+            background-color: rgba(68,68,68,0.75); // From original .scroll-button:hover
+            border-color: #555;
+        }
+    }
+
+    // Popups (.decafmud.window)
+    .window {
+        border-color: #333; //rgba(56,56,56,0.9);
+        background-color: #121212; //rgba(20,20,20,0.9);
+        color: #ccc; // Default text inside popups
+
+        .window-header {
+            background-color: #000; // Darker header
+            border-bottom: 1px solid #333;
+            .headertext {
+                color: #eee;
+            }
+        }
+        .popupTextarea, textarea {
+            background-color: #222;
+            color: #ddd;
+            border-color: #444;
+        }
+        .popupTextdiv {
+            background-color: #1e1e1e;
+            color: #ccc;
+            border-color: #333;
+        }
+        .prettybutton {
+            border-color: #555;
+            background-color: #333;
+            color: #ddd;
+            &:hover, &:focus {
+                background-color: #444;
+                border-color: #666;
+            }
+        }
+        .closebutton {
+            color: #aaa;
+            &:hover, &:focus {
+                color: #fff;
+            }
+        }
+    }
+
+    // Splash Screen
+    .splash {
+        background: rgba(0,0,0,0.9); // Slightly transparent black
+        color: #ccc;
+        .heading, .status {
+            background: rgba(20,20,20,0.9); // #121212
+            color: #CCC;
+        }
+        .version { color: #555; } // Darker version text
+        .progress { background: #020202; } // Very dark progress bar background
+        .inner-progress { background: #222; } // Darker inner progress
+        .old { // Old messages on splash
+            background: rgba(2,2,2,0.9); // #020202
+            color: #555;
+        }
+        .status .error { // For splashError
+            color: #ff6b6b; // Brighter red for errors on dark bg
+        }
+    }
+
+    // Center Notification (.note.center) - if used
+    .note.center {
+        background: rgba(20,20,20,0.9); // #121212
+        border-color: #333; //rgba(56,56,56,0.9);
+        color: #ccc;
+    }
+
+    // Fullscreen button (.fs) - if a dedicated one exists
+    .fs { // General style for a fullscreen button if it's not a toolbar button
+        background-color: rgba(24,24,24,0.75);
+        color: #ccc;
+        &:hover, &:focus {
+            background-color: rgba(68,68,68,0.75);
+        }
+    }
+
+    // Status Icons
+    .status-icon {
+        // Default color might be fine, or make it #aaa
+        &.connectivity { // Specific for connectivity icon
+            border-radius: 8px; // Make it round
+            -moz-border-radius: 8px;
+            width: 16px; height:16px; // Ensure size if text removed
+
+            &.connected { background-color: #017D01; color: transparent; } // Green
+            &.disconnected { background-color: #7D0101; color: transparent; } // Red
+            &.connecting {
+                background-color: #7D7D01; // Yellow/Olive
+                color: transparent;
+                -webkit-animation-name: connecting-pulse; // Reuse animation
+                -webkit-animation-duration: 1s;
+                -webkit-animation-iteration-count: infinite;
+                -webkit-animation-direction: alternate;
+                -webkit-animation-timing-function: ease-in-out;
+            }
+        }
+    }
+
+    // Toolbar
+    .toolbar {
+        background-color: rgba(56,56,56,0.95); // #333
+        border-color: #666; //rgba(113,113,113,0.9);
+
+        .button {
+            color: #FFF;
+            background-color: rgba(20,20,20,0.9); // #121212
+            border: 1px solid; // Add border for definition
+            border-color: #666; //rgba(113,113,113,0.9);
+
+            &:hover, &:focus {
+                background-color: #666; //rgba(113,113,113,0.9);
+                border-color: #888;
+            }
+            &.toggle { // General toggle, not specific to pressed/depressed
+                border-color: #666; //rgba(113,113,113,0.9);
+            }
+            &.toggle-pressed {
+                background-color: rgba(0,0,0,0.9); // #000
+                border-color: #444; // Darker inset border
+                border-style: inset;
+            }
+            &.toggle-depressed {
+                 background-color: rgba(30,30,30,0.9);
+                 border-color: #777;
+                 border-style: outset;
+            }
+            &.disabled, &.disabled:hover, &.disabled:focus {
+                background-color: rgba(20,20,20,0.9); // #121212
+                opacity: 0.4; // Keep opacity from base
+                border-color: #555;
+                color: #888;
+            }
+        }
+        // Text color for always-on/visible toolbars (was black on light theme)
+        // &.always-on .button, &.visible .button, &:hover .button, &:focus .button {
+        //     color: #FFF; // Ensure text is white
+        // }
+    }
+
+    // Info Bars
+    .infobar {
+        // Original path was ../images/decaf-icon.png relative to src/css/
+        // Relative to src/scss/ it's still ../images/decaf-icon.png
+        // This assumes the final CSS will be placed such that this relative path works,
+        // or a build tool will adjust/copy assets.
+        background-image: url("../images/decaf-icon.png");
+        background-position: 5px center;
+        background-repeat: no-repeat;
+        background-color: rgba(26,26,26,0.95); // #191919;
+        border-color: #666; //rgba(113,113,113,0.9);
+        color: #ccc;
+
+        .close {
+            color: #aaa;
+            &:hover, &:focus {
+                background-color: #000; // Make hover distinct
+                color: #fff;
+            }
+        }
+        // &.clickable:hover, &.clickable:focus { // Not used by PanelsInterface
+        //     border-color: #888; //rgba(151,151,151,0.9);
+        // }
+        .buttons button { // For buttons inside .infobar .buttons
+            color: #ddd;
+            background-color: #333; // Similar to popup buttons
+            border-color: #555;
+            &:hover, &:focus {
+                background-color: #444;
+                border-color: #666;
+            }
+        }
+    }
+
+    // Sidebar specific dark theme
+    .side-pane {
+        background-color: #111; // Darker than main pane for contrast
+        border-color: #2b2b2b;
+        color: #aaa;
+
+        .progresstable {
+            td { color: #aaa; }
+            .name { color: #bbb; }
+        }
+        .progress-outer {
+            background-color: #282828;
+            border-color: #404040;
+        }
+        .progress-inner { // Example: health bar - green
+            background-color: #2a5d2a; // Dark green
+            &.mana { background-color: #2a3d5d; } // Example for mana - blue
+            &.stamina { background-color: #5d5d2a; } // Example for stamina - yellow/brown
+        }
+        .progress-text {
+            color: #dfdfdf;
+            text-shadow: 1px 1px 1px #000;
+        }
+        .mapdiv {
+            background-color: #0a0a0a;
+            border-color: #222;
+            color: #999;
+        }
+    }
+
+    // Toolbar Submenus dark theme
+    .toolbar ul.submenu {
+        background-color: #2a2a2a;
+        border-color: #444;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+        li a {
+            color: #ccc;
+            &:hover, &:focus {
+                background-color: #3a3a3a;
+                color: #fff;
+            }
+        }
+    }
+
+    // Size Display dark theme
+    .size-display {
+        background-color: rgba(10,10,10,0.75);
+        color: #ddd;
+        border: 1px solid #222;
+    }
+
+
+    // Fancy Custom Scrollbar (WebKit specific from original)
+    // These are webkit specific and might not be desired, but ported for completeness
+    // It's often better to rely on browser default scrollbars or OS-level theming.
+    &::-webkit-scrollbar { // Applied to .decafmud.interface
+        width: 15px;
+        // border-radius: 7.5px; // Can cause issues if scrollbar track is not styled
+        background-color: #000; // Scrollbar track
+    }
+    &::-webkit-scrollbar-thumb {
+        border-radius: 7.5px;
+        background-color: #232323; // Face color
+        border: 1px solid #444444; // 3dlight color
+        // Using gradient from original:
+        // background: rgba(13,13,13,0.9) -webkit-gradient(linear, 0% 0%, 100% 0%, from(rgba(57,57,57,0.9)), to(rgba(13,13,13,0.9)));
+        // border-left: 1px solid rgba(75,75,75,0.9); // Original had this, seems complex for simple thumb
+
+        &:hover, &:focus {
+            background-color: #2f2f2f; // Highlight color
+            // background: #181818 -webkit-gradient(linear, 0% 0%, 100% 0%, from(rgb(63,63,63)), to(rgb(24,24,24)));
+        }
+        &:active {
+            background-color: #181818; // Shadow color
+            // background: #3F3F3F -webkit-gradient(linear, 0% 0%, 100% 0%, from(rgb(24,24,24)), to(rgb(63,63,63)));
+            // border-left: none;
+            // border-right: 1px solid #444; // Original
+        }
+    }
+    // For Firefox, scrollbar colors can be set with `scrollbar-color`
+    // scrollbar-color: #232323 #000; /* thumb track */
+}

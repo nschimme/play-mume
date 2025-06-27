@@ -1494,6 +1494,46 @@ export class PanelsInterface {
     }
     // #endregion Menu Action Handlers
 
+    // #region Toolbar and Menu Programmatic Modification
+    public addMenuItem(
+        targetMenuId: string,
+        item: MenuItemAction,
+        position?: number,
+        isSubmenu: boolean = false,
+        parentSubmenuText?: string
+    ): boolean {
+        let targetMenu = toolbarMenus.find(m => m.id === targetMenuId);
+
+        // This is a simplified version. A full implementation might need to handle nested submenus.
+        // For now, assuming targetMenuId refers to a top-level menu defined in toolbarMenus.
+        if (!targetMenu) {
+            this.decaf.debugString(`Target menu "${targetMenuId}" not found for adding item "${item.name}".`, "warn");
+            return false;
+        }
+
+        if (position === undefined || position < 0 || position > targetMenu.items.length) {
+            targetMenu.items.push(item);
+        } else {
+            targetMenu.items.splice(position, 0, item);
+        }
+
+        // If the menu is already rendered, we need to refresh its DOM representation.
+        // This is tricky as submenus are created on-demand by toggle_menu.
+        // Simplest for now: if a menu that was already opened is modified, close it to force redraw on next open.
+        const menuElement = document.getElementById("sub" + targetMenuId);
+        if (menuElement) {
+           // Force close and clear current DOM for this menu to be rebuilt on next open
+           if (this.open_menu !== -1 && toolbarMenus[this.open_menu].id === targetMenuId) {
+               this.close_menus(); // Close all menus
+           }
+           // Remove the existing submenu so it gets rebuilt with new items
+           menuElement.remove();
+        }
+        this.decaf.debugString(`Added menu item "${item.name}" to menu "${targetMenuId}". Interface may need UI refresh for static menus.`, "info");
+        return true;
+    }
+    // #endregion Toolbar and Menu Programmatic Modification
+
     /** Create a new toolbar button.
      * @param {string} btnDomId The DOM ID for the button element.
      * @param {String} text The name of the button.
@@ -1974,16 +2014,7 @@ export class PanelsInterface {
 
                 a.onclick = (ev: MouseEvent) => {
                     ev.stopPropagation();
-                    try {
-                        const methodName = item.action.replace("this.", "").replace("()", "").split(";")[0].trim();
-                        if (typeof (this as any)[methodName] === 'function') {
-                            (this as any)[methodName]();
-                        } else {
-                            this.decaf.debugString(`Action '${item.action}' (method '${methodName}') not found on PanelsInterface.`, "warn");
-                        }
-                    } catch (err: any) {
-                        this.decaf.error(`Error executing menu action '${item.action}': ${err.message}`);
-                    }
+                    this.executeMenuAction(item.action);
                     this.close_menus();
                 };
                 li.appendChild(a);
@@ -2014,6 +2045,40 @@ export class PanelsInterface {
         });
         this.open_menu = -1;
     }
+
+    private executeMenuAction(actionString: string): void {
+        try {
+            if (actionString.startsWith("this.")) {
+                const methodName = actionString.replace("this.", "").replace("()", "").split(";")[0].trim();
+                if (typeof (this as any)[methodName] === 'function') {
+                    (this as any)[methodName]();
+                } else {
+                    this.decaf.debugString(`Method '${methodName}' not found on PanelsInterface for action '${actionString}'.`, "warn");
+                }
+            } else {
+                // Attempt to call as a global function.
+                // This is a simplified approach. For more complex global calls or namespaced functions,
+                // a more robust solution (e.g., function registry or safer eval) might be needed.
+                const functionName = actionString.replace("()", "").split(";")[0].trim();
+                if (typeof (window as any)[functionName] === 'function') {
+                    (window as any)[functionName]();
+                } else {
+                    this.decaf.debugString(`Global function '${functionName}' not found for action '${actionString}'. Trying eval.`, "warn");
+                    // Fallback to eval if it's a more complex statement, but use with caution.
+                    // This is potentially unsafe if action strings can be user-supplied without sanitization.
+                    // Given these are dev-defined menu actions, risk is lower but present.
+                    try {
+                        eval(actionString);
+                    } catch (e: any) {
+                         this.decaf.error(`Error evaluating menu action '${actionString}': ${e.message}`);
+                    }
+                }
+            }
+        } catch (err: any) {
+            this.decaf.error(`Error executing menu action '${actionString}': ${err.message}`);
+        }
+    }
+
 
     // Popup Management
     private maxPopupHeight(): number {

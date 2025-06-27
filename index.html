@@ -4,23 +4,29 @@
     <title>Play MUME!</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <link rel="stylesheet" type="text/css" href="DecafMUD/src/css/main.css" />
-    <link rel="stylesheet" type="text/css" href="DecafMUD/src/css/mud-colors.css" />
-    <link rel="stylesheet" type="text/css" href="DecafMUD/src/css/decafmud.css" />
-    <link rel="stylesheet" type="text/css" href="DecafMUD/src/css/decafmud-dark.css" />
+    <!--
+        Assuming DecafMUD's SCSS (DecafMUD/src/scss/decafmud.scss) is compiled to something like 'css/decafmud.css'
+        and play.scss is compiled to 'play.css' in the root.
+        The order is important: DecafMUD base styles first, then MUME-specific overrides from play.css.
+    -->
+    <link rel="stylesheet" type="text/css" href="css/decafmud.css" />
+    <link rel="stylesheet" type="text/css" href="play.css" />
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#222222">
 </head>
 <body>
     <div id="mume-app">
+        <!-- This is the container for DecafMUD -->
         <div id="mume-client-panel" class="split">
             <div id="mume-client">
                 <noscript>You would be able to play MUME from within your browser if you had Javascript enabled.</noscript>
             </div>
         </div>
         <div id="mume-map-panel" class="split">
+            <!-- This is where the MUME map will be rendered, potentially by mume.mapper.ts -->
             <div id="mume-map"></div>
         </div>
     </div>
+    <!-- Scripts will be loaded here, presumably by webpack or similar, including src/index.ts -->
 </body>
 </html>

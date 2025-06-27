@@ -1,0 +1,225 @@
+// SCSS Partial for PanelsInterface specific UI elements (MIT Licensed)
+
+// Sidebar (inside .decafmud .side-pane)
+.decafmud .side-pane {
+    // Base .side-pane styles are in _base.scss (e.g., position, overflow)
+    // Add specific padding or child element styling here if needed beyond what's in _base.scss
+    // For example, if the sidebar itself needs a different background than the main .mud-pane
+    // background-color: lighten(#000, 5%); // Example: slightly lighter black for dark theme sidebar
+}
+
+.decafmud .side-pane .progresstable {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 10px; // Space between progress table and map or other content
+
+    td {
+        padding: 2px 4px;
+        font-size: 0.9em; // Slightly smaller text for sidebar items
+        // color: themed (e.g. #bbb for dark)
+    }
+
+    .name {
+        width: 30%; // Adjust as needed
+        text-align: right;
+        padding-right: 5px;
+        // color: themed
+    }
+
+    .bar {
+        width: 70%; // Adjust as needed
+    }
+}
+
+.decafmud .side-pane .progress-outer {
+    // background-color: #555; // Themed
+    border: 1px solid; // #777; // Themed
+    height: 16px;
+    position: relative;
+    border-radius: 3px;
+    overflow: hidden; // Ensure inner bar respects radius
+}
+
+.decafmud .side-pane .progress-inner {
+    // background-color: #4CAF50; /* Green - Themed */
+    height: 100%;
+    // border-radius: 2px; // Not needed if outer has overflow:hidden and inner is 100% height
+    transition: width 0.2s ease-in-out;
+}
+
+.decafmud .side-pane .progress-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    line-height: 16px; // Match height of progress-outer
+    font-size: 0.8em; // Smaller text on bar
+    // color: white; // Themed
+    // text-shadow: 1px 1px #333; // Themed
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.decafmud .side-pane .mapdiv {
+    // border: 1px solid #444; // Themed
+    padding: 5px;
+    min-height: 100px;
+    // background-color: #111; // Themed
+    overflow: auto;
+    // color: themed (e.g. #aaa for dark)
+}
+
+// Toolbar Submenus (ul.submenu is created by PanelsInterface)
+.decafmud.toolbar ul.submenu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    position: absolute; // JS positions this based on the parent toolbar button
+    // background-color: #f0f0f0; // Themed (light default)
+    border: 1px solid; // #ccc; // Themed
+    z-index: 1001; // Above toolbar buttons, below popups
+    min-width: 160px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2); // Generic shadow
+
+    li a {
+        display: block;
+        padding: 8px 12px;
+        text-decoration: none;
+        // color: #333; // Themed (dark text on light bg default)
+        white-space: nowrap;
+
+        &:hover, &:focus {
+            // background-color: #e0e0e0; // Themed
+            // color: #000; // Themed
+            outline: none;
+        }
+    }
+}
+
+// Popup content elements (within .decafmud.window)
+.decafmud .window { // Base .window style in _base.scss
+    // PanelsInterface popups use .window class
+    // background-color: #fff; // Themed
+    // border: 1px solid #aaa; // Themed
+    box-shadow: 3px 3px 10px rgba(0,0,0,0.3);
+
+    .window-header { // From _base.scss, used by PanelsInterface
+        // background-color: #005; // Themed (dark blue default)
+        // color: white; // Themed
+        padding: 8px 10px; // Add some padding to header
+        .headertext { // Class used in PanelsInterface for the title
+            margin: 0;
+            padding: 0; // Reset, parent has padding
+            font-weight: bold;
+            text-align: center;
+        }
+    }
+
+    .popupTextarea, // Class assigned by PanelsInterface method
+    textarea { // General textarea within popup
+        width: calc(100% - 20px);
+        min-height: 100px;
+        margin: 10px;
+        padding: 8px;
+        border: 1px solid; // #ccc; // Themed
+        box-sizing: border-box;
+        // background-color: #fff; // Themed
+        // color: #000; // Themed
+        font-family: Consolas, Courier, 'Courier New', monospace; // Consistent font
+        font-size: 0.95em;
+    }
+
+    .popupTextdiv { // Class assigned by PanelsInterface method
+        width: calc(100% - 20px);
+        max-height: 300px;
+        overflow-y: auto;
+        margin: 10px;
+        padding: 10px;
+        border: 1px solid; // #ddd; // Themed
+        // background-color: #f9f9f9; // Themed
+        box-sizing: border-box;
+        // color: #000; // Themed
+        line-height: 1.4;
+    }
+
+    .buttonLine { // Class for paragraph containing buttons
+        text-align: center;
+        padding: 10px 0 15px 0; // More padding at bottom
+    }
+
+    .prettybutton { // Class for buttons in popups
+        padding: 8px 15px;
+        margin: 0 5px;
+        border: 1px solid; // #ccc; // Themed
+        // background-color: #e7e7e7; // Themed
+        // color: #000; // Themed
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 0.9em;
+
+        &:hover, &:focus {
+            // background-color: #d7d7d7; // Themed
+            outline: none;
+        }
+    }
+
+    .closebutton { // From _base.scss, used by PanelsInterface
+      // Ensure it's styled to be easily clickable on popup headers
+      top: 5px; // Example, adjust based on header padding
+      right: 5px; // Example
+      // color: themed; // Ensure contrast with header
+      // &:hover { color: themed_hover; }
+    }
+}
+
+
+// Size Display (created by PanelsInterface.showSize)
+.decafmud .size-display {
+    position: absolute;
+    bottom: 3px; // Adjust to be above input container border
+    right: 5px;
+    padding: 2px 5px;
+    // background-color: rgba(0,0,0,0.6); // Themed
+    // color: white; // Themed
+    font-size: 0.8em;
+    border-radius: 3px;
+    z-index: 100;
+    pointer-events: none; // Don't interfere with clicks
+}
+
+// Splash screen fadeout animation (JS adds .fadeout class)
+.decafmud.splash.fadeout {
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+}
+
+// PanelsInterface specific container class (if needed for overrides)
+.decafmud.panels-interface {
+    // Any specific overrides for the main container if .decafmud.interface is too general
+}
+
+// Scrollbutton (used by PanelsInterface, was .scroll-button in original css)
+.decafmud .scrollbutton {
+	position: absolute;
+	z-index: 8; // Same as original .scroll-button
+	right: 5px; // Adjusted default
+	// bottom: 5px; // Set by JS relative to input height
+	height: 20px; // Slightly taller
+	width: 20px; // Make it square for an arrow
+	line-height: 18px; // Center arrow
+	padding: 0;
+	border-radius: 3px;
+	// background-color: #ccc; // Themed
+	// border: 1px solid #aaa; // Themed
+	// color: #333; // Themed
+	cursor: pointer;
+	text-align: center;
+	font-size: 1.2em;
+
+    &:hover, &:focus {
+        // background-color: #bbb; // Themed
+        outline: none;
+    }
+}
