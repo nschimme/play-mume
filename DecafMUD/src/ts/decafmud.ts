@@ -12,6 +12,9 @@
  * @version 0.9.0
  */
 import * as pako from 'pako';
+import { GmcpTelopt } from './plugins/telopt/gmcp';
+import { StandardDisplay } from './plugins/display/standard';
+import { WebSocketSocket } from './plugins/socket/websocket';
 
 // Simple string formatting utility to replace {key} or {0} placeholders
 function formatString(text: string, ...args: any[]): string {
@@ -97,16 +100,21 @@ class DecafMUD {
     public loaded_plugs: any;
     public cconnect_try: number; // from original, might be a typo for connect_try, assuming it is connect_try
 
-    // Static properties will be attached to the class after its definition for now
+    // Static properties
     static instances: DecafMUD[] = [];
     static last_id: number = -1;
-    static version: any = {};
-    static options: any = {};
-    static settings: any = {};
-    static TN: any = {};
-    static plugins: any = {};
-    static ESC: string = "";
-    static BEL: string = "";
+    static version: any = { // Will be properly initialized below
+        major: 0, minor: 0, micro: 0, flag: '', toString: () => ''
+    };
+    static options: any = {}; // Will be properly initialized below
+    static settings: any = {}; // Will be properly initialized below
+    static TN: any = {}; // Will be properly initialized below
+
+    // Typed Plugin Structure
+    static plugins: DecafPlugins; // Definition and initialization below
+
+    static ESC: string = ""; // Will be properly initialized below
+    static BEL: string = ""; // Will be properly initialized below
     static debugIAC: (seq: string) => string;
 
 
@@ -195,11 +203,86 @@ class DecafMUD {
  *  <p>Generally, each DecafMUD's id is the instance's index in
  *  this array.</p>
  * @type DecafMUD[] */
-(DecafMUD as any).instances	= [];
+// Define PluginConstructor and DecafPlugins interfaces
+interface PluginConstructor {
+    new (decaf: DecafMUD, ...args: any[]): any;
+}
 
-/** The ID of the latest instance of DecafMUD.
- * @type number */
-(DecafMUD as any).last_id	= -1;
+interface TeloptPluginConstructor {
+    new (decaf: DecafMUD): {
+        _will?: () => boolean | void;
+        _wont?: () => boolean | void;
+        _do?: () => boolean | void;
+        _dont?: () => boolean | void;
+        _sb?: (data: string) => boolean | void;
+        connect?: () => void;
+        disconnect?: () => void;
+        [key: string]: any; // Allow other methods/properties
+    };
+}
+
+interface EncodingPlugin {
+    proper: string;
+    decode: (data: string) => [string, string];
+    encode: (data: string) => string;
+    [key: string]: any;
+}
+
+interface DecafPlugins {
+    Display: { [key: string]: PluginConstructor };
+    Socket: { [key: string]: PluginConstructor };
+    Interface: { [key: string]: PluginConstructor };
+    Storage: { [key:string]: PluginConstructor };
+    Telopt: { [key: string]: TeloptPluginConstructor | boolean | undefined };
+    Encoding: { [key: string]: EncodingPlugin };
+    Extra: { [key: string]: PluginConstructor };
+    TextInputFilter?: { [key: string]: PluginConstructor };
+}
+
+// Initialize static properties that were previously set outside or with `(DecafMUD as any)`
+DecafMUD.version = {
+    major: 0, minor: 10, micro: 0, flag: 'beta',
+    toString: function() { return this.major + '.' + this.minor + '.' + this.micro + (this.flag ? '-' + this.flag : ''); }
+};
+
+DecafMUD.ESC = "\x1B";
+DecafMUD.BEL = "\x07";
+
+DecafMUD.TN = {
+    IAC: "\xFF", DONT: "\xFE", DO: "\xFD", WONT: "\xFC", WILL: "\xFB", SB: "\xFA", SE: "\xF0",
+    IS: "\x00", EORc: "\xEF", GA: "\xF9", BINARY: "\x00", ECHO: "\x01", SUPGA: "\x03",
+    STATUS: "\x05", SENDLOC: "\x17", TTYPE: "\x18", EOR: "\x19", NAWS: "\x1F", TSPEED: "\x20",
+    RFLOW: "\x21", LINEMODE: "\x22", AUTH: "\x23", NEWENV: "\x27", CHARSET: "\x2A",
+    MSDP: "E", MSSP: "F", COMPRESS: "U", COMPRESSv2: "V", MSP: "Z", MXP: "[", ZMP: "]",
+    CONQUEST: "^", ATCP: "\xC8", GMCP: "\xC9"
+};
+
+// Keep the t alias for existing telopt handlers that might use it internally if they are not yet converted
+var t = DecafMUD.TN;
+
+DecafMUD.plugins = {
+    Display: {},
+    Encoding: {}, // Will be populated with iso88591 and utf8 below
+    Extra: {},
+    Interface: {},
+    Socket: {},
+    Storage: {},
+    Telopt: {}, // Will be populated with converted and existing handlers below
+    TextInputFilter: {}
+};
+
+
+// Default Values (These were on DecafMUD.prototype, now handled by class field initializers or constructor)
+// DecafMUD.prototype.loaded		= false;
+// DecafMUD.prototype.connecting	= false;
+// DecafMUD.prototype.connected	= false;
+// DecafMUD.prototype.loadTimer	= null;
+// DecafMUD.prototype.timer		= null;
+// DecafMUD.prototype.connect_try	= 0;
+// DecafMUD.prototype.required		= 0;
+
+
+// The old (DecafMUD as any).instances and last_id are handled by static class fields.
 
 /** DecafMUD's version. This can be used to check plugin compatability.
  * @example
@@ -1795,16 +1878,78 @@ DecafMUD.prototype.requestPermission = function(option: string, prompt: string, 
 };
 
 // Assign telopt handlers after class definition
-(DecafMUD as any).plugins.Telopt[(DecafMUD as any).TN.TTYPE] = tTTYPE;
-(DecafMUD as any).plugins.Telopt[(DecafMUD as any).TN.ECHO] = tECHO;
-(DecafMUD as any).plugins.Telopt[(DecafMUD as any).TN.NAWS] = tNAWS;
-(DecafMUD as any).plugins.Telopt[(DecafMUD as any).TN.CHARSET] = tCHARSET;
-(DecafMUD as any).plugins.Telopt[(DecafMUD as any).TN.COMPRESSv2] = tCOMPRESSv2;
-(DecafMUD as any).plugins.Telopt[(DecafMUD as any).TN.MSDP] = tMSDP;
-(DecafMUD as any).plugins.Telopt[(DecafMUD as any).TN.BINARY] = true;
-(DecafMUD as any).plugins.Telopt[(DecafMUD as any).TN.MSSP] = typeof window !== 'undefined' && 'console' in window;
+// Assign telopt handlers after class definition
+DecafMUD.plugins.Telopt[DecafMUD.TN.TTYPE] = tTTYPE;
+DecafMUD.plugins.Telopt[DecafMUD.TN.ECHO] = tECHO;
+DecafMUD.plugins.Telopt[DecafMUD.TN.NAWS] = tNAWS;
+DecafMUD.plugins.Telopt[DecafMUD.TN.CHARSET] = tCHARSET;
+DecafMUD.plugins.Telopt[DecafMUD.TN.COMPRESSv2] = tCOMPRESSv2;
+DecafMUD.plugins.Telopt[DecafMUD.TN.MSDP] = tMSDP;
 
-export { DecafMUD, TN_Export as TN };
+// Register the converted GMCP plugin
+DecafMUD.plugins.Telopt[DecafMUD.TN.GMCP] = GmcpTelopt;
+
+// Register the converted StandardDisplay plugin
+DecafMUD.plugins.Display.standard = StandardDisplay;
+
+// Register the converted WebSocketSocket plugin
+DecafMUD.plugins.Socket.websocket = WebSocketSocket;
+// Note: The Flash socket plugin (DecafMUD.plugins.Socket.flash) will be omitted as Flash is obsolete.
+
+DecafMUD.plugins.Telopt[DecafMUD.TN.BINARY] = true;
+DecafMUD.plugins.Telopt[DecafMUD.TN.MSSP] = typeof window !== 'undefined' && 'console' in window;
+
+// Populate the Encoding plugins (moved from earlier in the original JS)
+DecafMUD.plugins.Encoding.iso88591 = {
+	proper : 'ISO-8859-1',
+	decode : function(data: string): [string, string] { return [data,'']; },
+	encode : function(data: string): string { return data; }
+};
+
+DecafMUD.plugins.Encoding.utf8 = {
+	proper : 'UTF-8',
+	decode : function(data: string): [string, string] {
+		try { return [decodeURIComponent( escape( data ) ), '']; }
+		catch(err) {
+			var out = '', i=0, l=data.length, c = 0;
+			while ( i < l ) {
+				c = data.charCodeAt(i++);
+				if ( c < 0x80) { out += String.fromCharCode(c); }
+				else if ( (c > 0xBF) && (c < 0xE0) ) {
+					if ( i+1 > l ) { break; }
+					out += String.fromCharCode(((c & 31) << 6) | (data.charCodeAt(i++) & 63)); }
+				else if ( (c > 0xDF) && (c < 0xF0) ) {
+					if ( i+2 > l ) { break; }
+					out += String.fromCharCode(((c & 15) << 12) | ((data.charCodeAt(i++) & 63) << 6) | (data.charCodeAt(i++) & 63)); }
+				else if ( (c > 0xEF) && (c < 0xF5) ) {
+                    if ( i+3 > l ) { break; }
+                    let charCode = ((c & 7) << 18) | ((data.charCodeAt(i++) & 63) << 12) | ((data.charCodeAt(i++) & 63) << 6) | (data.charCodeAt(i++) & 63);
+                    if (charCode > 0xFFFF) {
+                        charCode -= 0x10000;
+                        out += String.fromCharCode(0xD800 + (charCode >> 10), 0xDC00 + (charCode & 0x3FF));
+                    } else { out += String.fromCharCode(charCode); }
+				} else { out += String.fromCharCode(0xFFFD); }
+			}
+			return [out, data.substr(i)];
+		}
+    },
+	encode : function(data: string): string {
+		try { return unescape( encodeURIComponent( data ) ); }
+		catch(err) {
+			console.dir(err); return data;
+        }
+    }
+};
+
+
+export { DecafMUD, DecafMUD as Decaf }; // Export DecafMUD also as Decaf for backward compatibility if any old script relied on that name.
+export { DecafMUD as default }; // Export as default
+
+// Export TN separately for potential direct use by plugins or external tools
+export const TN = DecafMUD.TN;
+
 // Add other exports as needed, e.g. extend_obj, inherit etc. if they are to be used by plugins externally
 // For now, keeping them module-local.
-// export { DecafMUD, extend_obj, inherit, iacToWord, readMSDP, writeMSDP, t as TN };
+// export { extend_obj, inherit, iacToWord, readMSDP, writeMSDP };
+
+```
