@@ -16,7 +16,20 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
 import $ from 'jquery';
-import * as PIXI from 'pixi.js';
+import {
+    Application,
+    Container,
+    Graphics,
+    Text,
+    TextStyle,
+    Sprite,
+    Point,
+    Assets,
+    RendererType,
+    ColorMatrixFilter,
+    // type ITextStyle, // Add if specific style properties need ITextStyle type
+    // type ApplicationOptions // Add if options object needs this type
+} from 'pixi.js';
 import SparkMD5 from 'spark-md5';
 
 const ROOM_PIXELS = 48;
@@ -1143,32 +1156,32 @@ namespace Mm2Gfx
         return dirsf;
     };
 
-    const buildRoomSector = function( room: Room ) : PIXI.Container
+    const buildRoomSector = function( room: Room ) : Container
     {
-        let display: PIXI.Container;
-        let sectorSprite: PIXI.Sprite;
+        let display: Container;
+        let sectorSprite: Sprite;
         const dirsf = roadDirsFlags( room );
 
         if ( room.data.sector === Sector.ROAD )
         {
             const imgPath = getRoadAssetPath( dirsf, "road" );
-            sectorSprite = new PIXI.Sprite( PIXI.Assets.get( imgPath ) );
+            sectorSprite = new Sprite( Assets.get( imgPath ) );
             sectorSprite.height = sectorSprite.width = ROOM_PIXELS;
             display = sectorSprite;
         }
         else
         {
             const imgPath = getSectorAssetPath( room.data.sector );
-            sectorSprite = new PIXI.Sprite( PIXI.Assets.get( imgPath ) );
+            sectorSprite = new Sprite( Assets.get( imgPath ) );
             sectorSprite.height = sectorSprite.width = ROOM_PIXELS;
 
             if ( dirsf !== 0 ) // Trail (road exits but not Sectors.ROAD)
             {
                 const trailPath = getRoadAssetPath( dirsf, "trail" );
-                const trail = new PIXI.Sprite( PIXI.Assets.get( trailPath ) );
+                const trail = new Sprite( Assets.get( trailPath ) );
                 trail.scale.set( sectorSprite.width / trail.width, sectorSprite.height / trail.height );
 
-                display = new PIXI.Container();
+                display = new Container();
                 display.addChild( sectorSprite );
                 display.addChild( trail );
             }
@@ -1180,10 +1193,9 @@ namespace Mm2Gfx
         return display;
     };
 
-    const buildRoomBorders = function( room: Room ) : PIXI.Graphics
+    const buildRoomBorders = function( room: Room ) : Graphics
     {
-        const borders = new PIXI.Graphics();
-        borders.setStrokeStyle( { width: 2, color: 0x000000, alpha: 1 } );
+        const borders = new Graphics();
 
         const borderSpec = [
             { dir: Dir.NORTH, x0: 0,           y0: 0,           x1: ROOM_PIXELS, y1: 0           },
@@ -1200,29 +1212,29 @@ namespace Mm2Gfx
                 borders.lineTo( spec.x1, spec.y1 );
             }
         }
-        borders.stroke()
+        borders.stroke({ width: 2, color: 0x000000, alpha: 1 });
         return borders;
     };
 
-    const buildUpExit = function( room: Room ): PIXI.Container | null
+    const buildUpExit = function( room: Room ): Container | null
     {
         if ( room.data.exits[ Dir.UP ].out.length === 0 )
             return null;
 
-        const exit = new PIXI.Graphics();
+        const exit = new Graphics();
 
-        exit.fill( 0xffffff );
+        // Draw larger filled circle
         exit.circle( ROOM_PIXELS * 0.75, ROOM_PIXELS * 0.25, ROOM_PIXELS / 8 );
-        exit.fill();
+        exit.fill( 0xffffff );
 
-        exit.setStrokeStyle( { width: 1, color: 0x000000, alpha: 1 } );
+        // Draw small stroked circle (dot)
         exit.circle( ROOM_PIXELS * 0.75, ROOM_PIXELS * 0.25, 1 );
-        exit.stroke()
+        exit.stroke({ width: 1, color: 0x000000, alpha: 1 });
 
         return exit;
     };
 
-    const buildDownExit = function( room: Room ): PIXI.Container | null
+    const buildDownExit = function( room: Room ): Container | null
     {
         if ( room.data.exits[ Dir.DOWN ].out.length === 0 )
             return null;
@@ -1232,25 +1244,24 @@ namespace Mm2Gfx
         const centerX = ROOM_PIXELS * 0.25;
         const centerY = ROOM_PIXELS * 0.75;
 
-        const exit = new PIXI.Graphics();
-        exit.setStrokeStyle( { width: 1, color: 0x000000, alpha: 1 } );
+        const exit = new Graphics();
+        const strokeStyle = { width: 1, color: 0x000000, alpha: 1 };
 
+        // Draw filled and stroked circle
+        exit.circle( centerX, centerY, radius );
         exit.fill( 0xffffff );
-        exit.circle( centerX, centerY, radius );
-        exit.fill();
+        exit.stroke(strokeStyle); // Stroke the defined circle
 
-        exit.circle( centerX, centerY, radius );
-        exit.stroke()
-
+        // Draw cross
         exit.moveTo( centerX - crossCoord, centerY - crossCoord );
         exit.lineTo( centerX + crossCoord, centerY + crossCoord );
         exit.moveTo( centerX - crossCoord, centerY + crossCoord );
         exit.lineTo( centerX + crossCoord, centerY - crossCoord );
-        exit.stroke()
+        exit.stroke(strokeStyle); // Stroke the defined cross path
         return exit;
     };
 
-    const buildRoomExtra = function( room: Room, kind: ExtraKind ) : PIXI.Container | null
+    const buildRoomExtra = function( room: Room, kind: ExtraKind ) : Container | null
     {
         const flagsCount = (kind === "load" ? LOAD_FLAGS : MOB_FLAGS );
         const flags = (kind === "load" ? room.data.loadflags : room.data.mobflags );
@@ -1266,22 +1277,22 @@ namespace Mm2Gfx
         // Do not allocate a container for the common case of a single load flag
         if ( paths.length === 1 )
         {
-            const sprite: PIXI.Sprite = new PIXI.Sprite( PIXI.Assets.get( paths[0] ) );
+            const sprite: Sprite = new Sprite( Assets.get( paths[0] ) );
             sprite.scale.set( ROOM_PIXELS / sprite.width, ROOM_PIXELS / sprite.height );
             return sprite;
         }
 
-        const container = new PIXI.Container();
+        const container = new Container();
         for ( const path of paths )
         {
-            const sprite: PIXI.Sprite = new PIXI.Sprite( PIXI.Assets.get( path ) );
+            const sprite: Sprite = new Sprite( Assets.get( path ) );
             sprite.scale.set( ROOM_PIXELS / sprite.width, ROOM_PIXELS / sprite.height );
             container.addChild( sprite );
         }
         return container;
     };
 
-    const maybeAddChild = function( display: PIXI.Container, child: PIXI.Container | null ): void
+    const maybeAddChild = function( display: Container, child: Container | null ): void
     {
         if ( child != null )
             display.addChild( child );
@@ -1289,9 +1300,9 @@ namespace Mm2Gfx
 
     /* Returns the graphical structure for a single room for rendering (base
      * texture, walls, flags etc). */
-    export function buildRoomDisplay( room: Room ): PIXI.Container
+    export function buildRoomDisplay( room: Room ): Container
     {
-        const display = new PIXI.Container();
+        const display = new Container();
 
         display.addChild( buildRoomSector( room ) );
         display.addChild( buildRoomBorders( room ) );
@@ -1301,50 +1312,45 @@ namespace Mm2Gfx
         maybeAddChild( display, buildRoomExtra( room, "load" ) );
 
         // Position the room display in its layer
-        display.position = new PIXI.Point( room.data.x * ROOM_PIXELS, room.data.y * ROOM_PIXELS );
+        display.position = new Point( room.data.x * ROOM_PIXELS, room.data.y * ROOM_PIXELS );
         /*console.log( "MumeMapDisplay added room %s (%d,%d) in PIXI at local:%O, global:%O",
             room.data.name, room.data.x, room.data.y, display.position, display.getGlobalPosition() );*/
 
-        display.updateCacheTexture();
+        display.cacheAsBitmap = true; // Replaced updateCacheTexture()
         return display;
     }
 
     /* Returns the graphical structure for the yellow square that shows the current
      * position to the player. */
-    export function buildHerePointer(): PIXI.Container
+    export function buildHerePointer(): Container
     {
         const size = ROOM_PIXELS * 1.4;
         const offset = ( size - ROOM_PIXELS ) / 2;
 
-        const square = new PIXI.Graphics();
+        const square = new Graphics();
 
-        square.fill( { color: 0x000000, alpha: 0.1 } );
-        square.rect( -offset, -offset, size, size );
-        square.fill();
-
-        square.setStrokeStyle( { width: 2, color: 0xFFFF00, alpha: 1 } );
-        square.rect( -offset, -offset, size, size )
-        square.stroke();
+        square.rect( -offset, -offset, size, size ); // Define path once
+        square.fill( { color: 0x000000, alpha: 0.1 } );    // Apply fill
+        square.stroke( { width: 2, color: 0xFFFF00, alpha: 1 } ); // Apply stroke to the same path
 
         return square;
     }
 
-    export function buildInitialHint(): PIXI.Text
+    export function buildInitialHint(): Text
     {
-        const text = new PIXI.Text({
-            text: "Enter Arda to see a map here",
-            style: {
-                fontFamily : 'Arial', fontSize: 24, fill : 'white', align : 'center',
-                wordWrap: true, wordWrapWidth: 400,
-                dropShadow: {
-                    alpha: 1,
-                    angle: Math.PI / 6,
-                    blur: 5,
-                    color: 'black',
-                    distance: 0,
-                },
-            }
+        const textString = "Enter Arda to see a map here";
+        const style = new TextStyle({
+            fontFamily : 'Arial', fontSize: 24, fill : 'white', align : 'center',
+            wordWrap: true, wordWrapWidth: 400,
+            dropShadow: {
+                alpha: 1,
+                angle: Math.PI / 6,
+                blur: 5,
+                color: 'black',
+                distance: 0,
+            },
         });
+        const text = new Text(textString, style);
 
         return text;
     }
@@ -1358,11 +1364,11 @@ class MumeMapDisplay
     private here: RoomCoords | undefined;
 
     // PIXI elements
-    private roomDisplays: SpatialIndex<PIXI.Container>;
-    private herePointer!: PIXI.Container;
-    private layers: PIXI.Container[] = [];
-    private pixi!: PIXI.Application;
-    private initialHint!: PIXI.Text;
+    private roomDisplays: SpatialIndex<Container>;
+    private herePointer!: Container;
+    private layers: Container[] = [];
+    private pixi!: Application;
+    private initialHint!: Text;
 
     // Use load() instead if the assets might not have been loaded yet.
     constructor( containerElementName: string, mapData: MumeMapData )
@@ -1378,7 +1384,7 @@ class MumeMapDisplay
         // Ensure getAllAssetPaths returns string[]
         const assetPaths = Mm2Gfx.getAllAssetPaths().map(p => String(p));
         try {
-            await PIXI.Assets.load(assetPaths);
+            await Assets.load(assetPaths);
         } catch (error: unknown) {
             console.error("Failed to load PIXI assets:", error);
             throw error;
@@ -1393,13 +1399,15 @@ class MumeMapDisplay
     /* Installs the viewport into the DOM. */
     public async installMap( containerElementName: string ): Promise<void>
     {
-        this.pixi = new PIXI.Application();
-        await this.pixi.init({
+        // Corrected Application instantiation and initialization
+        const app = new Application();
+        await app.init({
             autoStart: false,
             backgroundColor: 0x6e6e6e,
             resolution: window.devicePixelRatio || 1,
             autoDensity: true,
         });
+        this.pixi = app;
 
         // Check if PIXI Application and its canvas were successfully created
         if (!this.pixi || !this.pixi.canvas) {
@@ -1408,15 +1416,15 @@ class MumeMapDisplay
 
         const stub = document.getElementById( containerElementName );
         if ( stub == null || stub.parentElement == null ) {
-            document.body.appendChild(this.pixi.canvas as HTMLCanvasElement);
+            document.body.appendChild(this.pixi.canvas);
         } else {
-            stub.parentElement.replaceChild(this.pixi.canvas as HTMLCanvasElement, stub);
+            stub.parentElement.replaceChild(this.pixi.canvas, stub);
         }
     }
 
     public fitParent(): boolean
     {
-        const parentElement = (this.pixi.canvas as HTMLCanvasElement).parentElement;
+        const parentElement = this.pixi.canvas.parentElement;
         if (parentElement === null)
         {
             console.warn( "PIXI canvas parentElement is null." );
@@ -1463,12 +1471,12 @@ class MumeMapDisplay
     {
         // Everything belongs to the map, so we can move it around to emulate
         // moving the viewport
-        const map = new PIXI.Container();
+        const map = new Container();
 
         // Rooms live on layers, there is one layer per z coord
         for ( let i = this.mapData.metaData.minZ; i <= this.mapData.metaData.maxZ; ++i )
         {
-            const layer = new PIXI.Container();
+            const layer = new Container();
             this.layers.push( layer );
             map.addChild( layer );
         }
@@ -1490,7 +1498,7 @@ class MumeMapDisplay
         return;
     }
 
-    private static dumpContainer( indent: number, name: string, what: PIXI.Container ): void
+    private static dumpContainer( indent: number, name: string, what: Container ): void
     {
         let indentStr = "";
         while ( indent-- )
@@ -1509,21 +1517,21 @@ class MumeMapDisplay
 
         const mapDO = this.pixi.stage.children[0];
 
-        if ( !( mapDO instanceof PIXI.Container ) )
+        if ( !( mapDO instanceof Container ) )
             return;
-        const map: PIXI.Container = mapDO;
+        const map: Container = mapDO;
 
         MumeMapDisplay.dumpContainer( 1, "map", map );
         for ( let i = 0; i < map.children.length; ++i )
         {
             const name = ( i == map.children.length - 1 ) ? "herePointer" : "layer";
-            MumeMapDisplay.dumpContainer( 2, name, map.children[i] );
+            MumeMapDisplay.dumpContainer( 2, name, map.children[i] as Container );
         }
     }
 
-    private roomCoordsToPoint( where: RoomCoords): PIXI.Point
+    private roomCoordsToPoint( where: RoomCoords): Point
     {
-        return new PIXI.Point( where.x * ROOM_PIXELS, where.y * ROOM_PIXELS );
+        return new Point( where.x * ROOM_PIXELS, where.y * ROOM_PIXELS );
     }
 
     private zeroZ( z: number ): number
@@ -1531,7 +1539,7 @@ class MumeMapDisplay
         return z - this.mapData.metaData.minZ;
     }
 
-    private layerForCoords( coords: RoomCoords ): PIXI.Container
+    private layerForCoords( coords: RoomCoords ): Container
     {
         const zeroedZ = this.zeroZ( coords.z );
         return this.layers[zeroedZ];
@@ -1587,9 +1595,9 @@ class MumeMapDisplay
             {
                 layer.visible = true;
                 layer.scale.set( 0.8, 0.8 );
-                if ( this.pixi.renderer.type === PIXI.RendererType.WEBGL )
+                if ( this.pixi.renderer.type === RendererType.WEBGL ) // Use named import
                 {
-                    const filter = new PIXI.ColorMatrixFilter();
+                    const filter = new ColorMatrixFilter(); // Use named import
                     filter.brightness( 0.4, false );
                     layer.filters = [ filter ];
                 }
@@ -1627,7 +1635,7 @@ class MumeMapDisplay
 
         console.log( "Recentering view to (r) %O", where );
 
-        this.herePointer.position = new PIXI.Point( where.x * ROOM_PIXELS, where.y * ROOM_PIXELS );
+        this.herePointer.position = new Point( where.x * ROOM_PIXELS, where.y * ROOM_PIXELS );
         this.herePointer.visible = true;
 
         this.repositionLayers( where );
@@ -1639,7 +1647,7 @@ class MumeMapDisplay
         // PIXI.CanvasRenderer doesn't seem to update the stage's transform
         // correctly (not all all, lagging, plain wrong, pick one). This forces
         // a working update.
-        this.pixi.stage.toGlobal( new PIXI.Point( 0, 0 ) );
+        this.pixi.stage.toGlobal( new Point( 0, 0 ) );
 
         const coordinates: RoomCoords[] = this.roomCoordsNear( where );
         const background = this.mapData.getRoomsAt( coordinates )

@@ -120,5 +120,3 @@ export class StandardStorage {
 // Registration in decafmud.ts:
 // import { StandardStorage } from './plugins/storage/standard';
 // DecafMUD.plugins.Storage.standard = StandardStorage;
-
-```

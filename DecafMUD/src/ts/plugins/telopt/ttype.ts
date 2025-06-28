@@ -1,4 +1,5 @@
 import type { DecafMUD } from '../../decafmud'; // Type-only import for DecafMUD reference
+import { TN } from '../../decafmud'; // Import TN
 
 export class TTypeTelopt {
     private decaf: DecafMUD;
@@ -17,12 +18,12 @@ export class TTypeTelopt {
     }
 
     public _sb(data: string): false | void {
-        if (data !== this.decaf.constructor.TN.ECHO) { // Access TN via static context
+        if (data !== TN.ECHO) { // Use imported TN
             return;
         }
         this.current = (this.current + 1) % this.decaf.options.ttypes.length;
 
-        const TN = this.decaf.constructor.TN; // Access TN via static context
+        // const TN = this.decaf.constructor.TN; // Now imported
         this.decaf.debugString('RCVD ' + (this.decaf.constructor as any).debugIAC(TN.IAC + TN.SB + TN.TTYPE + TN.ECHO + TN.IAC + TN.SE));
         this.decaf.sendIAC(TN.IAC + TN.SB + TN.TTYPE + TN.IS + this.decaf.options.ttypes[this.current] + TN.IAC + TN.SE);
 

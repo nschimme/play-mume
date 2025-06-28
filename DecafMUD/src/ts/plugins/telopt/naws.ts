@@ -1,4 +1,5 @@
 import type { DecafMUD } from '../../decafmud';
+import { TN } from '../../decafmud'; // Import TN
 
 export class NawsTelopt {
     private decaf: DecafMUD;
@@ -52,7 +53,7 @@ export class NawsTelopt {
         // Escape IAC characters in data
         data = data.replace(/\xFF/g, '\xFF\xFF');
 
-        const TN = this.decaf.constructor.TN; // Access TN via static context
+        // const TN = this.decaf.constructor.TN; // Access TN via static context - Now imported
         this.decaf.sendIAC(TN.IAC + TN.SB + TN.NAWS + data + TN.IAC + TN.SE);
     }
 }

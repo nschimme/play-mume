@@ -12,7 +12,7 @@
  */
 
 import { DecafMUD } from '../../decafmud'; // Assuming DecafMUD class is exported from here
-import { TN_Export as TN } from '../../decafmud'; // Assuming TN is exported as TN_Export
+import { TN } from '../../decafmud'; // Changed import from TN_Export to TN
 
 // Helper type for GMCP package structure
 interface GmcpPackage {
@@ -209,4 +209,3 @@ export class GmcpTelopt {
 // The static `DecafMUD.version` is also now `DecafMUD.version`.
 // The `tr` function was removed, so string formatting needs to be done directly.
 // `console.debug` and `console.dir` are browser-specific debug tools; using `decaf.debugString` for consistency.
-```

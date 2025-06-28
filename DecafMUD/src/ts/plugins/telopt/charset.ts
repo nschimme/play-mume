@@ -1,4 +1,5 @@
 import type { DecafMUD, DecafPlugins } from '../../decafmud'; // Import DecafPlugins too
+import { TN } from '../../decafmud'; // Import TN
 
 export class CharsetTelopt {
     private decaf: DecafMUD;
@@ -15,7 +16,7 @@ export class CharsetTelopt {
         setTimeout(() => {
             const requestedCharsets: string[] = [];
             const doneEncodings: string[] = [];
-            const TN = this.decaf.constructor.TN; // Static access
+            // const TN = this.decaf.constructor.TN; // Static access - Now imported
             const DecafMUDGlobal = this.decaf.constructor as any; // To access static DecafMUD.plugins
 
             const currentEncoding = this.decaf.options.encoding;
@@ -48,7 +49,7 @@ export class CharsetTelopt {
     }
 
     public _sb(data: string): false | void {
-        const TN = this.decaf.constructor.TN; // Static access
+        // const TN = this.decaf.constructor.TN; // Static access - Now imported
         const DecafMUDGlobal = this.decaf.constructor as any; // To access static DecafMUD.plugins
 
         this.decaf.debugString('RCVD ' + DecafMUDGlobal.debugIAC(TN.IAC + TN.SB + TN.CHARSET + data + TN.IAC + TN.SE));

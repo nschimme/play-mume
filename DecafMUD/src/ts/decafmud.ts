@@ -11,7 +11,7 @@
  * @author Stendec <stendec365@gmail.com>
  * @version 0.9.0
  */
-import '../scss/decafmud.scss'; // Import DecafMUD's own SCSS
+// import '../scss/decafmud.scss'; // Import DecafMUD's own SCSS - Commented out for main project build
 
 import * as pako from 'pako';
 import { GmcpTelopt } from './plugins/telopt/gmcp';
@@ -22,7 +22,7 @@ import { EchoTelopt } from './plugins/telopt/echo';
 import { NawsTelopt } from './plugins/telopt/naws';
 import { CharsetTelopt } from './plugins/telopt/charset';
 import { CompressV2Telopt } from './plugins/telopt/compressv2';
-import { MsdpTelopt } from './plugins/telopt/msdp';
+import { MsdpTelopt, readMSDP } from './plugins/telopt/msdp'; // Import readMSDP
 
 // Simple string formatting utility to replace {key} or {0} placeholders
 function formatString(text: string, ...args: any[]): string {
@@ -234,16 +234,17 @@ class DecafMUD {
         // Firebug / Console Logging
         if (typeof window === 'undefined' || !('console' in window )) { return; }
         var st = 'DecafMUD[%d]: %s';
+        const con = console as any; // Cast to any to bypass strict type checks
         switch(type) {
-            case 'info':	console.info(st, this.id, text); return;
-            case 'warn':	console.warn(st, this.id, text); return;
-            case 'error':	console.error(st, this.id, text); return;
+            case 'info':	con.info(st, this.id, text); return;
+            case 'warn':	con.warn(st, this.id, text); return;
+            case 'error':	con.error(st, this.id, text); return;
             default:
-                if ( 'debug' in console ) {
-                    console.debug(st, this.id, text);
+                if ( 'debug' in con ) {
+                    con.debug(st, this.id, text);
                     return;
                 }
-                console.log(st, this.id, text);
+                con.log(st, this.id, text);
         }
     }
 
@@ -592,7 +593,7 @@ class DecafMUD {
                     chunk = String.fromCharCode.apply(null, chunk as unknown as number[]);
                 }
                 accumulatedData += chunk;
-                this.decompressStream.chunks = [];
+                // this.decompressStream.chunks = []; // Property 'chunks' does not exist on type 'Inflate'.
                 // @ts-ignore: pako types might not show result as nullable like this
                 this.decompressStream.result = null;
             }
@@ -657,7 +658,7 @@ class DecafMUD {
                     }
                     // @ts-ignore
                     this.decompressStream.result = null;
-                    this.decompressStream.chunks = [];
+                    // this.decompressStream.chunks = []; // Property 'chunks' does not exist on type 'Inflate'.
                     out = initialDecompressed;
                     this.startCompressV2 = false; // Compression starts after this first block
                 } catch (e: any) {
@@ -872,6 +873,8 @@ DecafMUD.TN = {
 // Keep the t alias for existing telopt handlers that might use it internally if they are not yet converted
 var t = DecafMUD.TN;
 
+const iac_reg = /\xFF/g; // Regular expression for Telnet IAC byte (255)
+
 DecafMUD.plugins = {
     Display: {},
     Encoding: {}, // Will be populated with iso88591 and utf8 below
@@ -913,10 +916,10 @@ DecafMUD.prototype.loaded		= false;
 DecafMUD.prototype.connecting	= false;
 DecafMUD.prototype.connected	= false;
 
-DecafMUD.prototype.loadTimer	= null;
+// DecafMUD.prototype.loadTimer	= null; // Property 'loadTimer' was removed from class
 DecafMUD.prototype.timer		= null;
 DecafMUD.prototype.connect_try	= 0;
-DecafMUD.prototype.required		= 0;
+// DecafMUD.prototype.required		= 0; // Property 'required' was removed from class
 
 ///////////////////////////////////////////////////////////////////////////////
 // Plugins System
@@ -1074,14 +1077,10 @@ DecafMUD.prototype.required		= 0;
 
 // DecafMUD.prototype.loaded_plugs = {}; // REMOVED - instance property now
 
-export { DecafMUD, DecafMUD as Decaf }; // Export DecafMUD also as Decaf for backward compatibility if any old script relied on that name.
+export { DecafMUD, DecafMUD as Decaf, DecafPlugins }; // Export DecafMUD, Decaf alias, and DecafPlugins interface
 export { DecafMUD as default }; // Export as default
-
-// Export TN separately for potential direct use by plugins or external tools
-export const TN = DecafMUD.TN;
+export const TN = DecafMUD.TN; // Export TN separately
 
 // Add other exports as needed, e.g. extend_obj, inherit etc. if they are to be used by plugins externally
 // For now, keeping them module-local.
 // export { extend_obj, inherit, iacToWord, readMSDP, writeMSDP };
-
-```

@@ -226,4 +226,3 @@ function formatString(text: string, ...args: any[]): string {
 // import { WebSocketSocket } from './plugins/socket/websocket';
 // DecafMUD.plugins.Socket.websocket = WebSocketSocket;
 // This will be done in decafmud.ts
-```

@@ -20,7 +20,7 @@ import $ from 'jquery';
 import Split from 'split.js';
 
 // Import the main DecafMUD class
-import { DecafMUD } from '@decafmud/decafmud';
+import { DecafMUD } from '../DecafMUD/src/ts/decafmud'; // Adjusted path to submodule source
 
 // The following script-loader imports are being removed as their functionalities
 // should now be part of the main DecafMUD ES6 module or explicitly imported if necessary.

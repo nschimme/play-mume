@@ -1,4 +1,5 @@
 import type { DecafMUD } from '../../decafmud';
+import { TN } from '../../decafmud'; // Import TN
 
 const MSDP_VAR = '\x01';
 const MSDP_VAL = '\x02';
@@ -13,7 +14,7 @@ const msdpControlChars = /[\x01\x02\x03\x04\x05\x06]/;
  * Read a string of MSDP-formatted variables and return an object.
  * This is a simplified parser focusing on var-val pairs and basic tables.
  */
-function readMSDP(data: string): [Record<string, any>, string] {
+export function readMSDP(data: string): [Record<string, any>, string] {
     let out: Record<string, any> = {};
     let variable: string | undefined = undefined;
     let i = 0;
@@ -77,7 +78,7 @@ function readMSDP(data: string): [Record<string, any>, string] {
 }
 
 /** Convert a variable to a string of valid MSDP-formatted data. */
-function writeMSDP(obj: any): string {
+export function writeMSDP(obj: any): string {
     var type = typeof obj;
     if (type === 'string' || type === 'number') { return obj.toString(); }
     else if (type === 'boolean') { return obj ? '1' : '0'; }
@@ -141,7 +142,7 @@ export class MsdpTelopt {
     }
 
     public _will(): void {
-        const TN = this.decaf.constructor.TN;
+        // const TN = this.decaf.constructor.TN; // Now imported
         // Server offers MSDP, client agrees. Client can now send MSDP commands.
         // Standard practice is for client to then LIST known variables.
         setTimeout(() => {
@@ -159,7 +160,7 @@ export class MsdpTelopt {
 
     public _sb(data: string): boolean { // Return true to allow default debug, false to suppress
         const [msdp_out, ] = readMSDP(data);
-        const TN = this.decaf.constructor.TN;
+        // const TN = this.decaf.constructor.TN; // Now imported
         const DecafMUDGlobal = this.decaf.constructor as any;
 
 
@@ -215,7 +216,7 @@ export class MsdpTelopt {
     // Utility to send an MSDP command
     public sendCommand(command: string, args?: Record<string, any>): void {
         if (!this.decaf.connected) return;
-        const TN = this.decaf.constructor.TN;
+        // const TN = this.decaf.constructor.TN; // Now imported
         let msdpPayload = MSDP_VAR + command;
         if (args) {
             for (const key in args) {

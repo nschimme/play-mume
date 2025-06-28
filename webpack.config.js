@@ -39,6 +39,9 @@ module.exports = {
   },
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
+    // alias: { // Removed alias as DecafMUD is compiled from source by ts-loader
+    //   '@decafmud/decafmud': path.resolve(__dirname, 'DecafMUD/dist/js/decafmud.js'),
+    // }
   },
   output: {
     filename: '[name].bundle.js',

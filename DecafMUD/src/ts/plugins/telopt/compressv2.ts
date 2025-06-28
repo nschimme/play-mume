@@ -1,4 +1,5 @@
 import type { DecafMUD } from '../../decafmud';
+import { TN } from '../../decafmud'; // Import TN
 import * as pako from 'pako'; // Ensure pako is a dependency or provided globally
 
 export class CompressV2Telopt {
@@ -18,7 +19,7 @@ export class CompressV2Telopt {
     }
 
     public _sb(): void {
-        const TN = this.decaf.constructor.TN; // Static access
+        // const TN = this.decaf.constructor.TN; // Static access - Now imported
         this.decaf.debugString('RCVD ' + (this.decaf.constructor as any).debugIAC(TN.IAC + TN.SB + TN.COMPRESSv2 + TN.IAC + TN.SE));
 
         try {

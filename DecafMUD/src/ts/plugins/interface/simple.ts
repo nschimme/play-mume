@@ -237,9 +237,11 @@ export class SimpleInterface {
         this.container.appendChild(this._input);
 
         addEvent(this.input, 'keydown', (e) => this.handleInput(e as KeyboardEvent));
-        const blurFocusHelper = (e: Event) => this.handleBlur(e as FocusEvent);
-        addEvent(this.input, 'blur', blurFocusHelper);
-        addEvent(this.input, 'focus', blurFocusHelper);
+        // const blurFocusHelper: EventListener = (e: Event) => this.handleBlur(e as FocusEvent);
+        // addEvent(this.input, 'blur', blurFocusHelper);
+        // addEvent(this.input, 'focus', blurFocusHelper);
+        this.input.onblur = (e: FocusEvent) => this.handleBlur(e);
+        this.input.onfocus = (e: FocusEvent) => this.handleBlur(e);
 
         this.mruSize = this.decaf.options.set_interface.mru_size || 15; // Retain for now, might be used by options
         this.history = new Array(this.MAX_HISTORY_SIZE).fill(''); // Initialize history array
@@ -348,13 +350,9 @@ export class SimpleInterface {
         return true;
     }
 
-    // ... (rest of the methods: showSize, hideSize, connected, connecting, disconnected, load, reset, setup, showLogs, showSettings, tb*, _resizeToolbar, showScrollButton, hideScrollButton, infoBar, immediateInfoBar, createIBar, closeIBar, addIcon, delIcon, updateIcon, _resizeTray, click_fsbutton, enter_fs, exit_fs, resizeScreen, displayInput, localEcho, displayKey, handleInputPassword, handleInput, handleBlur, updateInput )
-    // These methods will be implemented progressively, ensuring types and modern JS.
-    // For brevity in this step, I'm showing the structure and initial methods.
-    // The full implementation would follow the patterns of the original JS but with TS enhancements.
-
     public load(): void {
-        this.decaf.require('decafmud.display.' + this.decaf.options.display);
+        // The old require mechanism was removed from DecafMUD core.
+        // Display plugin is now instantiated directly in setup().
     }
 
     public reset(): void {
@@ -504,24 +502,29 @@ export class SimpleInterface {
         }
 
         // Focus Helpers
-        addEvent(btn, 'focus', (e: FocusEvent) => {
+        const focusHandler: EventListener = (e: Event) => {
             const target = e.target as HTMLElement;
-            if (!target.parentNode) { return; }
-            if (target.parentNode.classList.contains('toolbar')) {
-                target.parentNode.setAttribute('aria-activedescendant', target.id);
-                target.parentNode.classList.add('visible');
-            }
-        });
-        addEvent(btn, 'blur', (e: FocusEvent) => {
-            const target = e.target as HTMLElement;
-            if (!target.parentNode) { return; }
-            if (target.parentNode.classList.contains('toolbar')) {
-                if (target.parentNode.getAttribute('aria-activedescendant') === target.id) {
-                    target.parentNode.setAttribute('aria-activedescendant', '');
+            if (target.parentNode instanceof HTMLElement) {
+                if (target.parentNode.classList.contains('toolbar')) {
+                    target.parentNode.setAttribute('aria-activedescendant', target.id);
+                    target.parentNode.classList.add('visible');
                 }
-                target.parentNode.classList.remove('visible');
             }
-        });
+        };
+        addEvent(btn, 'focus', focusHandler);
+
+        const blurHandler: EventListener = (e: Event) => {
+            const target = e.target as HTMLElement;
+            if (target.parentNode instanceof HTMLElement) {
+                if (target.parentNode.classList.contains('toolbar')) {
+                    if (target.parentNode.getAttribute('aria-activedescendant') === target.id) {
+                        target.parentNode.setAttribute('aria-activedescendant', '');
+                    }
+                    target.parentNode.classList.remove('visible');
+                }
+            }
+        };
+        addEvent(btn, 'blur', blurHandler);
 
         this.toolbuttons[id] = [btn, text, iconUrl, tooltip, type, enabled, pressed, clss, onclick];
         btn.setAttribute('button-id', id.toString()); // For easier debugging or selection
@@ -866,7 +869,7 @@ export class SimpleInterface {
 
     public resizeScreen(showSize: boolean = true, force?: boolean): void {
         if (this.goFullOnResize) {
-            let fs = window.fullScreen === true; // Note: window.fullScreen is non-standard
+            let fs: boolean;
             // Attempt more standard checks if available, or rely on class for internal state
             if (document.fullscreenElement || (document as any).mozFullScreenElement || (document as any).webkitFullscreenElement || (document as any).msFullscreenElement) {
                 fs = true;
@@ -1411,13 +1414,13 @@ export class SimpleInterface {
 
         // if (this.stbutton !== undefined) {
         //     this.tbPressed(this.stbutton, true);
-        //     this.tbTooltip(this.stbutton, "Click to close the settings window."); // No i18n
+        //     this.tbTooltip(this.stbutton, "Click to change DecafMUD's settings."); // No i18n
         // }
     }
 
 
     // Placeholder for addIcon - will need full implementation
-    private addIcon(text: string, html: string, clss: string, onclick?: (e: Event) => void, onkey?: (e: KeyboardEvent) => void): number {
+    private addIcon(text: string, html: string, clss: string, onclick?: (e: Event) => void, onkey?: (e: Event) => void): number { // Changed onkey param type
         const id = this.icons.length;
         const ico = document.createElement('div');
         // ... (full icon creation logic)
@@ -1437,9 +1440,16 @@ export class SimpleInterface {
 
         this.tray.appendChild(ico);
 
-        if (onclick) { addEvent(ico, 'click', (e) => onclick.call(this, e)); }
-        if (onclick && !onkey) { addEvent(ico, 'keydown', (e) => { if ((e as KeyboardEvent).keyCode !== 13) return; onclick.call(this, e); }); }
-        if (onkey) { addEvent(ico, 'keydown', (e) => onkey.call(this, e as KeyboardEvent)); }
+        if (onclick) { addEvent(ico, 'click', (e: Event) => onclick.call(this, e)); }
+        if (onclick && !onkey) {
+            addEvent(ico, 'keydown', (e: Event) => {
+                if ((e as KeyboardEvent).keyCode !== 13) return;
+                onclick.call(this, e);
+            });
+        }
+        if (onkey) {
+            addEvent(ico, 'keydown', onkey); // Pass onkey directly
+        }
 
 
         this._resizeTray();
@@ -2001,15 +2011,7 @@ export class SimpleInterface {
         this.popup.appendChild(this.popupHeaderElement);
 
         // dragelement.js integration point:
-        // dragelement.js integration point:
-        // Assuming dragObject is available globally or imported after conversion
-        // if (typeof (window as any).dragObject === 'function') { // Old check
-        //     this.headerDragInstance = new (window as any).dragObject(this.popup.id, this.popupHeaderElement.id);
-        // } else {
-        //     this.decaf.debugString("dragObject not available for popup.", "warn");
-        //     this.popupHeaderElement.style.cursor = "move"; // Basic move cursor as fallback
-        // }
-        // Use the imported DragObject
+        // Assuming DragObject is imported
         try {
             this.headerDragInstance = new DragObject(this.popup, this.popupHeaderElement);
         } catch (e) {
@@ -2026,12 +2028,12 @@ export class SimpleInterface {
         this.popup.appendChild(closeButton); // Add to popup, not header, for typical dialog layout
 
         // Prevent clicks inside popup from closing menus
-        addEvent(this.popup, 'mousedown', (e: MouseEvent) => {
-            if (e.which === 1 && this.openMenuIndex !== -1) {
-                // Check if the click is outside any open menu's submenu
-                // This is tricky; for now, just stop propagation if a menu is open.
-                // A more robust solution would check if target is part of a menu.
-                // e.stopPropagation(); // This might be too aggressive.
+        addEvent(this.popup, 'mousedown', (e: Event) => {
+            if ((e as MouseEvent).which === 1 && this.openMenuIndex !== -1) { // Cast to MouseEvent for .which
+                // This logic might need to be more sophisticated to correctly determine
+                // if the click is outside an open menu. For now, it might be overly aggressive
+                // or not effective enough depending on event propagation details.
+                // e.stopPropagation(); // Consider the implications of stopping propagation here.
             }
         });
 
@@ -2043,7 +2045,6 @@ export class SimpleInterface {
     public addPopupHeaderText(text: string): HTMLElement {
         if (!this.popupHeaderElement) {
             this.decaf.debugString("Cannot add header text, popup header not initialized.", "error");
-            // Create a dummy paragraph to satisfy return type, though it won't be visible correctly.
             const dummyP = document.createElement("p");
             dummyP.innerHTML = "Error: Popup header missing.";
             return dummyP;
@@ -2069,9 +2070,6 @@ export class SimpleInterface {
         btn.className = "prettybutton"; // Style with CSS
         btn.innerHTML = `<big>${caption}</big>`; // Using big tag from original
         if (typeof onclickAction === 'string') {
-            // Caution: eval is generally discouraged.
-            // If original code relied on 'this' context within eval, this might break.
-            // Prefer passing functions directly.
             addEvent(btn, 'click', () => {
                  try { eval(onclickAction); } catch(e) { this.decaf.error("Error in button action: " + e); }
             });
@@ -2084,13 +2082,13 @@ export class SimpleInterface {
     /** Creates a textarea element for the popup. */
     public createPopupTextarea(name: string, adjustHeight: number = 0): HTMLTextAreaElement {
         if (!this.popup) throw new Error("Popup not shown, cannot create textarea.");
-        const w = parseFloat(this.popup.style.width || '0') - 15; // Adjust for padding/borders
-        const h = parseFloat(this.popup.style.height || '0') - 100 - adjustHeight; // Adjust for header, buttons, padding
+        const w = parseFloat(this.popup.style.width || '0') - 15;
+        const h = parseFloat(this.popup.style.height || '0') - 100 - adjustHeight;
 
         const textarea = document.createElement("textarea");
         textarea.id = name;
-        textarea.cols = 80; // Default, consider removing if width/height style is sufficient
-        textarea.rows = 20; // Default
+        textarea.cols = 80;
+        textarea.rows = 20;
         textarea.style.width = `${Math.max(50, w)}px`;
         textarea.style.height = `${Math.max(20, h)}px`;
         textarea.style.margin = "5px";
@@ -2102,8 +2100,8 @@ export class SimpleInterface {
     /** Creates a div for scrollable text content in the popup. */
     public createPopupTextDiv(): HTMLElement {
         if (!this.popup) throw new Error("Popup not shown, cannot create text div.");
-        const w = parseFloat(this.popup.style.width || '0') - 10; // Adjust for padding
-        const h = parseFloat(this.popup.style.height || '0') - 60; // Adjust for header, padding
+        const w = parseFloat(this.popup.style.width || '0') - 10;
+        const h = parseFloat(this.popup.style.height || '0') - 60;
 
         const div = document.createElement("div");
         div.style.width = `${Math.max(50, w)}px`;
@@ -2116,12 +2114,11 @@ export class SimpleInterface {
     // End of Popup window methods
 
     // Client-side settings from panels.settings.js, managed by SimpleInterface
-    // These will be initialized from and saved to this.decaf.store
     private fontPercentage: number = 100;
     private fkeyMacrosEnabled: boolean = true;
     private numpadWalkingEnabled: boolean = true;
-    private clientShowProgressBars: boolean = false; // Renamed to avoid conflict with method
-    private clientShowMap: boolean = false;        // Renamed to avoid conflict with method
+    private clientShowProgressBars: boolean = false;
+    private clientShowMap: boolean = false;
 
     private loadClientSettings(): void {
         this.fontPercentage = this.decaf.store.get('ui/fontPercentage', 100);
@@ -2138,23 +2135,22 @@ export class SimpleInterface {
     }
 
     private applyFontSettings(): void {
-         if (this.el_display) { // el_display is the main content area
+         if (this.el_display) {
             this.el_display.style.fontSize = `${this.fontPercentage * 110 / 100}%`;
          }
     }
 
     private applySidebarVisibility(): void {
         if (this.clientShowProgressBars) {
-            this.showProgressBars(); // Assumes this also calls showSidebar
+            this.showProgressBars();
         } else {
             this.hideProgressBars();
         }
         if (this.clientShowMap) {
-            this.showMap(); // Assumes this also calls showSidebar
+            this.showMap();
         } else {
             this.hideMap();
         }
-        // If both are false, hideSidebar should be called by hideMap/hideProgressBars
         if (!this.clientShowMap && !this.clientShowProgressBars && this.sidebar) {
             this.hideSidebar();
         } else if ((this.clientShowMap || this.clientShowProgressBars) && this.sidebar) {
@@ -2166,7 +2162,7 @@ export class SimpleInterface {
     // Menu Action Methods
     public menu_reconnect(): void {
         this.closeMenus();
-        this.decaf.reconnect?.(); // Assuming reconnect is a method on DecafMUD
+        this.decaf.reconnect?.();
     }
 
     public menu_log(style: 'html' | 'plain'): void {
@@ -2182,16 +2178,15 @@ export class SimpleInterface {
         }
 
         if (style === "plain") {
-            logText = logText.replace(/\n/g, ' '); // Normalize newlines first
-            logText = logText.replace(/<br\s*\/?>/gi, '\n'); // Convert <br> to newlines
-            logText = logText.replace(/<[^>]*>/g, '');    // Strip other HTML tags
+            logText = logText.replace(/\n/g, ' ');
+            logText = logText.replace(/<br\s*\/?>/gi, '\n');
+            logText = logText.replace(/<[^>]*>/g, '');
             logText = logText.replace(/&nbsp;/g, ' ');
             logText = logText.replace(/&lt;/g, '<');
             logText = logText.replace(/&gt;/g, '>');
         } else { // html
             const currentTime = new Date();
             const dateString = `${currentTime.getDate()}/${currentTime.getMonth() + 1}/${currentTime.getFullYear()}`;
-            // Basic HTML structure, assuming mud-colors.css is available relative to the client
             logText = `<html><head><title>DecafMUD Log ${dateString}</title>\n<link rel="stylesheet" href="DecafMUD/src/css/mud-colors.css" type="text/css" />\n</head><body>\n${logText}</body></html>`;
         }
         textarea.value = logText;
@@ -2213,11 +2208,9 @@ export class SimpleInterface {
         const popup = this.showPopup();
         this.addPopupHeaderText("Change Font Settings");
 
-        const formContainer = this.createPopupTextDiv(); // Use text div for form elements
+        const formContainer = this.createPopupTextDiv();
 
         const currentFontSize = this.fontPercentage;
-        // const currentFontFamily = (this.el_display.style.fontFamily || '').split(',')[0].replace(/'/g, '').trim();
-        // For simplicity, not implementing font family change via this UI for now, as it's complex.
 
         formContainer.innerHTML = `
             <p>Font Size:
@@ -2225,14 +2218,10 @@ export class SimpleInterface {
             </p>
             <p>(Select a value between 50 and 500 - default is 100.)</p>
         `;
-        // <p>Font Family: <input type="text" id="popup_fontfamily" value="${currentFontFamily}" placeholder="e.g., Courier New"></p>
-        // <p>(Leave empty for current default, or specify a browser-supported font.)</p>
 
         const btns = this.createButtonLine(popup);
         const saveBtn = this.createButton('Save', () => {
             const sizeInput = document.getElementById('popup_fontsize') as HTMLInputElement;
-            // const familyInput = document.getElementById('popup_fontfamily') as HTMLInputElement;
-
             const newSize = parseInt(sizeInput.value, 10);
             if (newSize >= 50 && newSize <= 500) {
                 this.fontPercentage = newSize;
@@ -2242,15 +2231,11 @@ export class SimpleInterface {
                 alert("Please select a font size between 50 and 500.");
                 return;
             }
-            // if (familyInput.value.trim() !== "") {
-            //    this.el_display.style.fontFamily = `'${familyInput.value.trim()}', Consolas, Courier, 'Courier New', 'Andale Mono', Monaco, monospace`;
-            //    this.saveClientSetting('fontFamily', familyInput.value.trim());
-            // }
             this.hidePopup();
             if (this.decaf.display as StandardDisplay) (this.decaf.display as StandardDisplay).scroll?.();
         });
         btns.appendChild(saveBtn);
-        btns.appendChild(document.createTextNode('\u00A0\u00A0')); // Spacer
+        btns.appendChild(document.createTextNode('\u00A0\u00A0'));
         const cancelBtn = this.createButton('Cancel', () => this.hidePopup());
         btns.appendChild(cancelBtn);
     }
@@ -2310,11 +2295,9 @@ export class SimpleInterface {
 
     public menu_about(): void {
         this.closeMenus();
-        this.decaf.about?.(); // Call core about method
+        this.decaf.about?.();
     }
 
-    // Methods for settings from panels.settings.js
-    // These are now mostly handled by direct property changes and saveClientSetting
     public get_fontsize(): number { return this.fontPercentage; }
     public set_fontsize(k: number): void {
         this.fontPercentage = Math.max(50, Math.min(500, k));
@@ -2348,8 +2331,6 @@ export class SimpleInterface {
         this.applySidebarVisibility();
         this.saveClientSetting('clientShowMap', this.clientShowMap);
     }
-
-
 }
 
 // Registration in decafmud.ts:
@@ -2359,5 +2340,3 @@ export class SimpleInterface {
 // Need to import toolbarMenus from menuData.ts
 import { toolbarMenus, MenuDefinition } from './menuData';
 import { DragObject } from '../../util/dragObject'; // Import DragObject
-
-```

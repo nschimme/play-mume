@@ -1,6 +1,7 @@
 import type { DecafMUD } from '../../decafmud';
 import { DragObject, Position, hookEvent, unhookEvent, cancelEvent, absoluteCursorPosition } from '../../util/dragObject';
 import { toolbarMenus, MenuDefinition, MenuItemAction, ClientSettings, defaultClientSettings } from './menuData'; // Assuming menuData will be used
+import { StandardDisplay } from '../display/standard'; // Import StandardDisplay
 
 // Helper to translate, placeholder for now
 function tr(this: DecafMUD | PanelsInterface, text: string, ...args: any[]): string {
@@ -27,6 +28,7 @@ export class PanelsInterface {
     public decaf: DecafMUD;
     public container: HTMLElement;
     public el_display: HTMLElement;
+    public display!: StandardDisplay; // Added definite assignment assertion
     public sidebar: HTMLElement;
     public progresstable: HTMLTableElement;
     public progressbars: Array<[string, HTMLDivElement, HTMLDivElement]> = [];
@@ -72,6 +74,8 @@ export class PanelsInterface {
     public old_display: string[] = [];
     public goFullOnResize: boolean = false;
     public old_fs: boolean = false;
+    private old_height: number = -1; // For resizeScreen logic
+    private old_width: number = -1;  // For resizeScreen logic
 
 
     // Splash screen elements
@@ -185,13 +189,13 @@ export class PanelsInterface {
         this.container.appendChild(this._input);
 
         // Event listeners
-        hookEvent(this.el_display, 'mouseup', this.maybeFocusInput.bind(this));
+        hookEvent(this.el_display, 'mouseup', (e: Event) => this.maybeFocusInput(e));
         hookEvent(this.el_display, 'keydown', (e) => this.displayKey(e as KeyboardEvent));
         hookEvent(this.sidebar, 'keydown', (e) => this.displayKey(e as KeyboardEvent));
         hookEvent(this.input, 'keydown', (e) => this.handleInput(e as KeyboardEvent));
         hookEvent(this.input, 'blur', (e) => this.handleBlur(e as FocusEvent));
         hookEvent(this.input, 'focus', (e) => this.handleBlur(e as FocusEvent));
-        hookEvent(window, 'resize', this.resizeScreenFromEvent.bind(this, 'window resize'));
+        hookEvent(window, 'resize', (e: Event) => this.resizeScreenFromEvent('window resize', e as UIEvent));
 
         if ("onhelp" in window) { // Neuters IE's F1 help popup
             (window as any).onhelp = () => false;
@@ -450,7 +454,7 @@ export class PanelsInterface {
 
         this.decaf.debugString("Entering fullscreen mode.", "info");
         this.old_parent = this.container.parentNode as HTMLElement;
-        this.next_sib = this.container.nextSibling;
+        this.next_sib = this.container.nextElementSibling;
 
         // Save current body overflow and scroll position
         this.old_body_over = document.body.style.overflow;
@@ -480,13 +484,16 @@ export class PanelsInterface {
 
         // Update toolbar button if one exists for fullscreen
         // This assumes a button with ID 'fsbutton' or similar
-        const fsButton = this.toolbuttons[Object.keys(this.toolbuttons).find(key => this.toolbuttons[parseInt(key)][0].id === 'fsbutton')!];
-        if (fsButton && fsButton[4] === 1) { // type 1 is toggle
-            fsButton[0].classList.remove('toggle-depressed');
-            fsButton[0].classList.add('toggle-pressed');
-            fsButton[6] = true; // pressed state
-            fsButton[0].setAttribute('aria-pressed', 'true');
-        }
+        const fsButtonKeyStr = Object.keys(this.toolbuttons).find(key => this.toolbuttons[parseInt(key)][0].id === 'fsbutton');
+        if (fsButtonKeyStr) {
+            const fsButton = this.toolbuttons[parseInt(fsButtonKeyStr)];
+            if (fsButton && fsButton[4] === 1) { // type 1 is toggle
+                fsButton[0].classList.remove('toggle-depressed');
+                fsButton[0].classList.add('toggle-pressed');
+                fsButton[6] = true; // pressed state
+                fsButton[0].setAttribute('aria-pressed', 'true');
+            } // Corrected: Inner if closes here
+        } // Corrected: Outer if closes here
 
 
         this.resizeScreen(false, true);
@@ -521,13 +528,16 @@ export class PanelsInterface {
         this.old_fs = false;
 
         // Update toolbar button
-        const fsButton = this.toolbuttons[Object.keys(this.toolbuttons).find(key => this.toolbuttons[parseInt(key)][0].id === 'fsbutton')!];
-        if (fsButton && fsButton[4] === 1) { // type 1 is toggle
-            fsButton[0].classList.remove('toggle-pressed');
-            fsButton[0].classList.add('toggle-depressed');
-            fsButton[6] = false; // pressed state
-            fsButton[0].setAttribute('aria-pressed', 'false');
-        }
+        const fsButtonKeyStr = Object.keys(this.toolbuttons).find(key => this.toolbuttons[parseInt(key)][0].id === 'fsbutton');
+        if (fsButtonKeyStr) {
+            const fsButton = this.toolbuttons[parseInt(fsButtonKeyStr)];
+            if (fsButton && fsButton[4] === 1) { // type 1 is toggle
+                fsButton[0].classList.remove('toggle-pressed');
+                fsButton[0].classList.add('toggle-depressed');
+                fsButton[6] = false; // pressed state
+                fsButton[0].setAttribute('aria-pressed', 'false');
+            } // Corrected: Inner if closes here
+        } // Corrected: Outer if closes here
 
         this.resizeScreen(false, true);
         if (from_click) { (this.input as HTMLElement).focus(); }
@@ -966,7 +976,7 @@ export class PanelsInterface {
 
 
     // Placeholder for other methods that will be filled in
-    public maybeFocusInput(e: MouseEvent): void {
+    public maybeFocusInput(e: Event): void { // Changed MouseEvent to Event
         const sel = window.getSelection();
         if (sel && sel.toString() !== '' && sel.focusNode && this.el_display.contains(sel.focusNode.parentNode as Node)) {
             this.decaf.debugString('not focusing this.input: selection active');
@@ -1217,12 +1227,15 @@ export class PanelsInterface {
 
 
     public updateInput(): void {
-        const currentInput = (this.input as HTMLInputElement | HTMLTextAreaElement);
-        if (this.masked) {
-            if (currentInput.type !== 'password') currentInput.type = 'password';
-        } else {
-            if (currentInput.type !== 'text') currentInput.type = 'text'; // Or 'textarea' if it's a textarea
+        const currentInput = this.input; // Type is HTMLInputElement | HTMLTextAreaElement
+        if (currentInput instanceof HTMLInputElement) { // Only set type if it's an Input element
+            if (this.masked) {
+                if (currentInput.type !== 'password') currentInput.type = 'password';
+            } else {
+                if (currentInput.type !== 'text') currentInput.type = 'text';
+            }
         }
+        // If currentInput is a TextArea, its type cannot be changed. Masking would need other handling.
 
         if (this.inpFocus) {
             currentInput.classList.remove(this.decaf.options.set_interface.blurclass || 'mud-input-blur');
@@ -1977,60 +1990,61 @@ export class PanelsInterface {
         if (!menuDef) return;
 
         const menuId = "sub" + menuDef.id;
-        let menuElement = document.getElementById(menuId);
+        let menuNode = document.getElementById(menuId) as HTMLElement | null; // Use a different variable name, ensure it's HTMLElement or null
 
-        if (!menuElement) {
-            // Create and append submenu if it doesn't exist
-            menuElement = document.createElement('ul');
-            menuElement.id = menuId;
-            menuElement.className = 'submenu';
-            // Find the corresponding top-level menu button to append to
+        if (!menuNode) {
+            const newMenuElement = document.createElement('ul'); // Create with a new name
+            newMenuElement.id = menuId;
+            newMenuElement.className = 'submenu';
+
             const topMenuButton = document.getElementById(menuDef.id);
-
             if (topMenuButton) {
-                 // Position submenu (basic example, needs refinement)
-                // const rect = topMenuButton.getBoundingClientRect(); // window-relative
-                // const parentRect = this.toolbar.getBoundingClientRect(); // Get toolbar's position
-                menuElement.style.position = 'absolute';
-                menuElement.style.top = (topMenuButton.offsetTop + topMenuButton.offsetHeight) + 'px';
-                menuElement.style.left = topMenuButton.offsetLeft + 'px';
-                menuElement.style.zIndex = "1001"; // Ensure it's on top of toolbar buttons
-
-                this.toolbar.appendChild(menuElement); // Append to toolbar for correct relative positioning
+                newMenuElement.style.position = 'absolute';
+                newMenuElement.style.top = (topMenuButton.offsetTop + topMenuButton.offsetHeight) + 'px';
+                newMenuElement.style.left = topMenuButton.offsetLeft + 'px';
+                newMenuElement.style.zIndex = "1001";
+                this.toolbar.appendChild(newMenuElement);
             } else {
-                this.toolbar.appendChild(menuElement); // Fallback append to toolbar
-                menuElement.style.position = 'absolute';
-                menuElement.style.top = this.toolbar.offsetHeight + 'px';
-                menuElement.style.left = '0px'; // Default to left
-                menuElement.style.zIndex = "1001";
+                this.toolbar.appendChild(newMenuElement);
+                newMenuElement.style.position = 'absolute';
+                newMenuElement.style.top = this.toolbar.offsetHeight + 'px';
+                newMenuElement.style.left = '0px';
+                newMenuElement.style.zIndex = "1001";
             }
 
             menuDef.items.forEach(item => {
                 const li = document.createElement('li');
                 const a = document.createElement('a');
-                a.href = "javascript:void(0);"; // Avoid page jump
+                a.href = "javascript:void(0);";
                 a.innerText = item.name;
                 if(item.id) a.id = item.id;
-
                 a.onclick = (ev: MouseEvent) => {
                     ev.stopPropagation();
                     this.executeMenuAction(item.action);
                     this.close_menus();
                 };
                 li.appendChild(a);
-                menuElement.appendChild(li);
+                newMenuElement.appendChild(li);
             });
+            menuNode = newMenuElement; // Assign the created and appended element
         }
 
-        if (this.open_menu === index && menuElement.style.visibility === 'visible') {
-            menuElement.style.visibility = 'hidden';
+        if (!menuNode) { // Should not happen if logic above is correct
+            this.decaf.error(`Menu element ${menuId} could not be found or created.`);
+            if(event) cancelEvent(event);
+            return;
+        }
+
+        // Now use menuNode (which is HTMLElement)
+        if (this.open_menu === index && menuNode.style.visibility === 'visible') {
+            menuNode.style.visibility = 'hidden';
             this.open_menu = -1;
             (this.input as HTMLElement).focus();
         } else {
             this.close_menus();
-            menuElement.style.visibility = 'visible';
+            menuNode.style.visibility = 'visible';
             this.open_menu = index;
-            const firstLink = menuElement.querySelector('a');
+            const firstLink = menuNode.querySelector('a');
             if (firstLink) firstLink.focus();
         }
         if(event) cancelEvent(event);

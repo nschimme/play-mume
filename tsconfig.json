@@ -11,6 +11,7 @@
         "outDir": "built",
         "esModuleInterop": true,
         "skipLibCheck": true,
+        "moduleResolution": "bundler", // Added for proper node_modules lookup
         "baseUrl": ".", // Added
         "paths": { // Added
             "@decafmud/*": ["DecafMUD/src/ts/*"],

@@ -136,7 +136,7 @@ export class StandardDisplay {
         this._display.appendChild(this.display);
 
         addEvent(this._display, 'scroll', this.onScroll.bind(this));
-        addEvent(this._display, 'mousedown', (e: MouseEvent) => {
+        addEvent(this._display, 'mousedown', (e: any) => { // Changed MouseEvent to any
             if (e.which !== 2 || !this.decaf.store.get('ui/middle-click-scroll', false)) { return; }
             this.scroll();
             if (e.cancelBubble) { e.cancelBubble = true; }
@@ -172,6 +172,9 @@ export class StandardDisplay {
         this.readyClear = false;
         // this.endSpace = false; // Not used
     }
+
+    // Removed duplicated public shouldScroll and doScroll methods that were added incorrectly.
+    // The original private methods further down will be made public.
 
     private scrollbarWidth(): number {
         if (this.sbw !== undefined) { return this.sbw; }
@@ -530,7 +533,7 @@ export class StandardDisplay {
         this.doScroll();
     }
 
-    private shouldScroll(addTarget: boolean = true): void {
+    public shouldScroll(addTarget: boolean = true): void { // Changed private to public
         if (this.willScroll !== undefined || this._display.style.overflowY === 'hidden') { return; }
         // Check if scrolled to bottom (or very close to it)
         this.willScroll = this._display.scrollTop + this._display.offsetHeight >= this._display.scrollHeight - 5; // 5px buffer
@@ -547,7 +550,7 @@ export class StandardDisplay {
         }
     }
 
-    private doScroll(): void {
+    public doScroll(): void { // Changed private to public
         if (this.scrollTime) clearTimeout(this.scrollTime);
 
         if (this.willScroll) {
@@ -611,4 +614,3 @@ export class StandardDisplay {
 // Registration will be handled in decafmud.ts:
 // import { StandardDisplay } from './plugins/display/standard';
 // DecafMUD.plugins.Display.standard = StandardDisplay;
-```

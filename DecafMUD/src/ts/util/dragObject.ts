@@ -1,8 +1,8 @@
 // Based on code from http://www.switchonthecode.com/tutorials/javascript-draggable-elements
 // Heavily typed and modernized for TypeScript ES6 module structure.
 
-export function hookEvent(element: HTMLElement | null | string, eventName: string, callback: (event: Event) => any): void {
-    let el: HTMLElement | null;
+export function hookEvent(element: HTMLElement | Window | Document | null | string, eventName: string, callback: (event: Event) => any): void {
+    let el: HTMLElement | Window | Document | null; // Allow Document type
     if (typeof element === "string") {
         el = document.getElementById(element);
     } else {
@@ -18,8 +18,8 @@ export function hookEvent(element: HTMLElement | null | string, eventName: strin
     }
 }
 
-export function unhookEvent(element: HTMLElement | null | string, eventName: string, callback: (event: Event) => any): void {
-    let el: HTMLElement | null;
+export function unhookEvent(element: HTMLElement | Window | Document | null | string, eventName: string, callback: (event: Event) => any): void {
+    let el: HTMLElement | Window | Document | null; // Allow Document type
     if (typeof element === "string") {
         el = document.getElementById(element);
     } else {
