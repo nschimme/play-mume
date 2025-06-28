@@ -39,20 +39,35 @@ declare let globalSplit: GlobalSplit | null | undefined;
 declare function canvasFitParent(): void;
 declare let globalMapWindow: Window | null;
 
+import { toolbarMenus, MENU_HELP, MENU_OPTIONS, MenuItemAction } from '@decafmud/plugins/interface/menuData';
+
 $(document).ready(function() {
-    window.toolbar_menus[MENU_HELP][MI_SUBMENU].unshift(
-        'New to MUME?', 'mume_menu_new();',
-        'MUME Help',    'mume_menu_help();',
-        'MUME Rules',   'mume_menu_rules();' );
+    // Modify the imported toolbarMenus directly
+    if (toolbarMenus && toolbarMenus[MENU_HELP]) {
+        const helpMenuItems: MenuItemAction[] = [
+            { name: 'New to MUME?', action: 'mume_menu_new();', id: 'mume_menu_new_to_mume'},
+            { name: 'MUME Help',    action: 'mume_menu_help();', id: 'mume_menu_mume_help' },
+            { name: 'MUME Rules',   action: 'mume_menu_rules();', id: 'mume_menu_mume_rules' }
+        ];
+        toolbarMenus[MENU_HELP].items.unshift(...helpMenuItems);
 
-    window.toolbar_menus[MENU_HELP][MI_SUBMENU].push(
-        'About Map',     'mume_menu_about_map();',
-        'Map(per) Bug?', 'mume_menu_map_bug();', );
+        toolbarMenus[MENU_HELP].items.push(
+            { name: 'About Map',     action: 'mume_menu_about_map();', id: 'mume_menu_map_about' },
+            { name: 'Map(per) Bug?', action: 'mume_menu_map_bug();', id: 'mume_menu_map_bug_report' });
+    } else {
+        console.error("DecafMUD toolbarMenus or MENU_HELP not found/initialized correctly. MUME menu extensions failed.");
+    }
 
-    window.toolbar_menus[MENU_OPTIONS][MI_SUBMENU].unshift(
-        'Detach Map', 'open_mume_map_window();' );
+    if (toolbarMenus && toolbarMenus[MENU_OPTIONS]) {
+        toolbarMenus[MENU_OPTIONS].items.unshift(
+            { name: 'Detach Map', action: 'open_mume_map_window();', id: 'mume_menu_detach_map' });
+    } else {
+        console.error("DecafMUD toolbarMenus or MENU_OPTIONS not found/initialized correctly. MUME menu extensions failed.");
+    }
 });
 
+// These functions will be called by string actions, so they need to be global.
+// Assign them to window and ensure they are declared in window-extensions.d.ts
 function mume_menu_new(): void
 {
     window.open('http://mume.org/newcomers.php', 'mume_new_players');

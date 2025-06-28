@@ -35,13 +35,18 @@ module.exports = {
         test: /\.scss$/i,
         use: ['style-loader', 'css-loader', 'sass-loader'],
       },
+      {
+        test: /\.css$/i,
+        use: ['style-loader', 'css-loader'],
+      },
     ],
   },
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
-    // alias: { // Removed alias as DecafMUD is compiled from source by ts-loader
-    //   '@decafmud/decafmud': path.resolve(__dirname, 'DecafMUD/dist/js/decafmud.js'),
-    // }
+    alias: {
+      "@decafmud": path.resolve(__dirname, 'DecafMUD/src/ts'),
+      "@src": path.resolve(__dirname, 'src'),
+    }
   },
   output: {
     filename: '[name].bundle.js',

@@ -124,6 +124,7 @@ class DecafMUD {
     static ESC: string = ""; // Will be properly initialized below
     static BEL: string = ""; // Will be properly initialized below
     static debugIAC: (seq: string) => string;
+    static formatString = formatString; // Expose formatString
 
 
     constructor(options?: any) {
@@ -920,6 +921,11 @@ DecafMUD.prototype.connected	= false;
 DecafMUD.prototype.timer		= null;
 DecafMUD.prototype.connect_try	= 0;
 // DecafMUD.prototype.required		= 0; // Property 'required' was removed from class
+
+import { SimpleInterface } from './plugins/interface/simple'; // Import SimpleInterface
+import { PanelsInterface } from './plugins/interface/panels'; // Import PanelsInterface
+DecafMUD.plugins.Interface.simple = SimpleInterface; // Register SimpleInterface
+DecafMUD.plugins.Interface.panels = PanelsInterface; // Register PanelsInterface
 
 ///////////////////////////////////////////////////////////////////////////////
 // Plugins System

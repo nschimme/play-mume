@@ -18,31 +18,22 @@
 // src/window-extensions.d.ts
 
 declare global {
-  interface MenuItemArray extends Array<string> {
-  }
-
-  interface ToolbarSubmenu {
-    [miSubmenu: string]: MenuItemArray;
-  }
-
-  interface ToolbarMenus {
-    [menuHelpOrOptions: string]: ToolbarSubmenu;
-  }
-
   interface Window {
-    toolbar_menus: ToolbarMenus;
-    Zlib?: {
-      InflateStream?: any;
-    };
-    DecafMUD?: DecafMUDStatic;
+    // Functions made global by mume.menu.ts itself for string-based actions
     open_mume_map_window?: () => void;
     mume_menu_new?: () => void;
     mume_menu_help?: () => void;
     mume_menu_rules?: () => void;
     mume_menu_about_map?: () => void;
     mume_menu_map_bug?: () => void;
-  }
 
+    // DecafMUD related globals
+    // The DecafMUD class/namespace (includes .formatString, .plugins, etc.)
+    // This is needed if any part of the code accesses DecafMUD as a global (e.g. DecafMUD.plugins)
+    // The main DecafMUD class is imported via ES6 modules in index.ts, but PanelsInterface might expect it globally.
+    DecafMUD?: any;
+    Zlib?: { InflateStream?: any; }; // For pako/inflate_stream, used by DecafMUD core
+  }
 }
 
 export {};

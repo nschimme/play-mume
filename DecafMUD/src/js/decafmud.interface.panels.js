@@ -192,7 +192,7 @@ SimpleInterface.supports = {
  *    display. */
 SimpleInterface.prototype.initSplash = function(percentage,message) {
 	if ( percentage === undefined ) { percentage = 0; }
-	if ( message === undefined ) { message = 'Discombobulating interface recipient...'.tr(this.decaf); }
+	if ( message === undefined ) { message = DecafMUD.formatString('Discombobulating interface recipient...', this.decaf); }
 	
 	// Disable scrolling
 	this.old_y = this.el_display.style.overflowY;
@@ -212,7 +212,7 @@ SimpleInterface.prototype.initSplash = function(percentage,message) {
 	this.splash_pg.setAttribute('aria-valuemax', 100);
 	this.splash_pg.setAttribute('aria-valuemin', 0);
 	this.splash_pg.setAttribute('aria-valuenow', percentage);
-	this.splash_pg.setAttribute('aria-valuetext', '{0}%'.tr(this.decaf,percentage));
+	this.splash_pg.setAttribute('aria-valuetext', DecafMUD.formatString('{0}%', percentage));
 	
 	this.splash_pgi = document.createElement('div');
 	this.splash_pgi.className = 'decafmud inner-progress';
@@ -221,7 +221,7 @@ SimpleInterface.prototype.initSplash = function(percentage,message) {
 	
 	this.splash_pgt = document.createElement('div');
 	this.splash_pgt.className = 'decafmud progress-text';
-	this.splash_pgt.innerHTML = '{0}%'.tr(this.decaf,percentage);
+	this.splash_pgt.innerHTML = DecafMUD.formatString('{0}%', percentage);
 	this.splash_pg.appendChild(this.splash_pgt);
 	
 	this.splash.appendChild(this.splash_pg);
@@ -315,7 +315,7 @@ SimpleInterface.prototype.showSize = function() {
 	
 	var sz = this.display.getSize();
 	this.sizeel.style.cssText = 'opacity:1';
-	this.sizeel.innerHTML = "{0}x{1}".tr(this.decaf, sz[0], sz[1]);
+	this.sizeel.innerHTML = DecafMUD.formatString("{0}x{1}", sz[0], sz[1]);
 	
 	// Set a timer for hiding.
 	var si = this;
@@ -360,7 +360,7 @@ SimpleInterface.prototype.print_msg = function(txt) {
 
 /** Called by Decaf upon connection to let us know. */
 SimpleInterface.prototype.connected = function() {
-	this.updateIcon(this.ico_connected, "DecafMUD is currently connected.".tr(this.decaf),
+	this.updateIcon(this.ico_connected, DecafMUD.formatString("DecafMUD is currently connected.", this.decaf),
 		'', 'connectivity connected');
 }
 
@@ -387,7 +387,7 @@ SimpleInterface.prototype.connecting = function() {
     }
   }
   this.updateIcon(this.ico_connected,
-                  "DecafMUD is attempting to connect.".tr(this.decaf),
+                  DecafMUD.formatString("DecafMUD is attempting to connect.", this.decaf),
                   '', 'connectivity connecting');
 }
 
@@ -395,7 +395,7 @@ SimpleInterface.prototype.connecting = function() {
 SimpleInterface.prototype.disconnected = function() {
   this.print_msg("Connection closed.");
   this.updateIcon(this.ico_connected,
-                  "DecafMUD is currently not connected.".tr(this.decaf),
+                  DecafMUD.formatString("DecafMUD is currently not connected.", this.decaf),
                   '', 'connectivity disconnected');
 }
 
@@ -489,7 +489,7 @@ SimpleInterface.prototype.setup = function() {
 	var fs = this.store.get('fullscreen-start', this.decaf.options.set_interface.start_full);
 	
 	// Create the connected notification icon.
-	this.ico_connected = this.addIcon("You are currently disconnected.".tr(this.decaf), '', 'connectivity disconnected');
+	this.ico_connected = this.addIcon(DecafMUD.formatString("You are currently disconnected.", this.decaf), '', 'connectivity disconnected');
 	
 	// Go directly to fullscreen if necessary.
 	if ( fs ) {

@@ -16,6 +16,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
 import '../play.scss';
+import '../DecafMUD/src/css/decafmud.css';
 import $ from 'jquery';
 import Split from 'split.js';
 
@@ -34,8 +35,8 @@ import { DecafMUD } from '../DecafMUD/src/ts/decafmud'; // Adjusted path to subm
 
 // These interface related scripts might need special handling or conversion to TS modules.
 // For now, their direct loading is removed. Their functionality will be addressed in Step 4.
-// import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.menu.js';
 // import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.js';
+// import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.menu.js';
 // import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.settings.js';
 // import 'script-loader!../DecafMUD/src/js/dragelement.js';
 
