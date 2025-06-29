@@ -36,15 +36,43 @@ function formatString(text: string, ...args: any[]): string {
 		for (const key in obj) {
 			if (Object.prototype.hasOwnProperty.call(obj, key)) {
                 const pattern = `{${key}}`;
-                console.log("[DEBUG] formatString keyed pattern:", pattern, "Replacing with:", obj[key]);
-				s = s.replace(new RegExp(pattern, 'g'), obj[key]);
+                const replacementValue = obj[key] !== undefined && obj[key] !== null ? obj[key].toString() : "";
+                console.log("[DEBUG] formatString keyed pattern:", pattern, "Replacing with:", replacementValue);
+                try {
+                    const regex = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'); // Escape key for safety in regex
+                    s = s.replace(regex, replacementValue);
+                } catch (e: any) {
+                    console.error("[DEBUG] formatString keyed RegExp FAILED:", e.message, "Pattern was:", pattern);
+                    // Fallback to basic string replacement if regex fails, though less efficient
+                    let parts = s.split(pattern);
+                    s = parts.join(replacementValue);
+                }
 			}
 		}
 	} else {
 		for (let i = 0; i < args.length; i++) {
-            const pattern = `{${i}}`;
-            console.log("[DEBUG] formatString indexed pattern:", pattern, "Replacing with:", args[i]);
-			s = s.replace(new RegExp(pattern, 'g'), args[i]);
+            const placeholder = `{${i}}`;
+            const replacementValue = args[i] !== undefined && args[i] !== null ? args[i].toString() : "";
+            console.log("[DEBUG] formatString indexed placeholder:", placeholder, "Replacing with:", replacementValue);
+
+            if (s.includes(placeholder)) { // Only attempt if placeholder exists
+                try {
+                    // Test RegExp construction directly
+                    const testPatternForRegex = placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // Escape placeholder for safety in regex
+                    console.log("[DEBUG] Testing RegExp construction with pattern:", testPatternForRegex);
+                    new RegExp(testPatternForRegex, 'g'); // Test construction
+                    console.log("[DEBUG] RegExp construction successful for:", testPatternForRegex);
+
+                    // Use the safe (escaped) pattern for replacement
+                    s = s.replace(new RegExp(testPatternForRegex, 'g'), replacementValue);
+                } catch (e: any) {
+                    console.error("[DEBUG] formatString indexed RegExp FAILED for placeholder:", placeholder, "Error:", e.message);
+                    console.log("[DEBUG] Falling back to string.split().join() for placeholder:", placeholder);
+                    // Fallback to basic string replacement if regex fails
+                    let parts = s.split(placeholder);
+                    s = parts.join(replacementValue);
+                }
+            }
 		}
 	}
 	return s;
