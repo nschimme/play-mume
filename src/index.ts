@@ -91,6 +91,12 @@ $(window).on('load', function () {
     language: 'en',
     textinputfilter: 'mumexml',
     socket: 'websocket',
+    set_display: { // Options for the display plugin (e.g., StandardDisplay)
+      fgclass: 'decaf-fg-default', // Default foreground color class
+      bgclass: 'decaf-bg-default', // Default background color class
+      // scrollbar_width: 15, // Example, if StandardDisplay uses it
+      // font_size: '100%', // Example, if StandardDisplay uses it
+    }
   });
 
   _globalSplit = Split(['#mume-client-panel', '#mume-map-panel'], {
