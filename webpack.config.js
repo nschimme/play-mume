@@ -33,11 +33,33 @@ module.exports = {
       },
       {
         test: /\.scss$/i,
-        use: ['style-loader', 'css-loader', 'sass-loader'],
+        use: [
+            'style-loader',
+            'css-loader',
+            {
+                loader: 'resolve-url-loader',
+                options: {
+                    sourceMap: true,
+                }
+            },
+            {
+                loader: 'sass-loader',
+                options: {
+                    sourceMap: true,
+                },
+            },
+        ],
       },
       {
         test: /\.css$/i,
         use: ['style-loader', 'css-loader'],
+      },
+      {
+        test: /\.(png|svg|jpg|jpeg|gif)$/i,
+        type: 'asset/resource',
+        generator: {
+            filename: 'assets/images/[name].[hash][ext][query]' // Output images to assets/images
+        }
       },
     ],
   },

@@ -33,6 +33,7 @@
     "jest-environment-jsdom": "^30.0.2",
     "pako": "^2.1.0",
     "pixi.js": "^8.10.1",
+    "resolve-url-loader": "^5.0.0",
     "sass": "*",
     "sass-loader": "*",
     "script-loader": "^0.7.2",

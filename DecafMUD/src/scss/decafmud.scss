@@ -3,6 +3,9 @@
 // Core variables and mixins (if any, can be defined in a separate partial e.g., _variables.scss)
 // @import "variables";
 
+// Import main page layout styles first
+@import "main";
+
 // Base styles from decafmud.css (and potentially main.css)
 @import "base";
 
