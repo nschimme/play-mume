@@ -94,7 +94,7 @@ export class WebSocketSocket {
         this.decaf.debugString(`WebSocket Connection String: ${connectionString}`);
 
         try {
-            this.websocket = new WebSocket(connectionString); // Removed 'binary' subprotocol
+            this.websocket = new WebSocket(connectionString, 'binary'); // Re-added 'binary' subprotocol
             this.websocket.binaryType = 'arraybuffer';
 
             this.websocket.onopen = (event) => this.onOpen(event);
