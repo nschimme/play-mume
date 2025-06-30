@@ -16,7 +16,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
 import '../play.scss';
-import '../DecafMUD/src/css/decafmud.css';
+import '../DecafMUD/src/scss/decafmud.scss'; // Corrected to import SCSS
 import $ from 'jquery';
 import Split from 'split.js';
 
