@@ -29,6 +29,7 @@ import { MsdpTelopt, readMSDP } from './plugins/telopt/msdp'; // Import readMSDP
 // Interface plugins need to be imported before DecafMUD.plugins is defined.
 import { SimpleInterface } from './plugins/interface/simple';
 import { PanelsInterface } from './plugins/interface/panels';
+import { StandardStorage } from './plugins/storage/standard'; // Import StandardStorage
 
 // Simple string formatting utility to replace {key} or {0} placeholders
 function formatString(text: string, ...args: any[]): string {
@@ -175,7 +176,7 @@ class DecafMUD {
             // websocket: WebSocketSocket, // WebSocketSocket used as default
         },
         Storage: {
-            // standard: StandardStorage, // Example if registered this way
+            standard: StandardStorage,
         },
         Telopt: {
             // Populated later by specific telopt plugins
