@@ -31,9 +31,13 @@ import { CompressV2Telopt } from './plugins/telopt/compressv2';
 import { MsdpTelopt, readMSDP } from './plugins/telopt/msdp';
 import { ZmpTelopt } from './plugins/telopt/zmp';
 
+// Import TN constants
+import { TN as ImportedTelnetConstants } from './telnetConstants';
+
 
 // Simple string formatting utility
 function formatString(text: string, ...args: any[]): string {
+    console.log("[DEBUG DecafMUD.formatString] Called with text:", JSON.stringify(text), "Args:", JSON.stringify(args));
 	let s = text;
 	if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
 		const obj = args[0];
@@ -41,12 +45,12 @@ function formatString(text: string, ...args: any[]): string {
 			if (Object.prototype.hasOwnProperty.call(obj, key)) {
                 const pattern = `{${key}}`;
                 const replacementValue = obj[key] !== undefined && obj[key] !== null ? obj[key].toString() : "";
-                // console.log("[DEBUG] formatString keyed pattern:", pattern, "Replacing with:", replacementValue); // Keep for debugging if needed
+                console.log("[DEBUG DecafMUD.formatString keyed pattern]:", pattern, "Replacing with:", replacementValue);
                 try {
                     const regex = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
                     s = s.replace(regex, replacementValue);
                 } catch (e: any) {
-                    console.error("[DEBUG] formatString keyed RegExp FAILED:", e.message, "Pattern was:", pattern);
+                    console.error("[DEBUG DecafMUD.formatString keyed RegExp FAILED]:", e.message, "Pattern was:", pattern);
                     let parts = s.split(pattern);
                     s = parts.join(replacementValue);
                 }
@@ -56,18 +60,18 @@ function formatString(text: string, ...args: any[]): string {
 		for (let i = 0; i < args.length; i++) {
             const placeholder = `{${i}}`;
             const replacementValue = args[i] !== undefined && args[i] !== null ? args[i].toString() : "";
-            // console.log("[DEBUG] formatString indexed placeholder:", placeholder, "Replacing with:", replacementValue); // Keep for debugging if needed
+            console.log("[DEBUG DecafMUD.formatString indexed placeholder]:", placeholder, "Replacing with:", replacementValue);
 
             if (s.includes(placeholder)) {
                 try {
                     const escapedPlaceholder = placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    // console.log("[DEBUG] Testing indexed RegExp construction with pattern:", escapedPlaceholder); // Keep for debugging
+                    console.log("[DEBUG DecafMUD.formatString] Testing indexed RegExp construction with pattern:", escapedPlaceholder);
                     const regex = new RegExp(escapedPlaceholder, 'g');
-                    // console.log("[DEBUG] Indexed RegExp construction successful for:", escapedPlaceholder); // Keep for debugging
+                    console.log("[DEBUG DecafMUD.formatString] Indexed RegExp construction successful for:", escapedPlaceholder);
                     s = s.replace(regex, replacementValue);
                 } catch (e: any) {
-                    console.error("[DEBUG] formatString indexed RegExp FAILED for placeholder:", placeholder, "Error:", e.message);
-                    // console.log("[DEBUG] Falling back to string.split().join() for placeholder:", placeholder); // Keep for debugging
+                    console.error("[DEBUG DecafMUD.formatString] Indexed RegExp FAILED for placeholder:", placeholder, "Error:", e.message);
+                    console.log("[DEBUG DecafMUD.formatString] Falling back to string.split().join() for placeholder:", placeholder);
                     let parts = s.split(placeholder);
                     s = parts.join(replacementValue);
                 }
@@ -78,7 +82,7 @@ function formatString(text: string, ...args: any[]): string {
 }
 
 // Object extension utility
-const extend_obj = function(base: any, obj: any): any { /* ... (implementation as before) ... */
+const extend_obj = function(base: any, obj: any): any {
 	for ( var key in obj ) {
 		var o = obj[key];
 		if ( typeof o === 'object' && !('nodeType' in o) ) {
@@ -136,14 +140,9 @@ class DecafMUD {
 		reconnect_tries: 10, reconnect_delay: 2500,
     };
     static settings: any = {};
-    static TN: any = {
-        IAC: "\xFF", DONT: "\xFE", DO: "\xFD", WONT: "\xFC", WILL: "\xFB", SB: "\xFA", SE: "\xF0",
-        IS: "\x00", EORc: "\xEF", GA: "\xF9", BINARY: "\x00", ECHO: "\x01", SUPGA: "\x03",
-        STATUS: "\x05", SENDLOC: "\x17", TTYPE: "\x18", EOR: "\x19", NAWS: "\x1F", TSPEED: "\x20",
-        RFLOW: "\x21", LINEMODE: "\x22", AUTH: "\x23", NEWENV: "\x27", CHARSET: "\x2A",
-        MSDP: "E", MSSP: "F", COMPRESS: "U", COMPRESSv2: "V", MSP: "Z", MXP: "[", ZMP: "]",
-        CONQUEST: "^", ATCP: "\xC8", GMCP: "\xC9"
-    };
+
+    // Define TN first as plugins.Telopt depends on it
+    static TN: any = ImportedTelnetConstants;
 
     static plugins: DecafPlugins = {
         Display: { standard: StandardDisplay },
@@ -153,28 +152,45 @@ class DecafMUD {
         Encoding: {}, // Populated later
         Extra: {},
         Telopt: {
-            GMCP: GmcpTelopt,
-            NAWS: NawsTelopt,
-            TType: TTypeTelopt,
-            Echo: EchoTelopt,
-            Charset: CharsetTelopt,
-            CompressV2: CompressV2Telopt,
-            MSDP: MsdpTelopt,
-            ZMP: ZmpTelopt
+            [DecafMUD.TN.GMCP]: GmcpTelopt,
+            [DecafMUD.TN.NAWS]: NawsTelopt,
+            [DecafMUD.TN.TTYPE]: TTypeTelopt,
+            [DecafMUD.TN.ECHO]: EchoTelopt,
+            [DecafMUD.TN.CHARSET]: CharsetTelopt,
+            [DecafMUD.TN.COMPRESSv2]: CompressV2Telopt,
+            [DecafMUD.TN.MSDP]: MsdpTelopt,
+            [DecafMUD.TN.ZMP]: ZmpTelopt
         },
         TextInputFilter: {}
     };
 
     static ESC: string = "\x1B";
     static BEL: string = "\x07";
-    static debugIAC = (seq: string): string => { /* ... (implementation as before) ... */
+    static debugIAC = (seq: string): string => {
         let out = "";
+        const tnMap: { [key: string]: string } = {};
+        for (const name in DecafMUD.TN) {
+            if (Object.prototype.hasOwnProperty.call(DecafMUD.TN, name)) {
+                tnMap[DecafMUD.TN[name]] = name;
+            }
+        }
+
         for (let i = 0; i < seq.length; i++) {
+            const char = seq.charAt(i);
             const charCode = seq.charCodeAt(i);
+
             if (charCode === 255) out += "IAC "; else if (charCode === 254) out += "DONT ";
             else if (charCode === 253) out += "DO "; else if (charCode === 252) out += "WONT ";
             else if (charCode === 251) out += "WILL "; else if (charCode === 250) out += "SB ";
-            else if (charCode === 240) out += "SE "; else out += charCode.toString(16).toUpperCase() + " ";
+            else if (charCode === 240) out += "SE ";
+            else {
+                const optionName = tnMap[char];
+                if (optionName) {
+                    out += optionName + " ";
+                } else {
+                    out += charCode.toString(16).toUpperCase() + " ";
+                }
+            }
         }
         return out.trim();
     };
@@ -205,7 +221,7 @@ class DecafMUD {
         this.initSplash();
     }
 
-    about() { /* ... (implementation as before) ... */
+    about() {
         var abt = ["DecafMUD v{0} \u00A9 2010 Stendec"];
         abt.push("Updated and improved by Pit from Discworld.");
         abt.push("Further bugfixes and improvements by Waba from MUME.");
@@ -217,10 +233,10 @@ class DecafMUD {
             " and free to use and modify, so long as your MU* is free to play!");
         alert(DecafMUD.formatString(abt.join('\n'), DecafMUD.version.toString()));
     }
-    debugString(text: string, type?: string, obj?: any) { /* ... (implementation as before) ... */
+    debugString(text: string, type?: string, obj?: any) {
         if (typeof window === 'undefined' || !('console' in window) ) { return; }
         if ( type === undefined ) { type = 'debug'; }
-        if ( obj !== undefined ) { text = DecafMUD.formatString(text, obj); } // Use static version
+        if ( obj !== undefined ) { text = DecafMUD.formatString(text, obj); }
         var st = 'DecafMUD[%d]: %s';
         const con = console as any;
         switch(type) {
@@ -232,7 +248,7 @@ class DecafMUD {
                 con.log(st, this.id, text);
         }
     }
-    error(text: string) { /* ... (implementation as before) ... */
+    error(text: string) {
         this.debugString(text, 'error');
         if ( typeof window !== 'undefined' && 'console' in window && console.groupCollapsed !== undefined ) {
             console.groupCollapsed('DecafMUD['+this.id+'] Instance State');
@@ -240,7 +256,7 @@ class DecafMUD {
             console.groupEnd();
         }
         if ( this.ui && this.ui.splashError(text) ) { return; }
-        alert(DecafMUD.formatString("DecafMUD Error\n\n{0}", text)); // Use static version
+        alert(DecafMUD.formatString("DecafMUD Error\n\n{0}", text));
     }
 
     initSplash() {
@@ -258,7 +274,7 @@ class DecafMUD {
         this.initSocket();
     }
 
-    updateSplash(percentage: number, message?: string) { /* ... (implementation as before) ... */
+    updateSplash(percentage: number, message?: string) {
         if (!this.ui || !this.ui.updateSplash) { return; }
         this.ui.updateSplash(percentage, message);
     }
@@ -278,24 +294,17 @@ class DecafMUD {
     initUI() {
         const DisplayPlugin = DecafMUD.plugins.Display[this.options.display];
         if (!DisplayPlugin && this.ui) { this.error(DecafMUD.formatString(`Display plugin "${this.options.display}" not found.`)); return; }
-        // Note: PanelsInterface creates its own StandardDisplay instance in its setup() method.
-        // So, DecafMUD assigning this.display might be redundant if PanelsInterface manages it.
-        // However, other interfaces might expect this.display to be pre-populated.
-        // For now, let PanelsInterface handle its own display, and other interfaces might need this.
-        // if (DisplayPlugin && this.ui && !this.display) {
-        //    this.display = new DisplayPlugin(this, this.ui, this.ui.el_display); // Assuming el_display is standard on UI plugins
-        // }
 
         if (this.ui && this.ui.setup) { this.ui.setup(); this.updateSplash(50, "UI setup complete."); }
         this.initFinal();
     }
 
-    initFinal() { /* ... (implementation as before, uses DecafMUD.plugins.Telopt) ... */
+    initFinal() {
         var textInputFilterCtor, o;
         this.updateSplash(60, "Initializing TELNET extensions...");
         for (var k in DecafMUD.plugins.Telopt) {
             if (Object.prototype.hasOwnProperty.call(DecafMUD.plugins.Telopt, k)) {
-                o = DecafMUD.plugins.Telopt[k];
+                o = (DecafMUD.plugins.Telopt as any)[k];
                 if (typeof o === 'function') {
                     this.telopt[k] = new (o as TeloptPluginConstructor)(this);
                 } else if (typeof o === 'boolean' || o === undefined) {
@@ -333,7 +342,7 @@ class DecafMUD {
         }
         this.connect();
     }
-    connect() { /* ... (implementation as before) ... */
+    connect() {
         if ( this.connecting || this.connected ) { return; }
         if ( this.socket_ready !== true ) { throw "The socket isn't ready yet."; }
         this.connecting = true;
@@ -344,7 +353,7 @@ class DecafMUD {
         this.conn_timer = setTimeout(function(){decaf.connectFail();},this.options.connect_timeout);
         this.socket.connect();
     }
-    connectFail() { /* ... (implementation as before) ... */
+    connectFail() {
         clearTimeout(this.conn_timer);
         this.connect_try += 1;
         if ( this.connect_try > this.options.reconnect_tries ) { return; }
@@ -353,18 +362,18 @@ class DecafMUD {
         var decaf = this;
         this.conn_timer = setTimeout(function(){decaf.connectFail();},this.options.connect_timeout);
     }
-    reconnect() { /* ... (implementation as before) ... */
+    reconnect() {
       this.connect_try++;
         var d = this;
         if ( d.ui && d.ui.connecting ) { d.ui.connecting(); }
         d.socket.connect();
     }
-    socketReady() { /* ... (implementation as before) ... */
+    socketReady() {
         this.debugString("The socket is ready.");
         this.socket_ready = true;
         if ( this.loaded && this.options.autoconnect ) { this.connect(); }
     }
-    socketConnected() { /* ... (implementation as before, uses DecafMUD.formatString) ... */
+    socketConnected() {
         this.connecting = false; this.connected = true; this.connect_try = 0;
         clearTimeout(this.conn_timer);
         var host = this.socket.host, port = this.socket.port;
@@ -377,7 +386,7 @@ class DecafMUD {
         if ( this.textInputFilter && this.textInputFilter.connected ) { this.textInputFilter.connected(); }
         if ( this.ui && this.ui.connected ) { this.ui.connected(); }
     }
-    socketClosed() { /* ... (implementation as before, uses DecafMUD.formatString) ... */
+    socketClosed() {
         clearTimeout(this.conn_timer);
         this.connecting = false; this.connected = false;
         this.debugString("The socket has disconnected.","info");
@@ -411,7 +420,7 @@ class DecafMUD {
         }
         if ( this.ui && this.ui.disconnected ) { this.ui.disconnected(false); }
     }
-    socketData(data: string | ArrayBuffer | Uint8Array) { /* ... (implementation as before, uses DecafMUD.formatString) ... */
+    socketData(data: string | ArrayBuffer | Uint8Array) {
         if (this.decompressStream !== undefined) {
             try {
                 let dataToDecompress: Uint8Array | string;
@@ -431,13 +440,13 @@ class DecafMUD {
         } else { this.inbuf.push(data); }
         if ( this.loaded ) { this.processBuffer(); }
     }
-    socketError(data: any,data2: any) { /* ... (implementation as before, uses DecafMUD.formatString) ... */
+    socketError(data: any,data2: any) {
         this.debugString(DecafMUD.formatString('Socket Err: {0}  d2="{1}"',data,data2),'error');
     }
-    getEnc(enc: string): string { /* ... (implementation as before) ... */
+    getEnc(enc: string): string {
         return enc.replace(/-/g,'').toLowerCase();
     }
-    setEncoding(enc: string) { /* ... (implementation as before, uses DecafMUD.plugins.Encoding) ... */
+    setEncoding(enc: string) {
         let currentEnc = this.getEnc(enc);
         if ( DecafMUD.plugins.Encoding[currentEnc] === undefined ) {
             throw new Error(`"${currentEnc}" isn't a valid encoding scheme, or it isn't loaded.`); }
@@ -446,18 +455,18 @@ class DecafMUD {
         this.decode = DecafMUD.plugins.Encoding[currentEnc].decode;
         this.encode = DecafMUD.plugins.Encoding[currentEnc].encode;
     }
-    sendInput(input: string) { /* ... (implementation as before) ... */
+    sendInput(input: string) {
         if ( !this.socket || !this.socket.connected ) { this.debugString("Cannot send input: not connected"); return; }
         this.socket.write(this.encode(input + '\r\n').replace(iac_reg, '\xFF\xFF'));
         if ( this.ui ) { this.ui.displayInput(input); }
     }
-    decode(data: string): [string, string] { /* ... (implementation as before, uses DecafMUD.plugins.Encoding) ... */
+    decode(data: string): [string, string] {
         return DecafMUD.plugins.Encoding[this.options.encoding].decode(data);
     }
-    encode(data: string): string { /* ... (implementation as before, uses DecafMUD.plugins.Encoding) ... */
+    encode(data: string): string {
         return DecafMUD.plugins.Encoding[this.options.encoding].encode(data);
     }
-    processBuffer() { /* ... (implementation as before, uses DecafMUD.formatString) ... */
+    processBuffer() {
         var enc, data_str, ind, out;
         let accumulatedData = "";
         if (this.decompressStream) {
@@ -510,11 +519,11 @@ class DecafMUD {
             data_str = left + (out as string); left = '';
         }
     }
-    handleInputText(text: string) { /* ... (implementation as before) ... */
+    handleInputText(text: string) {
         if ( this.textInputFilter && this.textInputFilter.filterInputText) { text = this.textInputFilter.filterInputText(text); }
         if ( this.display && this.display.handleData) { this.display.handleData(text); }
     }
-    readIAC(data: string): string | false { /* ... (implementation as before, uses DecafMUD.debugIAC) ... */
+    readIAC(data: string): string | false {
         const { TN } = DecafMUD;
         if ( data.length < 2 ) { return false; }
         if ( data.charCodeAt(1) === 255 ) { if(this.display) this.display.handleData('\xFF'); return data.substring(2); }
@@ -549,10 +558,10 @@ class DecafMUD {
         }
         this.debugString('RCVD Unknown IAC sequence: ' + data.charCodeAt(1), 'warn'); return data.substring(1);
     }
-    sendIAC(seq: string) { /* ... (implementation as before, uses DecafMUD.debugIAC) ... */
+    sendIAC(seq: string) {
         this.debugString('SENT ' + DecafMUD.debugIAC(seq)); if ( this.socket ) { this.socket.write(seq); }
     }
-    handleIACSimple(seq: string) { /* ... (implementation as before, uses DecafMUD.TN) ... */
+    handleIACSimple(seq: string) {
         var t_local = DecafMUD.TN, o = this.telopt[seq.charAt(2)], c = seq.charAt(2);
         if ( o === undefined ) {
             if ( seq.charAt(1) === t_local.DO ) { this.sendIAC(t_local.IAC + t_local.WONT + c); }
@@ -566,11 +575,11 @@ class DecafMUD {
             case t_local.WONT: if (!( o._wont && o._wont() === false )) { this.sendIAC(t_local.IAC + t_local.DONT + c); } return;
         }
     }
-    disableMCCP2() { /* ... (implementation as before, uses DecafMUD.TN) ... */
+    disableMCCP2() {
         this.sendIAC(DecafMUD.TN.IAC + DecafMUD.TN.DONT + DecafMUD.TN.COMPRESSv2);
         this.startCompressV2 = false; this.decompressStream = undefined; this.inbuf = [];
     }
-    requestPermission(option: string, promptText: string, callback: (allowed: boolean) => void) { /* ... (implementation as before) ... */
+    requestPermission(option: string, promptText: string, callback: (allowed: boolean) => void) {
         var cur = this.store.get(option);
         if ( cur !== undefined && cur !== null ) { callback.call(this, !!(cur)); return; }
         var decaf = this;
@@ -640,4 +649,4 @@ const iac_reg = /\xFF/g;
 
 export { DecafMUD, DecafMUD as Decaf, DecafPlugins };
 export { DecafMUD as default };
-export const TN = DecafMUD.TN;
+export const TN = DecafMUD.TN; // Re-export TN using the static property from DecafMUD class

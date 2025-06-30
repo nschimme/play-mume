@@ -30,13 +30,13 @@ export class WebSocketSocket {
     public setup(): void {
         if ("WebSocket" in window) {
             this.ready = true;
-            this.decaf.socketReady(); // Removed 'this' argument as socketReady in core doesn't expect it.
+            this.decaf.socketReady();
             return;
         }
 
-        if (this.decaf.timer) clearTimeout(this.decaf.timer); // Assuming decaf.timer is public or accessible
+        if (this.decaf.timer) clearTimeout(this.decaf.timer);
         this.decaf.error(
-            DecafMUD.formatString( // Use DecafMUD.formatString
+            DecafMUD.formatString(
                 "Unable to create a WebSocket. Does your browser support them? If not, try {0}.",
                 '<a href="http://www.google.com/chrome" target="_blank">Google Chrome</a>'
             )
@@ -53,16 +53,16 @@ export class WebSocketSocket {
         if (currentPort === undefined) {
             currentPort = this.decaf.options.set_socket.wsport;
             if (typeof currentPort !== 'number' || currentPort < 1 || currentPort > 65535) {
-                currentPort = this.decaf.options.set_socket.policyport; // Fallback, though policyport is for Flash
+                currentPort = this.decaf.options.set_socket.policyport;
             }
-            if (typeof currentPort !== 'number' || currentPort < 1 || currentPort > 65535) { // Final fallback if policyport also not set
-                currentPort = 843; // Default WebSocket proxy wrapper often runs here
+            if (typeof currentPort !== 'number' || currentPort < 1 || currentPort > 65535) {
+                currentPort = 843;
             }
             this.port = currentPort;
         }
 
         let path = this.decaf.options.set_socket.wspath;
-        if (path === undefined) { // Default path construction if not provided
+        if (path === undefined) {
             path = 'port_' + this.decaf.options.port;
         }
 
@@ -94,17 +94,17 @@ export class WebSocketSocket {
         this.decaf.debugString(`WebSocket Connection String: ${connectionString}`);
 
         try {
-            this.websocket = new WebSocket(connectionString, 'binary'); // 'binary' is a subprotocol hint
-            this.websocket.binaryType = 'arraybuffer'; // Crucial for receiving binary data correctly
+            this.websocket = new WebSocket(connectionString); // Removed 'binary' subprotocol
+            this.websocket.binaryType = 'arraybuffer';
 
             this.websocket.onopen = (event) => this.onOpen(event);
             this.websocket.onclose = (event) => this.onClose(event);
             this.websocket.onmessage = (event) => this.onMessage(event);
             this.websocket.onerror = (event) => this.onError(event);
         } catch (e: any) {
-            this.decaf.error(formatString("Failed to create WebSocket: {0}", e.message));
-            if (this.decaf.socketClosed) { // Check if method exists before calling
-                this.decaf.socketClosed(); // Simulate a closure if connection failed to start
+            this.decaf.error(DecafMUD.formatString("Failed to create WebSocket: {0}", e.message));
+            if (this.decaf.socketClosed) {
+                this.decaf.socketClosed();
             }
         }
     }
@@ -112,7 +112,7 @@ export class WebSocketSocket {
     public close(): void {
         this.connected = false;
         if (this.websocket) {
-            this.websocket.onopen = null; // Clear handlers to prevent events during manual close
+            this.websocket.onopen = null;
             this.websocket.onclose = null;
             this.websocket.onmessage = null;
             this.websocket.onerror = null;
@@ -131,12 +131,11 @@ export class WebSocketSocket {
 
     public write(data: string): void {
         this.assertConnected();
-        if (!this.websocket) return; // Should be caught by assertConnected, but good for type safety
+        if (!this.websocket) return;
 
-        // Convert string to Uint8Array then to ArrayBuffer, as WebSocket.send(ArrayBuffer) is preferred for binary
         const byteArray = new Uint8Array(data.length);
         for (let i = 0; i < data.length; i++) {
-            byteArray[i] = data.charCodeAt(i) & 0xFF; // Ensure byte values
+            byteArray[i] = data.charCodeAt(i) & 0xFF;
         }
         this.websocket.send(byteArray.buffer);
     }
@@ -150,28 +149,22 @@ export class WebSocketSocket {
 
     private onClose(event: CloseEvent): void {
         const previouslyConnected = this.connected;
-        this.close(); // Perform full cleanup
+        this.close();
         if (previouslyConnected) {
             this.decaf.socketClosed();
         }
-        // Optionally log event.code and event.reason for debugging
         this.decaf.debugString(`WebSocket closed. Code: ${event.code}, Reason: '${event.reason}', Clean: ${event.wasClean}`);
     }
 
     private onError(event: Event): void {
-        // Type assertion if specific error properties are needed, e.g. (event as ErrorEvent).message
-        this.decaf.error(formatString("WebSocket error occurred. See browser console for details. Event: {0}", event.type));
-        // Consider also calling decaf.socketClosed() or a more specific error handler if the connection drops
-        // The onClose event will likely fire after an error that closes the socket.
+        this.decaf.error(DecafMUD.formatString("WebSocket error occurred. See browser console for details. Event: {0}", event.type));
     }
 
     private onMessage(event: MessageEvent): void {
         if (event.data instanceof ArrayBuffer) {
             this.decaf.socketData(new Uint8Array(event.data));
         } else if (typeof event.data === 'string') {
-            // This case should ideally not happen if server respects 'binary' subprotocol and we set binaryType='arraybuffer'
-            // However, if it does, we need to convert string to Uint8Array
-            this.decaf.debugString("WebSocket received string data, converting to Uint8Array. This is unexpected for 'binary' protocol.", "warn");
+            this.decaf.debugString("WebSocket received string data, converting to Uint8Array. This is unexpected if binaryType='arraybuffer' was set and server respects it.", "warn");
             const stringData = event.data as string;
             const buffer = new Uint8Array(stringData.length);
             for (let i = 0; i < stringData.length; i++) {
@@ -179,7 +172,6 @@ export class WebSocketSocket {
             }
             this.decaf.socketData(buffer);
         } else if (event.data instanceof Blob) {
-            // If data is a Blob, convert it to ArrayBuffer
              this.decaf.debugString("WebSocket received Blob data, converting to ArrayBuffer.", "warn");
             const reader = new FileReader();
             reader.onload = (e: ProgressEvent<FileReader>) => {
@@ -194,35 +186,12 @@ export class WebSocketSocket {
             };
             reader.readAsArrayBuffer(event.data as Blob);
         } else {
-            this.decaf.error(formatString("WebSocket received unknown data type: {0}", typeof event.data));
+            this.decaf.error(DecafMUD.formatString("WebSocket received unknown data type: {0}", typeof event.data));
         }
     }
-}
-
-// Helper function `formatString` needs to be available.
-// Assuming it's accessible via DecafMUD instance or globally.
-// For direct use here, it would need to be imported or defined in this scope.
-// For now, assuming `this.decaf.error` or `this.decaf.debugString` might internally use it,
-// or it's a global utility. If not, this will cause runtime errors.
-// Let's define a local one for safety if it's not part of DecafMUD's public API for plugins.
-function formatString(text: string, ...args: any[]): string {
-	let s = text;
-	if (args.length === 1 && typeof args[0] === 'object' && args[0] !== null) {
-		const obj = args[0];
-		for (const key in obj) {
-			if (Object.prototype.hasOwnProperty.call(obj, key)) {
-				s = s.replace(new RegExp(`{${key}}`, 'g'), obj[key]);
-			}
-		}
-	} else {
-		for (let i = 0; i < args.length; i++) {
-			s = s.replace(new RegExp(`{${i}}`, 'g'), args[i]);
-		}
-	}
-	return s;
 }
 
 // Registration:
 // import { WebSocketSocket } from './plugins/socket/websocket';
 // DecafMUD.plugins.Socket.websocket = WebSocketSocket;
-// This will be done in decafmud.ts
+// This is done in decafmud.ts
