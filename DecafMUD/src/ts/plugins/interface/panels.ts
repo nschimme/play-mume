@@ -12,12 +12,43 @@ function tr(this: DecafMUD | PanelsInterface, text: string, ...args: any[]): str
         const obj = args[0];
         for (const key in obj) {
             if (Object.prototype.hasOwnProperty.call(obj, key)) {
-                s = s.replace(new RegExp(`{${key}}`, 'g'), obj[key]);
+                const pattern = `{${key}}`;
+                const replacementValue = obj[key] !== undefined && obj[key] !== null ? obj[key].toString() : "";
+                console.log("[DEBUG panels.ts tr] keyed pattern:", pattern, "Replacing with:", replacementValue);
+                try {
+                    const escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    console.log("[DEBUG panels.ts tr] Testing keyed RegExp construction with pattern:", escapedPattern);
+                    const regex = new RegExp(escapedPattern, 'g');
+                    console.log("[DEBUG panels.ts tr] Keyed RegExp construction successful for:", escapedPattern);
+                    s = s.replace(regex, replacementValue);
+                } catch (e: any) {
+                    console.error("[DEBUG panels.ts tr] Keyed RegExp FAILED:", e.message, "Original pattern was:", pattern);
+                    console.log("[DEBUG panels.ts tr] Falling back to string.split().join() for keyed pattern:", pattern);
+                    let parts = s.split(pattern); // Use original pattern for split
+                    s = parts.join(replacementValue);
+                }
             }
         }
     } else {
         for (let i = 0; i < args.length; i++) {
-            s = s.replace(new RegExp(`{${i}}`, 'g'), args[i]);
+            const placeholder = `{${i}}`;
+            const replacementValue = args[i] !== undefined && args[i] !== null ? args[i].toString() : "";
+            console.log("[DEBUG panels.ts tr] indexed placeholder:", placeholder, "Replacing with:", replacementValue);
+
+            if (s.includes(placeholder)) { // Only attempt if placeholder exists
+                try {
+                    const escapedPlaceholder = placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    console.log("[DEBUG panels.ts tr] Testing indexed RegExp construction with pattern:", escapedPlaceholder);
+                    const regex = new RegExp(escapedPlaceholder, 'g');
+                    console.log("[DEBUG panels.ts tr] Indexed RegExp construction successful for:", escapedPlaceholder);
+                    s = s.replace(regex, replacementValue);
+                } catch (e: any) {
+                    console.error("[DEBUG panels.ts tr] Indexed RegExp FAILED for placeholder:", placeholder, "Error:", e.message);
+                    console.log("[DEBUG panels.ts tr] Falling back to string.split().join() for placeholder:", placeholder);
+                    let parts = s.split(placeholder); // Use original placeholder for split
+                    s = parts.join(replacementValue);
+                }
+            }
         }
     }
     return s;
