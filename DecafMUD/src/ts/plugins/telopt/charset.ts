@@ -1,5 +1,5 @@
 import type { DecafMUD, DecafPlugins } from '../../decafmud'; // Import DecafPlugins too
-import { TN } from '../../decafmud'; // Import TN
+import { TN } from '../../telnetConstants'; // Import TN from telnetConstants
 
 export class CharsetTelopt {
     private decaf: DecafMUD;

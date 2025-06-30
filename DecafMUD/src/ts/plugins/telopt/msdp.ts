@@ -1,5 +1,5 @@
 import type { DecafMUD } from '../../decafmud';
-import { TN } from '../../decafmud'; // Import TN
+import { TN } from '../../telnetConstants'; // Import TN from telnetConstants
 
 const MSDP_VAR = '\x01';
 const MSDP_VAL = '\x02';

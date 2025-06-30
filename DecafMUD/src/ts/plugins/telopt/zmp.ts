@@ -11,7 +11,8 @@
  * @version 0.9.0
  */
 
-import { DecafMUD, TN as DecafTN } from '../../decafmud'; // Using DecafTN to avoid conflict with local t
+import { DecafMUD } from '../../decafmud';
+import { TN as DecafTN } from '../../telnetConstants'; // Import TN from telnetConstants
 
 // Shortcut the TELNET constants for ease of use.
 const t = DecafTN;

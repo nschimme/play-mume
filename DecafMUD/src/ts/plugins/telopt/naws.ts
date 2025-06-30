@@ -1,5 +1,5 @@
 import type { DecafMUD } from '../../decafmud';
-import { TN } from '../../decafmud'; // Import TN
+import { TN } from '../../telnetConstants'; // Import TN from telnetConstants
 
 export class NawsTelopt {
     private decaf: DecafMUD;

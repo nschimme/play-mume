@@ -12,7 +12,7 @@
  */
 
 import { DecafMUD } from '../../decafmud'; // Assuming DecafMUD class is exported from here
-import { TN } from '../../decafmud'; // Changed import from TN_Export to TN
+import { TN } from '../../telnetConstants'; // Import TN from telnetConstants
 
 // Helper type for GMCP package structure
 interface GmcpPackage {

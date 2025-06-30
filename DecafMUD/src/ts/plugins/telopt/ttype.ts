@@ -1,5 +1,5 @@
 import type { DecafMUD } from '../../decafmud'; // Type-only import for DecafMUD reference
-import { TN } from '../../decafmud'; // Import TN
+import { TN } from '../../telnetConstants'; // Import TN from telnetConstants
 
 export class TTypeTelopt {
     private decaf: DecafMUD;

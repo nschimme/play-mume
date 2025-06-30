@@ -1,5 +1,5 @@
 import type { DecafMUD } from '../../decafmud';
-import { TN } from '../../decafmud'; // Import TN
+import { TN } from '../../telnetConstants'; // Import TN from telnetConstants
 import * as pako from 'pako'; // Ensure pako is a dependency or provided globally
 
 export class CompressV2Telopt {
