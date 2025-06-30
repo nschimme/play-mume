@@ -36,7 +36,7 @@ export class WebSocketSocket {
 
         if (this.decaf.timer) clearTimeout(this.decaf.timer); // Assuming decaf.timer is public or accessible
         this.decaf.error(
-            formatString( // Assuming formatString is globally available or imported into DecafMUD core
+            DecafMUD.formatString( // Use DecafMUD.formatString
                 "Unable to create a WebSocket. Does your browser support them? If not, try {0}.",
                 '<a href="http://www.google.com/chrome" target="_blank">Google Chrome</a>'
             )
