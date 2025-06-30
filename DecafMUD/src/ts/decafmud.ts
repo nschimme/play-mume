@@ -139,6 +139,7 @@ class DecafMUD {
         display: 'standard', interface: 'simple', connect_timeout: 5000,
 		reconnect_tries: 10, reconnect_delay: 2500,
         ttypes: ['DECAFMUD', 'XTERM', 'ANSI', 'VT100', 'UNKNOWN'], // Added default ttypes
+        encoding_order: ['utf8', 'iso885915', 'iso88591', 'cp437'], // Added default encoding_order
     };
     static settings: any = {};
 
