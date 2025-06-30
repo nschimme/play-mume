@@ -138,6 +138,7 @@ class DecafMUD {
         encoding: 'iso88591', socket: 'websocket', storage: 'standard',
         display: 'standard', interface: 'simple', connect_timeout: 5000,
 		reconnect_tries: 10, reconnect_delay: 2500,
+        ttypes: ['DECAFMUD', 'XTERM', 'ANSI', 'VT100', 'UNKNOWN'], // Added default ttypes
     };
     static settings: any = {};
 

@@ -1,4 +1,4 @@
-import type { DecafMUD } from '../../decafmud'; // Type-only import for DecafMUD reference
+import { DecafMUD } from '../../decafmud'; // Changed to value import
 import { TN } from '../../telnetConstants'; // Import TN from telnetConstants
 
 export class TTypeTelopt {
@@ -18,15 +18,18 @@ export class TTypeTelopt {
     }
 
     public _sb(data: string): false | void {
-        if (data !== TN.ECHO) { // Use imported TN
-            return;
+        // TTYPE subnegotiation SEND command is \x01
+        // data here is the content of the subnegotiation, after IAC SB TTYPE
+        if (data.charCodeAt(0) !== 1 || data.length !== 1) {
+            this.decaf.debugString('TTYPE: Received unexpected subnegotiation data: ' + data, 'warn');
+            return false; // Don't process further if not TTYPE SEND
         }
         this.current = (this.current + 1) % this.decaf.options.ttypes.length;
 
-        // const TN = this.decaf.constructor.TN; // Now imported
-        this.decaf.debugString('RCVD ' + (this.decaf.constructor as any).debugIAC(TN.IAC + TN.SB + TN.TTYPE + TN.ECHO + TN.IAC + TN.SE));
+        // Corrected debug string to show actual received data (which is just the SEND command)
+        this.decaf.debugString('RCVD ' + DecafMUD.debugIAC(TN.IAC + TN.SB + TN.TTYPE + data + TN.IAC + TN.SE));
         this.decaf.sendIAC(TN.IAC + TN.SB + TN.TTYPE + TN.IS + this.decaf.options.ttypes[this.current] + TN.IAC + TN.SE);
 
-        return false; // Explicitly return false as per original logic potentially suppressing debug
+        return false; // Suppress default debug message for SB, as we've logged a more accurate one
     }
 }

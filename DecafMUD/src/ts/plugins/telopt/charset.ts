@@ -1,4 +1,4 @@
-import type { DecafMUD, DecafPlugins } from '../../decafmud'; // Import DecafPlugins too
+import { DecafMUD, type DecafPlugins } from '../../decafmud'; // DecafMUD as value, DecafPlugins as type
 import { TN } from '../../telnetConstants'; // Import TN from telnetConstants
 
 export class CharsetTelopt {
@@ -16,28 +16,26 @@ export class CharsetTelopt {
         setTimeout(() => {
             const requestedCharsets: string[] = [];
             const doneEncodings: string[] = [];
-            // const TN = this.decaf.constructor.TN; // Static access - Now imported
-            const DecafMUDGlobal = this.decaf.constructor as any; // To access static DecafMUD.plugins
 
             const currentEncoding = this.decaf.options.encoding;
             if (currentEncoding !== 'iso88591' &&
-                DecafMUDGlobal.plugins.Encoding[currentEncoding]?.proper) {
-                requestedCharsets.push(DecafMUDGlobal.plugins.Encoding[currentEncoding].proper);
+                DecafMUD.plugins.Encoding[currentEncoding]?.proper) {
+                requestedCharsets.push(DecafMUD.plugins.Encoding[currentEncoding].proper);
                 doneEncodings.push(currentEncoding);
             }
 
             for (const encName of this.decaf.options.encoding_order) {
-                if (DecafMUDGlobal.plugins.Encoding[encName]?.proper &&
+                if (DecafMUD.plugins.Encoding[encName]?.proper &&
                     !doneEncodings.includes(encName)) {
-                    requestedCharsets.push(DecafMUDGlobal.plugins.Encoding[encName].proper);
+                    requestedCharsets.push(DecafMUD.plugins.Encoding[encName].proper);
                     doneEncodings.push(encName);
                 }
             }
 
-            for (const encKey in DecafMUDGlobal.plugins.Encoding) {
-                if (Object.prototype.hasOwnProperty.call(DecafMUDGlobal.plugins.Encoding, encKey)) {
-                    if (!doneEncodings.includes(encKey) && DecafMUDGlobal.plugins.Encoding[encKey].proper) {
-                        requestedCharsets.push(DecafMUDGlobal.plugins.Encoding[encKey].proper);
+            for (const encKey in DecafMUD.plugins.Encoding) {
+                if (Object.prototype.hasOwnProperty.call(DecafMUD.plugins.Encoding, encKey)) {
+                    if (!doneEncodings.includes(encKey) && DecafMUD.plugins.Encoding[encKey].proper) {
+                        requestedCharsets.push(DecafMUD.plugins.Encoding[encKey].proper);
                         // No need to add to doneEncodings here as we are iterating all available
                     }
                 }
