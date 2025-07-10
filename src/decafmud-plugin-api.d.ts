@@ -63,6 +63,19 @@ export interface DecafMUDExternalPlugin {
      * @param message The GMCP message (can be an object which will be stringified or a string).
      */
     sendGMCP?: (packageName: string, message: any) => void;
+
+    /**
+     * Called when DecafMUD's GMCP telopt handler has been activated by the client
+     * (i.e., it has sent Core.Hello to the server). This indicates that the client
+     * is ready to send and process GMCP messages. It does not guarantee the server
+     * fully supports or has acknowledged GMCP yet, but it's the earliest point the
+     * client-side GMCP module is considered "ready".
+     *
+     * @param gmcpClientInfo Information about the client's GMCP capabilities,
+     *                       e.g., `{ client: "DecafMUD", version: "x.y.z" }`.
+     * Optional.
+     */
+    onGMCPReady?: (gmcpClientInfo: { client: string, version: string }) => void;
 }
 
 // Extend the existing DecafMUDInstance interface if it's already declared elsewhere (e.g. in a global d.ts)

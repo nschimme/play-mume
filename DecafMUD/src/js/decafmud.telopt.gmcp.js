@@ -55,6 +55,23 @@ GMCP.prototype._will = function() {
 	
 	// Also, start the ping loop.
 	this.pingTimer = setTimeout(function(){g.ping();}, this.pingDelay*1000);
+
+	// Notify external plugins that GMCP is now active from the client's perspective
+	if (g.decaf && g.decaf.externalPlugins) {
+		for (var pluginName in g.decaf.externalPlugins) {
+			if (g.decaf.externalPlugins.hasOwnProperty(pluginName)) {
+				var plugin = g.decaf.externalPlugins[pluginName];
+				if (typeof plugin.onGMCPReady === 'function') {
+					try {
+						// We don't have specific server support info yet, but can pass the client's hello
+						plugin.onGMCPReady({ client: "DecafMUD", version: DecafMUD.version.toString() });
+					} catch (e) {
+						g.decaf.debugString('Error calling onGMCPReady for external plugin "' + pluginName + '": ' + e, 'error');
+					}
+				}
+			}
+		}
+	}
 }
 
 /** Send a ping. */

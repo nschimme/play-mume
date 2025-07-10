@@ -89,15 +89,17 @@ class MumePlayPlugin implements DecafMUDExternalPlugin {
       this.decafMUD = DecafMUD.instances[0];
     }
     this.xmlParser.connected(); // Sets MumeXmlParser mode to AsSoonAsPossible
+    // The actual MUME.Client.XML request will be sent in onGMCPReady
+  }
 
-    // Request XML mode via GMCP
+  onGMCPReady(gmcpClientInfo: { client: string, version: string }): void {
+    console.log("MumePlayPlugin: GMCP ready signal received.", gmcpClientInfo);
+    // Now request XML mode via GMCP
     if (this.sendGMCP) {
       console.log("MumePlayPlugin: Requesting XML mode via GMCP MUME.Client.XML { state: \"on\" }");
       this.sendGMCP("MUME.Client.XML", { state: "on" });
     } else {
-      console.warn("MumePlayPlugin: sendGMCP method not available, cannot request XML mode via GMCP.");
-      // As a fallback, we might consider if the old negotiation should be triggered here,
-      // but the goal is to rely on GMCP. For now, just log a warning.
+      console.warn("MumePlayPlugin: sendGMCP method not available at onGMCPReady, cannot request XML mode via GMCP.");
     }
   }
 
