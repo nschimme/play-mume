@@ -1859,16 +1859,10 @@ export class MumeXmlParser
                 // gratuitous descs. Hopefully, the first screen won't be split
                 // across filterInputText() calls, or we'll have to keep state.
 
-                // Use the injected send method from the plugin, if available, or fallback to direct socket write
-                // For initial negotiation, direct socket write is likely still needed if 'send' isn't fully set up.
-                const decaf = this.getDecafInstance();
-                if (decaf && decaf.socket) {
-                    decaf.socket.write( "~$#EX2\n1G\n" );
-                    this.setXmlModeDesirable();
-                    console.log( "Negotiating MUME XML mode" );
-                } else {
-                    console.error("MumeXmlParser: DecafMUD instance or socket not available for XML negotiation.");
-                }
+                // The MumePlayPlugin is now responsible for sending the GMCP request.
+                // We just transition to Desirable mode here, assuming the request will be/was sent.
+                this.setXmlModeDesirable();
+                console.log( "MumeXmlParser: Switched to Desirable mode, awaiting <xml> tag." );
             }
 
             // fall through
