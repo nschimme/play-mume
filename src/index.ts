@@ -35,7 +35,8 @@ import { throttle } from './utils';
 import './errorhandler';
 import './mume.macros';
 import './mume.menu';
-import { MumeMap, MumeXmlParser } from './mume.mapper';
+import { MumeMap, MumeXmlParser, MumeXmlParserTag } from './mume.mapper';
+import { DecafMUDExternalPlugin } from './decafmud-plugin-api';
 
 let globalMapWindow: Window | null | undefined;
 let _globalSplit: Split.Instance | undefined;
@@ -52,15 +53,72 @@ function canvasFitParent(): void {
   }
 }
 
+class MumePlayPlugin implements DecafMUDExternalPlugin {
+  private xmlParser: MumeXmlParser;
+  private decafMUD: DecafMUDInstance | null = null;
+
+  constructor() {
+    // The DecafMUD instance isn't available at construction time of the plugin object
+    // if the plugin is instantiated before DecafMUD.
+    // We'll get it during onConnect or rely on DecafMUD.instances[0] if needed sooner.
+    this.xmlParser = new MumeXmlParser(this.getDecafMUDInstance.bind(this));
+
+    // Forwarding events from MumeXmlParser to MumeMap
+    $(this.xmlParser).on(MumeXmlParser.SIG_TAG_END, (_event: unknown, tag: MumeXmlParserTag) => {
+      if (globalMap) {
+        globalMap.processTag(_event, tag);
+      }
+    });
+  }
+
+  private getDecafMUDInstance(): DecafMUDInstance {
+    if (this.decafMUD) {
+      return this.decafMUD;
+    }
+    // This is a fallback if the plugin needs the instance before onConnect.
+    // Assumes only one DecafMUD instance.
+    if (typeof DecafMUD !== 'undefined' && DecafMUD.instances && DecafMUD.instances[0]) {
+      return DecafMUD.instances[0];
+    }
+    throw new Error("DecafMUD instance not available to MumePlayPlugin.");
+  }
+
+  onConnect(): void {
+    console.log("MumePlayPlugin: Connected to DecafMUD.");
+    if (DecafMUD.instances && DecafMUD.instances[0]) {
+      this.decafMUD = DecafMUD.instances[0];
+    }
+    this.xmlParser.connected();
+  }
+
+  onDisconnect(): void {
+    console.log("MumePlayPlugin: Disconnected from DecafMUD.");
+    this.xmlParser.clear(); // Reset XML parser state
+  }
+
+  onData(text: string): string {
+    // Pass data through the XML parser
+    // The MumeXmlParser.filterInputText will handle text accumulation and event emission.
+    return this.xmlParser.filterInputText(text);
+  }
+
+  // The 'send' and 'sendGMCP' methods will be injected by DecafMUD itself.
+  // We just declare them here to satisfy the interface for type-checking if we were to call them internally,
+  // though typically they are for DecafMUD to provide to us.
+  send?: (dataToSend: string) => void;
+  sendGMCP?: (packageName: string, message: any) => void;
+}
+
+
 $(window).on('load', function () {
-  if (typeof DecafMUD === 'undefined' || !DecafMUD.plugins?.TextInputFilter) {
-    console.error('DecafMUD or DecafMUD.plugins.TextInputFilter is not loaded!');
+  if (typeof DecafMUD === 'undefined') {
+    console.error('DecafMUD is not loaded!');
     return;
   }
 
-  DecafMUD.plugins.TextInputFilter.mumexml = MumeXmlParser;
+  const mumePlugin = new MumePlayPlugin();
 
-  new DecafMUD({
+  const decafOptions = {
     host: 'mume.org',
     port: 443,
     autoreconnect: false,
@@ -78,9 +136,18 @@ $(window).on('load', function () {
       start_full: false,
     },
     language: 'en',
-    textinputfilter: 'mumexml',
+    // textinputfilter: 'mumexml', // This will be handled by our plugin's onData method
     socket: 'websocket',
-  });
+  };
+
+  const decaf = new DecafMUD(decafOptions);
+
+  // Register the MUME plugin
+  if (decaf.registerExternalPlugin) {
+    decaf.registerExternalPlugin("MumePlayFeatures", mumePlugin);
+  } else {
+    console.error("DecafMUD registerExternalPlugin function not found. MUME features may not work.");
+  }
 
   _globalSplit = Split(['#mume-client-panel', '#mume-map-panel'], {
     sizes: [80, 20],
@@ -101,25 +168,10 @@ $(window).on('load', function () {
   });
 
   MumeMap.load('mume-map').done(function (map: MumeMap) {
-    let parser: MumeXmlParser;
-    let tagEventHandler;
-
-    if (DecafMUD.instances && DecafMUD.instances[0] && DecafMUD.instances[0].textInputFilter) {
-      parser = DecafMUD.instances[0].textInputFilter as MumeXmlParser;
-      if (!parser || typeof parser.filterInputText !== 'function') {
-         console.error("Bug: expected to find a MumeXmlParser instance.");
-         throw new Error("MumeXmlParser not found or invalid.");
-      }
-
-      tagEventHandler = map.processTag.bind(map);
-      $(parser).on(MumeXmlParser.SIG_TAG_END, tagEventHandler);
-      console.log('The map widget will now receive parsing events');
-    } else {
-      console.error('DecafMUD instance or textInputFilter not found for map integration.');
-      throw new Error('DecafMUD instance or textInputFilter not found.');
-    }
-
+    // The MumeXmlParser event handling is now set up within the MumePlayPlugin constructor.
+    // We just need to assign the loaded map to the global variable so the plugin can use it.
     globalMap = map;
+    console.log('MumeMap loaded and ready for MumePlayPlugin.');
 
     $(window).on('resize', throttle(canvasFitParent, 500));
     canvasFitParent();

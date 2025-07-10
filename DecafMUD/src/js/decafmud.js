@@ -227,23 +227,100 @@ DecafMUD.plugins = {
 	 * @type Object */
 	Telopt		: {},
 
-		/** These plugins filter text sent by the MUD after the Telnet
-		 * sequences are interpreted and removed, but it still contains the
-		 * ANSI escape sequences (colors etc).
-		 *
-		 * These plugins must provide the following functions:
-		 * - filterInputText( text ), returns the modified text.
-		 * - connected(), for clearing any internal state upon (re)connecting.
-		 *
-		 * You can enable the registered plugin to use with the
-		 * "textinputfilter" DecafMUD instance option.
-		 *
-		 * Example usage:  MUME makes it easier to parse its output by adding
-		 * pseudo-XML tags. They need to be parsed and removed from what's
-		 * shown to the user.
-		 */
-		TextInputFilter : {}
+	/** These plugins filter text sent by the MUD after the Telnet
+	 * sequences are interpreted and removed, but it still contains the
+	 * ANSI escape sequences (colors etc).
+	 *
+	 * These plugins must provide the following functions:
+	 * - filterInputText( text ), returns the modified text.
+	 * - connected(), for clearing any internal state upon (re)connecting.
+	 *
+	 * You can enable the registered plugin to use with the
+	 * "textinputfilter" DecafMUD instance option.
+	 *
+	 * Example usage:  MUME makes it easier to parse its output by adding
+	 * pseudo-XML tags. They need to be parsed and removed from what's
+	 * shown to the user.
+	 */
+	TextInputFilter : {},
+
+	/** These plugins are external JavaScript modules that conform to a specific API.
+	 * They can be used to extend DecafMUD's functionality.
+	 * ExternalJS plugins are registered via DecafMUD.prototype.registerExternalPlugin
+	 * @type Object
+	 */
+	ExternalJS : {}
 };
+
+/** Stores registered external plugins for each DecafMUD instance.
+ *  Keyed by plugin name.
+ * @type {Object.<string, Object>} */
+DecafMUD.prototype.externalPlugins = {};
+
+/**
+ * Registers an external JavaScript plugin with this DecafMUD instance.
+ * The plugin object is expected to have some of the following methods:
+ * - onConnect(): Called when the socket connects.
+ * - onDisconnect(): Called when the socket disconnects.
+ * - onData(text): Called with decoded text received from the server, before standard text input filtering.
+ *                 Should return the processed text. If multiple plugins are registered,
+ *                 they are called in registration order, each receiving the output of the previous.
+ * - send(data): A function provided by DecafMUD to the plugin, allowing it to send data to the server.
+ *
+ * @param {string} name The name of the plugin.
+ * @param {Object} pluginObject The plugin object itself.
+ */
+DecafMUD.prototype.registerExternalPlugin = function(name, pluginObject) {
+	if (typeof name !== 'string' || !name) {
+		this.debugString('External plugin name must be a non-empty string.', 'error');
+		return;
+	}
+	if (typeof pluginObject !== 'object' || pluginObject === null) {
+		this.debugString('External plugin object must be a valid object.', 'error');
+		return;
+	}
+
+	if (this.externalPlugins[name]) {
+		this.debugString('External plugin "' + name + '" is already registered. Overwriting.', 'warn');
+	}
+
+	// Provide a send method to the plugin, bound to this DecafMUD instance
+	var decafInstance = this;
+	pluginObject.send = function(data) {
+		if (typeof data !== 'string') {
+			decafInstance.debugString('Plugin "' + name + '" attempted to send non-string data.', 'error');
+			return;
+		}
+		// Corresponds to sendInput, but without adding \r\n, assuming plugin handles it.
+		// Or we can define that the plugin should not add \r\n and we add it here.
+		// For now, let's assume the plugin sends a complete line including \r\n if needed.
+		// Or, more simply, just call sendInput which adds \r\n.
+		// Let's make it simpler: plugin sends a command line, sendInput handles the rest.
+		decafInstance.sendInput(data);
+	};
+
+	pluginObject.sendGMCP = function(packageName, message) {
+		if (!decafInstance.telopt[DecafMUD.TN.GMCP] || !decafInstance.telopt[DecafMUD.TN.GMCP].send) {
+			decafInstance.debugString('Plugin "' + name + '" attempted to send GMCP but GMCP telopt is not available/active.', 'warn');
+			return;
+		}
+		decafInstance.telopt[DecafMUD.TN.GMCP].send(packageName, message);
+	};
+
+
+	this.externalPlugins[name] = pluginObject;
+	this.debugString('External plugin "' + name + '" registered successfully.', 'info');
+
+	// If already connected, call onConnect (if it exists)
+	if (this.connected && typeof pluginObject.onConnect === 'function') {
+		try {
+			pluginObject.onConnect();
+		} catch (e) {
+			this.debugString('Error calling onConnect for plugin "' + name + '": ' + e, 'error');
+		}
+	}
+};
+
 
 /** This plugin handles conversion between raw data and iso-8859-1 encoded
  *  text, somewhat unimpressively as they're effectively the same thing.
@@ -1496,8 +1573,23 @@ DecafMUD.prototype.socketConnected = function() {
 			this.telopt[k].connect(); }
 	}
 
-	if ( this.textInputFilter )
+	if ( this.textInputFilter ) {
 		this.textInputFilter.connected();
+	}
+
+	// Call onConnect for external plugins
+	for (var pluginName in this.externalPlugins) {
+		if (this.externalPlugins.hasOwnProperty(pluginName)) {
+			var plugin = this.externalPlugins[pluginName];
+			if (typeof plugin.onConnect === 'function') {
+				try {
+					plugin.onConnect();
+				} catch (e) {
+					this.debugString('Error calling onConnect for external plugin "' + pluginName + '": ' + e, 'error');
+				}
+			}
+		}
+	}
 
 	// Show that we're connected.
 	if ( this.ui && this.ui.connected ) {
@@ -1517,6 +1609,20 @@ DecafMUD.prototype.socketClosed = function() {
 	for(var k in this.telopt) {
 		if ( this.telopt[k] && this.telopt[k].disconnect ) {
 			this.telopt[k].disconnect(); }
+	}
+
+	// Call onDisconnect for external plugins
+	for (var pluginName in this.externalPlugins) {
+		if (this.externalPlugins.hasOwnProperty(pluginName)) {
+			var plugin = this.externalPlugins[pluginName];
+			if (typeof plugin.onDisconnect === 'function') {
+				try {
+					plugin.onDisconnect();
+				} catch (e) {
+					this.debugString('Error calling onDisconnect for external plugin "' + pluginName + '": ' + e, 'error');
+				}
+			}
+		}
 	}
 	
 	// Clear the buffer to ensure we don't enter into a bad state on reconnect.
@@ -1704,12 +1810,32 @@ DecafMUD.prototype.processBuffer = function() {
 /** Filters text (if a filter is installed) and sends it to the display
  *  handler. */
 DecafMUD.prototype.handleInputText = function(text) {
+	// Call onData for external plugins first
+	for (var pluginName in this.externalPlugins) {
+		if (this.externalPlugins.hasOwnProperty(pluginName)) {
+			var plugin = this.externalPlugins[pluginName];
+			if (typeof plugin.onData === 'function') {
+				try {
+					var processedText = plugin.onData(text);
+					if (typeof processedText === 'string') {
+						text = processedText;
+					} else {
+						this.debugString('External plugin "' + pluginName + '" onData method did not return a string. Original text used.', 'warn');
+					}
+				} catch (e) {
+					this.debugString('Error calling onData for external plugin "' + pluginName + '": ' + e, 'error');
+				}
+			}
+		}
+	}
 
-	if ( this.textInputFilter )
+	if ( this.textInputFilter ) {
 		text = this.textInputFilter.filterInputText(text);
+	}
 
-	if ( this.display )
+	if ( this.display ) {
 		this.display.handleData(text);
+	}
 }
 
 /** Read an IAC sequence from the supplied data. Then return either the remaining

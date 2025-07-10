@@ -1809,12 +1809,11 @@ export class MumeXmlParser
     private plainText!: string;
     private mode!: MumeXmlMode;
     private xmlDesirableBytes: number = 0;
-    private decaf: DecafMUDInstance;
+    private getDecafInstance: () => DecafMUDInstance; // Function to get the Decaf instance
     private scouting!: ScoutingState
 
-    constructor( decaf: DecafMUDInstance )
-    {
-        this.decaf = decaf;
+    constructor(getDecafInstance: () => DecafMUDInstance) {
+        this.getDecafInstance = getDecafInstance;
         this.clear();
     }
 
@@ -1859,9 +1858,17 @@ export class MumeXmlParser
                 // Wait until we're done with the pre-play to request XML mode +
                 // gratuitous descs. Hopefully, the first screen won't be split
                 // across filterInputText() calls, or we'll have to keep state.
-                this.decaf.socket.write( "~$#EX2\n1G\n" );
-                this.setXmlModeDesirable();
-                console.log( "Negotiating MUME XML mode" );
+
+                // Use the injected send method from the plugin, if available, or fallback to direct socket write
+                // For initial negotiation, direct socket write is likely still needed if 'send' isn't fully set up.
+                const decaf = this.getDecafInstance();
+                if (decaf && decaf.socket) {
+                    decaf.socket.write( "~$#EX2\n1G\n" );
+                    this.setXmlModeDesirable();
+                    console.log( "Negotiating MUME XML mode" );
+                } else {
+                    console.error("MumeXmlParser: DecafMUD instance or socket not available for XML negotiation.");
+                }
             }
 
             // fall through
