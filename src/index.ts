@@ -35,7 +35,7 @@ import { throttle } from './utils';
 import './errorhandler';
 // import './mume.macros'; // Will be handled by the plugin
 import './mume.menu'; // For now, keep menu as is, pending further analysis/decision
-import { MumeMap, MumeXmlParser, MumeXmlParserTag } from './mume.mapper';
+import { MumeMap } from './mume.mapper'; // Removed MumeXmlParser, MumeXmlParserTag
 import { DecafMUDExternalPlugin } from './decafmud-plugin-api';
 import { tryExtraMacro } from './mume.macros';
 
@@ -55,20 +55,20 @@ function canvasFitParent(): void {
 }
 
 class MumePlayPlugin implements DecafMUDExternalPlugin {
-  private xmlParser: MumeXmlParser;
+  // private xmlParser: MumeXmlParser; // Removed
   private decafMUD: DecafMUDInstance | null = null;
   private boundHandleKeyDown: (event: KeyboardEvent) => void;
 
   constructor() {
-    this.xmlParser = new MumeXmlParser(this.getDecafMUDInstance.bind(this));
+    // this.xmlParser = new MumeXmlParser(this.getDecafMUDInstance.bind(this)); // Removed
     this.boundHandleKeyDown = this.handleKeyDown.bind(this);
 
-    // Forwarding events from MumeXmlParser to MumeMap
-    $(this.xmlParser).on(MumeXmlParser.SIG_TAG_END, (_event: unknown, tag: MumeXmlParserTag) => {
-      if (globalMap) {
-        globalMap.processTag(_event, tag);
-      }
-    });
+    // XML Parser event forwarding removed
+    // $(this.xmlParser).on(MumeXmlParser.SIG_TAG_END, (_event: unknown, tag: MumeXmlParserTag) => {
+    //   if (globalMap) {
+    //     globalMap.processTag(_event, tag);
+    //   }
+    // });
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
@@ -106,39 +106,64 @@ class MumePlayPlugin implements DecafMUDExternalPlugin {
         this.send = this.decafMUD.externalPlugins["MumePlayFeatures"].send;
       }
     }
-    this.xmlParser.connected(); // Sets MumeXmlParser mode to AsSoonAsPossible
+    // this.xmlParser.connected(); // Removed as xmlParser is removed
     document.addEventListener('keydown', this.boundHandleKeyDown, true);
     // The actual MUME.Client.XML request will be sent in onGMCPReady
   }
 
   onGMCPReady(gmcpClientInfo: { client: string, version: string }): void {
     console.log("MumePlayPlugin: GMCP ready signal received.", gmcpClientInfo);
-    // Now request XML mode via GMCP
-    if (this.sendGMCP) {
-      console.log("MumePlayPlugin: Requesting XML mode via GMCP MUME.Client.XML { state: \"on\" }");
-      this.sendGMCP("MUME.Client.XML", { state: "on" });
-    } else {
-      console.warn("MumePlayPlugin: sendGMCP method not available at onGMCPReady, cannot request XML mode via GMCP.");
-    }
+    // XML mode request removed as per new plan.
+    // if (this.sendGMCP) {
+    //   console.log("MumePlayPlugin: Requesting XML mode via GMCP MUME.Client.XML { state: \"on\" }");
+    //   this.sendGMCP("MUME.Client.XML", { state: "on" });
+    // } else {
+    //   console.warn("MumePlayPlugin: sendGMCP method not available at onGMCPReady, cannot request XML mode via GMCP.");
+    // }
+    console.log("MumePlayPlugin: XML mode request via GMCP has been disabled.");
   }
 
   onDisconnect(): void {
     console.log("MumePlayPlugin: Disconnected from DecafMUD.");
     document.removeEventListener('keydown', this.boundHandleKeyDown, true);
-    this.xmlParser.clear(); // Reset XML parser state
+    // this.xmlParser.clear(); // Removed
   }
 
-  onData(text: string): string {
-    // Pass data through the XML parser
-    // The MumeXmlParser.filterInputText will handle text accumulation and event emission.
-    return this.xmlParser.filterInputText(text);
-  }
+  // onData method removed as it's no longer called by DecafMUD for text filtering by this plugin.
+  // onData(text: string): string {
+  //   return text; // If it were to be kept, it would just pass through.
+  // }
 
   // The 'send' and 'sendGMCP' methods will be injected by DecafMUD itself.
   // We just declare them here to satisfy the interface for type-checking if we were to call them internally,
   // though typically they are for DecafMUD to provide to us.
   send?: (dataToSend: string) => void;
   sendGMCP?: (packageName: string, message: any) => void;
+
+  onGMCPMessage(packageName: string, data: any): void {
+    // console.log(`MumePlayPlugin: Received GMCP Message: ${packageName}`, data);
+
+    if (packageName === "Room.Info") {
+      console.log("MumePlayPlugin: GMCP Room.Info received:", data);
+      if (data && typeof data.name === 'string' && typeof data.desc === 'string' && globalMap && globalMap.pathMachine) {
+        // Use a short delay to allow DecafMUD to display the text before map potentially moves.
+        // This also helps if Room.Info arrives slightly before XML tags that might clear context.
+        setTimeout(() => {
+          if (globalMap && globalMap.pathMachine) { // Re-check globalMap in case of disconnect during timeout
+            globalMap.pathMachine.updateRoomFromGMCP(data.name, data.desc);
+          }
+        }, 50);
+      } else {
+        console.warn("MumePlayPlugin: Invalid or incomplete Room.Info data, or map not ready.", data);
+      }
+    } else if (packageName === "MUME.Room.UpdateExits") {
+      console.log("MumePlayPlugin: GMCP MUME.Room.UpdateExits received:", data);
+      if (data && globalMap && globalMap.pathMachine) {
+        globalMap.pathMachine.updateExitsFromGMCP(data);
+      }
+    }
+    // Potentially handle other GMCP messages like Char.Vitals, etc. here
+  }
 }
 
 
@@ -168,7 +193,7 @@ $(window).on('load', function () {
       start_full: false,
     },
     language: 'en',
-    // textinputfilter: 'mumexml', // This will be handled by our plugin's onData method
+    // textinputfilter: 'mumexml', // This option is no longer used by DecafMUD's core handleInputText
     socket: 'websocket',
   };
 

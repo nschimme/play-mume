@@ -43,7 +43,7 @@ export interface DecafMUDExternalPlugin {
      *          If a non-string is returned, a warning will be logged and original text used.
      * Optional.
      */
-    onData?: (text: string) => string;
+    // onData?: (text: string) => string; // Removed as DecafMUD no longer calls this
 
     /**
      * Injected by DecafMUD when the plugin is registered.
@@ -76,6 +76,16 @@ export interface DecafMUDExternalPlugin {
      * Optional.
      */
     onGMCPReady?: (gmcpClientInfo: { client: string, version: string }) => void;
+
+    /**
+     * Called by DecafMUD's GMCP Telopt handler whenever any GMCP message is received from the server.
+     * The plugin can then inspect the packageName and data to handle messages it cares about.
+     *
+     * @param packageName The full GMCP package name (e.g., "Room.Info", "Char.Vitals").
+     * @param data The parsed JSON data payload of the GMCP message. Can be undefined if the message has no payload.
+     * Optional.
+     */
+    onGMCPMessage?: (packageName: string, data: any) => void;
 }
 
 // Extend the existing DecafMUDInstance interface if it's already declared elsewhere (e.g. in a global d.ts)

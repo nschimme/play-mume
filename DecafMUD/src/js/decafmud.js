@@ -1807,31 +1807,11 @@ DecafMUD.prototype.processBuffer = function() {
 	}
 }
 
-/** Filters text (if a filter is installed) and sends it to the display
- *  handler. */
+/** Sends decoded text directly to the display handler.
+ *  Text filtering (both external plugin onData and internal textInputFilter) has been removed. */
 DecafMUD.prototype.handleInputText = function(text) {
-	// Call onData for external plugins first
-	for (var pluginName in this.externalPlugins) {
-		if (this.externalPlugins.hasOwnProperty(pluginName)) {
-			var plugin = this.externalPlugins[pluginName];
-			if (typeof plugin.onData === 'function') {
-				try {
-					var processedText = plugin.onData(text);
-					if (typeof processedText === 'string') {
-						text = processedText;
-					} else {
-						this.debugString('External plugin "' + pluginName + '" onData method did not return a string. Original text used.', 'warn');
-					}
-				} catch (e) {
-					this.debugString('Error calling onData for external plugin "' + pluginName + '": ' + e, 'error');
-				}
-			}
-		}
-	}
-
-	if ( this.textInputFilter ) {
-		text = this.textInputFilter.filterInputText(text);
-	}
+	// External plugin onData loop removed.
+	// Internal textInputFilter processing removed.
 
 	if ( this.display ) {
 		this.display.handleData(text);

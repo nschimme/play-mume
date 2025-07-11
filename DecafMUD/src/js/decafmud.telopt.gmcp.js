@@ -111,6 +111,22 @@ GMCP.prototype._sb = function(data) {
 	
 	// Call it.
 	if ( func ) { func.call(this, out); }
+
+	// Notify external plugins about the received GMCP message
+	if (this.decaf && this.decaf.externalPlugins) {
+		for (var pluginName in this.decaf.externalPlugins) {
+			if (this.decaf.externalPlugins.hasOwnProperty(pluginName)) {
+				var plugin = this.decaf.externalPlugins[pluginName];
+				if (typeof plugin.onGMCPMessage === 'function') {
+					try {
+						plugin.onGMCPMessage(pckg, out);
+					} catch (e) {
+						this.decaf.debugString('Error calling onGMCPMessage for external plugin "' + pluginName + '" for package "' + pckg + '": ' + e, 'error');
+					}
+				}
+			}
+		}
+	}
 	
 	return ret; // We print our own debug info.
 }

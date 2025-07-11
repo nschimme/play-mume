@@ -16,40 +16,28 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
 import $ from 'jquery';
-import { MumeMap, MumeXmlParser, RoomCoords, MumeXmlParserTag } from './mume.mapper';
+// Removed MumeXmlParser, MumeXmlParserTag from imports
+import { MumeMap, RoomCoords } from './mume.mapper';
 import { throttle } from './utils';
 
 (function () {
   "use strict";
 
-  let tagEventHandler: ((_event: unknown, tag: MumeXmlParserTag) => void) | undefined;
+  // let tagEventHandler: ((_event: unknown, tag: MumeXmlParserTag) => void) | undefined; // Removed
 
   $(window).on("load", function (_e: JQuery.Event) {
     MumeMap.load("mume-map").done(function (map: MumeMap) {
-      let parser: MumeXmlParser | undefined;
+      // let parser: MumeXmlParser | undefined; // Removed
       let matches: RegExpExecArray | null;
 
       const opener = window.opener as Window; // Cast once
 
       if (opener && opener.DecafMUD && opener.DecafMUD.instances && opener.DecafMUD.instances[0]) {
-        const decafInstance = opener.DecafMUD.instances[0];
-        if (decafInstance) {
-            parser = decafInstance.textInputFilter as MumeXmlParser;
-        }
-
-
-        if (!parser || typeof parser.filterInputText !== 'function') {
-          console.error("Bug: expected to find a MumeXmlParser instance in opener window or textInputFilter is invalid.");
-          parser = undefined;
-        }
-
-        if (parser) {
-          tagEventHandler = map.processTag.bind(map);
-          $(parser).on(MumeXmlParser.SIG_TAG_END, tagEventHandler);
-          console.log("The main window will now send data to the map window");
-        } else {
-            console.log("MumeXmlParser not found or invalid on opener, map events not bound.");
-        }
+        // const decafInstance = opener.DecafMUD.instances[0]; // Not used for parser anymore
+        // XML Parser related logic removed.
+        // The detached map will currently only show the initial room based on the hash.
+        // It will not receive live updates from the main window without a new communication mechanism.
+        console.log("Detached map loaded. Live updates from main window require new IPC mechanism.");
 
         if ((matches = /^#(\d+),(\d+),(\d+)$/.exec(location.hash))) {
           map.onMovement(null, new RoomCoords(+matches[1], +matches[2], +matches[3]));
@@ -72,16 +60,17 @@ import { throttle } from './utils';
   });
 
   $(window).on("unload", function (_e: JQuery.Event) {
-    const opener = window.opener as Window;
-    if (opener && opener.DecafMUD && opener.DecafMUD.instances && opener.DecafMUD.instances[0]) {
-      const decafInstance = opener.DecafMUD.instances[0];
-      if (decafInstance) {
-        const parser = decafInstance.textInputFilter;
-        if (tagEventHandler && parser) {
-          $(parser).off(MumeXmlParser.SIG_TAG_END, tagEventHandler);
-        }
-      }
-    }
+    // const opener = window.opener as Window; // No longer needed for parser
+    // if (opener && opener.DecafMUD && opener.DecafMUD.instances && opener.DecafMUD.instances[0]) {
+    //   const decafInstance = opener.DecafMUD.instances[0];
+    //   if (decafInstance) {
+    //     const parser = decafInstance.textInputFilter;
+    //     if (tagEventHandler && parser) { // tagEventHandler is also removed
+    //       $(parser).off(MumeXmlParser.SIG_TAG_END, tagEventHandler);
+    //     }
+    //   }
+    // }
+    console.log("Detached map unloading. No XML parser events to unbind.");
   });
 })();
 
