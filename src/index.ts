@@ -33,10 +33,11 @@ import 'script-loader!../DecafMUD/src/js/dragelement.js';
 
 import { throttle } from './utils';
 import './errorhandler';
-import './mume.macros';
-import './mume.menu';
+// import './mume.macros'; // Will be handled by the plugin
+import './mume.menu'; // For now, keep menu as is, pending further analysis/decision
 import { MumeMap, MumeXmlParser, MumeXmlParserTag } from './mume.mapper';
 import { DecafMUDExternalPlugin } from './decafmud-plugin-api';
+import { tryExtraMacro } from './mume.macros';
 
 let globalMapWindow: Window | null | undefined;
 let _globalSplit: Split.Instance | undefined;
@@ -56,12 +57,11 @@ function canvasFitParent(): void {
 class MumePlayPlugin implements DecafMUDExternalPlugin {
   private xmlParser: MumeXmlParser;
   private decafMUD: DecafMUDInstance | null = null;
+  private boundHandleKeyDown: (event: KeyboardEvent) => void;
 
   constructor() {
-    // The DecafMUD instance isn't available at construction time of the plugin object
-    // if the plugin is instantiated before DecafMUD.
-    // We'll get it during onConnect or rely on DecafMUD.instances[0] if needed sooner.
     this.xmlParser = new MumeXmlParser(this.getDecafMUDInstance.bind(this));
+    this.boundHandleKeyDown = this.handleKeyDown.bind(this);
 
     // Forwarding events from MumeXmlParser to MumeMap
     $(this.xmlParser).on(MumeXmlParser.SIG_TAG_END, (_event: unknown, tag: MumeXmlParserTag) => {
@@ -69,6 +69,19 @@ class MumePlayPlugin implements DecafMUDExternalPlugin {
         globalMap.processTag(_event, tag);
       }
     });
+  }
+
+  private handleKeyDown(event: KeyboardEvent): void {
+    if (!this.send) {
+      // Should not happen if called after onConnect where this.send is expected to be set up
+      console.warn("MumePlayPlugin: send function not available for macros.");
+      return;
+    }
+    // It's possible that DecafMUD's input handler already prevents default for some keys.
+    // We rely on tryExtraMacro's return value to decide if we should prevent default.
+    if (tryExtraMacro(event.keyCode, this.send)) {
+      event.preventDefault();
+    }
   }
 
   private getDecafMUDInstance(): DecafMUDInstance {
@@ -87,8 +100,14 @@ class MumePlayPlugin implements DecafMUDExternalPlugin {
     console.log("MumePlayPlugin: Connected to DecafMUD.");
     if (DecafMUD.instances && DecafMUD.instances[0]) {
       this.decafMUD = DecafMUD.instances[0];
+      // Ensure 'this.send' is populated if DecafMUD populated it on registration and we missed it
+      // This is a bit of a safeguard; ideally, this.send is correctly injected by DecafMUD.
+      if (!this.send && this.decafMUD.externalPlugins && this.decafMUD.externalPlugins["MumePlayFeatures"]) {
+        this.send = this.decafMUD.externalPlugins["MumePlayFeatures"].send;
+      }
     }
     this.xmlParser.connected(); // Sets MumeXmlParser mode to AsSoonAsPossible
+    document.addEventListener('keydown', this.boundHandleKeyDown, true);
     // The actual MUME.Client.XML request will be sent in onGMCPReady
   }
 
@@ -105,6 +124,7 @@ class MumePlayPlugin implements DecafMUDExternalPlugin {
 
   onDisconnect(): void {
     console.log("MumePlayPlugin: Disconnected from DecafMUD.");
+    document.removeEventListener('keydown', this.boundHandleKeyDown, true);
     this.xmlParser.clear(); // Reset XML parser state
   }
 
