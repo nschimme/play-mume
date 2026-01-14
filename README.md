@@ -21,11 +21,10 @@ Please contact the Valar on MUME before doing this. We'll discuss other options.
 Great! You'll need a little setup described below. If you get stuck, do not
 hesitate to contact the Valar on MUME!
 
-### Forking the repositories
+### Forking the repository
 
 The Github contribution workflow requires that you sign up on Github and fork
-the two repositories, [DecafMUD](https://github.com/MUME/DecafMUD/) and
-[Play MUME!](https://github.com/MUME/play-mume/).
+the [Play MUME!](https://github.com/MUME/play-mume/) repository.
 
 Doing so now will save you time later when you want to send pull requests.
 
