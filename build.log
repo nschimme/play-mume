@@ -1,0 +1,76 @@
+
+> play-mume@2.7.0 dev
+> webpack --mode development
+
+assets by path resources/pixmaps/*.png 553 KiB 124 assets
+assets by path DecafMUD/ 257 KiB 19 assets
+assets by path *.js 15.7 MiB
+  asset main.bundle.js 8.3 MiB [emitted] (name: main)
+  asset map.bundle.js 7.38 MiB [compared for emit] (name: map)
+  asset sw.js 1.46 KiB [compared for emit] [from: sw.js] [copied]
+assets by path icons/*.png 174 KiB
+  asset icons/icon-512x512.png 138 KiB [compared for emit] [from: icons/icon-512x512.png] [copied]
+  asset icons/icon-192x192.png 36.5 KiB [compared for emit] [from: icons/icon-192x192.png] [copied]
+assets by path *.html 1.02 KiB
+  asset index.html 752 bytes [compared for emit]
+  asset map.html 296 bytes [compared for emit]
+asset resources/COPYING 17.6 KiB [compared for emit] [from: resources/COPYING] [copied]
+asset manifest.webmanifest 470 bytes [compared for emit] [from: manifest.webmanifest] [copied]
+asset resources/README.txt 116 bytes [compared for emit] [from: resources/README.txt] [copied]
+runtime modules 2.05 KiB 9 modules
+modules by path ./node_modules/pixi.js/lib/ 2.02 MiB 645 modules
+modules by path ./DecafMUD/src/js/*.js 203 KiB 22 modules
+modules by path ./src/*.ts 80.9 KiB 7 modules
+modules by path ./node_modules/style-loader/dist/runtime/*.js 5.84 KiB 6 modules
+modules by path ./node_modules/@xmldom/xmldom/lib/*.js 136 KiB 6 modules
+modules by path ./node_modules/css-loader/dist/runtime/*.js 3.33 KiB 3 modules
+modules by path ./*.scss 89.2 KiB 2 modules
+modules by path ./node_modules/@pixi/colord/ 9.24 KiB 2 modules
+modules by path ./node_modules/ismobilejs/esm/*.js 4.39 KiB
+  ./node_modules/ismobilejs/esm/index.js 99 bytes [built] [code generated]
+  ./node_modules/ismobilejs/esm/isMobile.js 4.29 KiB [built] [code generated]
++ 9 modules
+
+WARNING in ./play.scss (./node_modules/css-loader/dist/cjs.js!./node_modules/sass-loader/dist/cjs.js!./play.scss)
+Module Warning (from ./node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 66, column 8 of file:///app/play.scss:66:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+66 | @import 'src/mud-colors';
+
+
+play.scss 67:9  root stylesheet
+ @ ./play.scss 8:6-137 20:17-24 25:22-29 25:33-47 25:50-64 24:0-107 24:0-107
+ @ ./src/index.ts 22:0-23
+
+WARNING in ./play.scss (./node_modules/css-loader/dist/cjs.js!./node_modules/sass-loader/dist/cjs.js!./play.scss)
+Module Warning (from ./node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 67, column 8 of file:///app/play.scss:67:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+67 | @import 'src/decafmud';
+
+
+play.scss 68:9  root stylesheet
+ @ ./play.scss 8:6-137 20:17-24 25:22-29 25:33-47 25:50-64 24:0-107 24:0-107
+ @ ./src/index.ts 22:0-23
+
+WARNING in ./play.scss (./node_modules/css-loader/dist/cjs.js!./node_modules/sass-loader/dist/cjs.js!./play.scss)
+Module Warning (from ./node_modules/sass-loader/dist/cjs.js):
+Deprecation Warning on line 68, column 8 of file:///app/play.scss:68:8:
+Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+68 | @import 'src/decafmud-dark';
+
+
+play.scss 69:9  root stylesheet
+ @ ./play.scss 8:6-137 20:17-24 25:22-29 25:33-47 25:50-64 24:0-107 24:0-107
+ @ ./src/index.ts 22:0-23
+
+webpack 5.104.1 compiled with 3 warnings in 10809 ms

@@ -60,6 +60,8 @@ module.exports = {
               '**/build/**',
               '**/docs/**',
               '**/flash/**',
+              '**/css/**',
+              '**/images/**',
             ],
           },
         },
