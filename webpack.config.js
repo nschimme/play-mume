@@ -52,17 +52,6 @@ module.exports = {
         { from: 'icons', to: 'icons' },
         { from: 'manifest.webmanifest', to: 'manifest.webmanifest' },
         { from: 'sw.js', to: 'sw.js' },
-        {
-          from: 'DecafMUD',
-          to: 'DecafMUD',
-          globOptions: {
-            ignore: [
-              '**/build/**',
-              '**/docs/**',
-              '**/flash/**',
-            ],
-          },
-        },
       ],
     }),
   ],

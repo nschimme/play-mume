@@ -19,17 +19,15 @@ import '../play.scss';
 import $ from 'jquery';
 import Split from 'split.js';
 
-import 'script-loader!../DecafMUD/src/js/decafmud.js';
-import 'script-loader!../DecafMUD/src/js/inflate_stream.min.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.display.standard.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.encoding.iso885915.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.socket.websocket.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.storage.standard.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.telopt.gmcp.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.menu.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.settings.js';
-import 'script-loader!../DecafMUD/src/js/dragelement.js';
+import { DecafMUD } from '../decafmud-ts/decafmud';
+import { standardDisplayPlugin } from '../decafmud-ts/plugins/display.standard';
+import { iso885915EncodingPlugin } from '../decafmud-ts/plugins/encoding.iso885915';
+import { panelsInterfacePlugin } from '../decafmud-ts/plugins/interface.panels';
+import { panelsMenuPlugin } from '../decafmud-ts/plugins/interface.panels.menu';
+import { panelsSettingsPlugin } from '../decafmud-ts/plugins/interface.panels.settings';
+import { websocketPlugin } from '../decafmud-ts/plugins/websocket';
+import { standardStoragePlugin } from '../decafmud-ts/plugins/storage.standard';
+import { gmcpPlugin } from '../decafmud-ts/plugins/telopt.gmcp';
 
 import { throttle } from './utils';
 import './errorhandler';
@@ -53,14 +51,7 @@ function canvasFitParent(): void {
 }
 
 $(window).on('load', function () {
-  if (typeof DecafMUD === 'undefined' || !DecafMUD.plugins?.TextInputFilter) {
-    console.error('DecafMUD or DecafMUD.plugins.TextInputFilter is not loaded!');
-    return;
-  }
-
-  DecafMUD.plugins.TextInputFilter.mumexml = MumeXmlParser;
-
-  new DecafMUD({
+  const decaf = new DecafMUD({
     host: 'mume.org',
     port: 443,
     autoreconnect: false,
@@ -77,10 +68,25 @@ $(window).on('load', function () {
       repeat_input: false,
       start_full: false,
     },
-    language: 'en',
     textinputfilter: 'mumexml',
     socket: 'websocket',
+    plugins: [
+        standardDisplayPlugin,
+        iso885915EncodingPlugin,
+        panelsInterfacePlugin,
+        panelsMenuPlugin,
+        panelsSettingsPlugin,
+        websocketPlugin,
+        standardStoragePlugin,
+        gmcpPlugin,
+    ]
   });
+
+  decaf.registerTextInputFilter('mumexml', MumeXmlParser);
+
+  if (typeof (window as { toggle_numpad?: (val: boolean) => void }).toggle_numpad === 'function') {
+    (window as { toggle_numpad?: (val: boolean) => void }).toggle_numpad(true);
+  }
 
   _globalSplit = Split(['#mume-client-panel', '#mume-map-panel'], {
     sizes: [80, 20],
@@ -104,8 +110,8 @@ $(window).on('load', function () {
     let parser: MumeXmlParser;
     let tagEventHandler;
 
-    if (DecafMUD.instances && DecafMUD.instances[0] && DecafMUD.instances[0].textInputFilter) {
-      parser = DecafMUD.instances[0].textInputFilter as MumeXmlParser;
+    if (decaf.textInputFilter) {
+      parser = decaf.textInputFilter as MumeXmlParser;
       if (!parser || typeof parser.filterInputText !== 'function') {
          console.error("Bug: expected to find a MumeXmlParser instance.");
          throw new Error("MumeXmlParser not found or invalid.");
