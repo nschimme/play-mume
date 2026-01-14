@@ -15,5 +15,6 @@
     "include": [
         "src/**/*",
         "libs/*.d.ts",
+        "decafmud-ts/**/*.ts"
     ],
 }
