@@ -43,3 +43,4 @@ declare const MENU_OPTIONS: number;
 
 declare function fkeys_enabled(): boolean;
 declare function numpad_enabled(): boolean;
+declare function toggle_numpad(value: boolean): void;
