@@ -82,10 +82,6 @@ $(window).on('load', function () {
     socket: 'websocket',
   });
 
-  if (typeof toggle_numpad === 'function') {
-    toggle_numpad(true);
-  }
-
   _globalSplit = Split(['#mume-client-panel', '#mume-map-panel'], {
     sizes: [80, 20],
     cursor: 'col-resize',
