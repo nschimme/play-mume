@@ -466,7 +466,7 @@ class MapMetaData
 
     public static assertValid( json: MapMetaData ): void
     {
-        const missing = new Array<string>();
+        const missing: string[] = [];
         for ( const prop in new MapMetaData() )
             if ( !Object.prototype.hasOwnProperty.call(json, prop) )
                 missing.push( prop );
@@ -621,12 +621,12 @@ class MumeMapData
             return [];
         }
 
-        const cached = new Array<Room>();
+        const cached: Room[] = [];
         for ( let i = 0; i < json.length; ++i )
         {
             const rdata: RoomData = json[ i ];
 
-            const missing = new Array<string>();
+            const missing: string[] = [];
             for ( const prop in new RoomData() )
                 if ( !Object.prototype.hasOwnProperty.call(rdata, prop) )
                     missing.push( prop );

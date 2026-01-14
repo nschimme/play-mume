@@ -1,3 +1,4 @@
+import { MumeXmlParser } from './mume.mapper';
 
 interface InflateStream {
   decompress(data: string | number[]): Uint8Array;
@@ -8,8 +9,6 @@ interface Zlib {
     new(): InflateStream;
   };
 }
-
-type MumeXmlParser = import('./mume.mapper').MumeXmlParser;
 
 interface DecafMUDInstance {
     textInputFilter?: MumeXmlParser;
@@ -28,5 +27,9 @@ interface DecafMUDStatic {
     instances: DecafMUDInstance[];
 }
 
-declare var Zlib: Zlib;
-declare var DecafMUD: DecafMUDStatic;
+declare global {
+  interface Window {
+    Zlib: Zlib;
+    DecafMUD: DecafMUDStatic;
+  }
+}

@@ -70,8 +70,8 @@ class PakoInflateStream {
     }
 }
 
-(window as any).Zlib = (window as any).Zlib || {};
-(window as any).Zlib.InflateStream = PakoInflateStream;
+window.Zlib = window.Zlib || {};
+window.Zlib.InflateStream = PakoInflateStream;
 
 let globalMapWindow: Window | null | undefined;
 let _globalSplit: Split.Instance | undefined;
