@@ -57,7 +57,7 @@ class PakoInflateStream {
         this.buffer = new Uint8Array(0); // Reset buffer for new output
 
         const input = typeof data === 'string'
-            ? pako.utils.string2buf(data)
+            ? new TextEncoder().encode(data)
             : new Uint8Array(data);
 
         this.strm.push(input, false);
@@ -70,43 +70,8 @@ class PakoInflateStream {
     }
 }
 
-interface InflateStream {
-  decompress(data: string | number[]): Uint8Array;
-}
-
-interface Zlib {
-  InflateStream: {
-    new(): InflateStream;
-  };
-}
-
-interface DecafMUDInstance {
-    textInputFilter?: MumeXmlParser;
-    socket: {
-        write(data: string): void;
-    };
-}
-
-interface DecafMUDStatic {
-    new(options: Record<string, unknown>): DecafMUDInstance;
-    plugins: {
-        TextInputFilter: {
-            [key: string]: unknown;
-        };
-    };
-    instances: DecafMUDInstance[];
-}
-
-
-declare global {
-    interface Window {
-        Zlib: Zlib;
-        DecafMUD: DecafMUDStatic;
-    }
-}
-
-window.Zlib = (window.Zlib || {}) as Zlib;
-window.Zlib.InflateStream = PakoInflateStream;
+(window as any).Zlib = (window as any).Zlib || {};
+(window as any).Zlib.InflateStream = PakoInflateStream;
 
 let globalMapWindow: Window | null | undefined;
 let _globalSplit: Split.Instance | undefined;
