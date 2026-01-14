@@ -63,3 +63,7 @@ html.no-scroll, html.no-scroll body {
     padding: 0;
     margin: 0;
 }
+
+@import 'src/mud-colors';
+@import 'src/decafmud';
+@import 'src/decafmud-dark';
