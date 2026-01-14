@@ -15,12 +15,12 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
+import * as pako from 'pako';
 import '../play.scss';
 import $ from 'jquery';
 import Split from 'split.js';
 
 import 'script-loader!../DecafMUD/src/js/decafmud.js';
-import 'script-loader!../DecafMUD/src/js/inflate_stream.min.js';
 import 'script-loader!../DecafMUD/src/js/decafmud.display.standard.js';
 import 'script-loader!../DecafMUD/src/js/decafmud.encoding.iso885915.js';
 import 'script-loader!../DecafMUD/src/js/decafmud.socket.websocket.js';
@@ -36,6 +36,42 @@ import './errorhandler';
 import './mume.macros';
 import './mume.menu';
 import { MumeMap, MumeXmlParser } from './mume.mapper';
+
+class PakoInflateStream {
+    private strm: pako.Inflate;
+    private buffer: Uint8Array;
+
+    constructor() {
+        this.strm = new pako.Inflate();
+        this.buffer = new Uint8Array(0);
+
+        this.strm.onData = (chunk: Uint8Array) => {
+            const newBuffer = new Uint8Array(this.buffer.length + chunk.length);
+            newBuffer.set(this.buffer);
+            newBuffer.set(chunk, this.buffer.length);
+            this.buffer = newBuffer;
+        };
+    }
+
+    decompress(data: string | number[]): Uint8Array {
+        this.buffer = new Uint8Array(0); // Reset buffer for new output
+
+        const input = typeof data === 'string'
+            ? new TextEncoder().encode(data)
+            : new Uint8Array(data);
+
+        this.strm.push(input, false);
+
+        if (this.strm.err) {
+            throw new Error(this.strm.msg);
+        }
+
+        return this.buffer;
+    }
+}
+
+window.Zlib = window.Zlib || {};
+window.Zlib.InflateStream = PakoInflateStream;
 
 let globalMapWindow: Window | null | undefined;
 let _globalSplit: Split.Instance | undefined;
