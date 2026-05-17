@@ -28,18 +28,18 @@ jobs:
         run: npm run lint:check
       - name: Compile TypeScript
         run: npm run tsc
+      - name: Run tests
+        run: npm test
       - name: Build with Webpack
         run: npm run build
       - name: Download Arda.xml
-        run: curl -L https://raw.githubusercontent.com/MUME/arda/main/arda.xml -o arda.xml
+        run: curl -fL https://raw.githubusercontent.com/MUME/arda/main/arda.xml -o arda.xml
       - name: Convert Map
         run: npm run convert-map -- arda.xml dist/mapdata
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
-      - name: Run tests
-        run: npm test
 
   deploy:
     permissions:

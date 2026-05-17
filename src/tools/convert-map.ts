@@ -165,18 +165,15 @@ const DoorFlagsMap: Record<string, number> = {
   NO_BASH: 10,
 };
 
-const DirMap: Record<string, number> = {
-  north: 0,
-  south: 1,
-  east: 2,
-  west: 3,
-  up: 4,
-  down: 5,
-  unknown: 6,
-  none: 7,
-};
+const DIRECTIONS = ["NORTH", "SOUTH", "EAST", "WEST", "UP", "DOWN", "UNKNOWN", "NONE"];
+const NUM_EXITS = DIRECTIONS.length;
+const DirMap: Record<string, number> = DIRECTIONS.reduce((acc, dir, index) => {
+  acc[dir.toLowerCase()] = index;
+  return acc;
+}, {} as Record<string, number>);
 
-const NUM_EXITS = 8;
+// Global tracker for unknown flags
+const unknownFlags = new Map<string, Set<string>>();
 
 // Utility functions
 function normalizeWhitespace(str: string): string {
@@ -228,7 +225,7 @@ function getZoneKey(x: number, y: number): string {
   return `${calcZoneCoord(x)},${calcZoneCoord(-y)}`;
 }
 
-function parseFlags(flags: string | string[] | undefined, map: Record<string, number>, context: string): number {
+function parseFlags(flags: string | string[] | undefined, map: Record<string, number>, context: string, category: string): number {
   if (!flags) return 0;
   const flagArray = Array.isArray(flags) ? flags : [flags];
   let result = 0;
@@ -236,7 +233,15 @@ function parseFlags(flags: string | string[] | undefined, map: Record<string, nu
     if (map[f] !== undefined) {
       result |= (1 << map[f]);
     } else {
-      console.warn(`Warning: Unknown flag "${f}" in context "${context}"`);
+      let flagsForCategory = unknownFlags.get(category);
+      if (!flagsForCategory) {
+        flagsForCategory = new Set<string>();
+        unknownFlags.set(category, flagsForCategory);
+      }
+      if (!flagsForCategory.has(f)) {
+        flagsForCategory.add(f);
+        console.warn(`Warning: Unknown flag "${f}" in category "${category}" (first seen in "${context}")`);
+      }
     }
   }
   return result;
@@ -322,8 +327,8 @@ function convert(xmlPath: string, outputDir: string) {
       const dir = DirMap[xmlDir];
       if (dir !== undefined && dir < NUM_EXITS) {
         jsonExits[dir].name = (exit['@_doorname'] || exit.doorname || "").toString();
-        jsonExits[dir].flags = parseFlags(exit.exitflag, ExitFlagsMap, `room ${room['@_id']} exit ${xmlDir} flags`);
-        jsonExits[dir].dflags = parseFlags(exit.doorflag, DoorFlagsMap, `room ${room['@_id']} exit ${xmlDir} dflags`);
+        jsonExits[dir].flags = parseFlags(exit.exitflag, ExitFlagsMap, `room ${room['@_id']} exit ${xmlDir}`, 'exitflag');
+        jsonExits[dir].dflags = parseFlags(exit.doorflag, DoorFlagsMap, `room ${room['@_id']} exit ${xmlDir}`, 'doorflag');
 
         // In the original jsonmapstorage.cpp, "in" and "out" are populated.
         // MM2 XML has "to". In MMapper, an exit is usually bidirectional unless flags say otherwise.
@@ -351,8 +356,8 @@ function convert(xmlPath: string, outputDir: string) {
       portable: room.portable === "NOT_PORTABLE" ? 0 : 1,
       rideable: room.ridable === "RIDABLE" ? 1 : 0,
       sundeath: room.sundeath === "SUNDEATH" ? 1 : 0,
-      mobflags: parseFlags(room.mobflag, MobFlagsMap, `room ${room['@_id']} mobflags`),
-      loadflags: parseFlags(room.loadflag, LoadFlagsMap, `room ${room['@_id']} loadflags`),
+      mobflags: parseFlags(room.mobflag, MobFlagsMap, `room ${room['@_id']}`, 'mobflag'),
+      loadflags: parseFlags(room.loadflag, LoadFlagsMap, `room ${room['@_id']}`, 'loadflag'),
       exits: jsonExits,
     });
   });
@@ -370,7 +375,7 @@ function convert(xmlPath: string, outputDir: string) {
     roomsCount: rooms.length,
     minX, minY, minZ,
     maxX, maxY, maxZ,
-    directions: ["NORTH", "SOUTH", "EAST", "WEST", "UP", "DOWN", "UNKNOWN", "NONE"],
+    directions: DIRECTIONS,
   };
   fs.writeFileSync(path.join(v1Dir, 'arda.json'), JSON.stringify(metadata, null, 2));
 
@@ -382,6 +387,14 @@ function convert(xmlPath: string, outputDir: string) {
   console.log("Writing room index...");
   for (const [prefix, data] of Object.entries(roomIndex)) {
     fs.writeFileSync(path.join(roomIndexDir, `${prefix}.json`), JSON.stringify(data));
+  }
+
+  if (unknownFlags.size > 0) {
+    console.warn("\nSummary of unknown flags encountered:");
+    unknownFlags.forEach((flags, category) => {
+      console.warn(`  ${category}: ${Array.from(flags).join(", ")}`);
+    });
+    console.warn("");
   }
 
   console.log("Conversion complete!");
