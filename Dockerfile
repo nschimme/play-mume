@@ -5,8 +5,14 @@ WORKDIR /usr/src/app
 # Install curl
 RUN apk add --no-cache curl
 
-COPY . .
+# Install dependencies first for better layer caching
+COPY package.json package-lock.json ./
 RUN npm install
+
+# Copy the rest of the source code
+COPY . .
+
+# Run build tasks
 RUN npm run lint:check
 RUN npm run tsc
 RUN npm run build

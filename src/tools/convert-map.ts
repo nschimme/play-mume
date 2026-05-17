@@ -68,103 +68,102 @@ const ZONE_WIDTH = 20;
 const ROOM_INDEX_FILE_NAME_SIZE = 2;
 
 const TerrainMap: Record<string, number> = {
-  UNDEFINED: 0,
-  INDOORS: 1,
+  BRUSH: 12,
+  CAVERN: 14,
   CITY: 2,
+  DEATHTRAP: 15,
   FIELD: 3,
   FOREST: 4,
   HILLS: 5,
+  INDOORS: 1,
   MOUNTAINS: 6,
-  SHALLOW: 7,
-  WATER: 8,
   RAPIDS: 9,
-  UNDERWATER: 10,
   ROAD: 11,
-  BRUSH: 12,
+  SHALLOW: 7,
   TUNNEL: 13,
-  CAVERN: 14,
-  DEATHTRAP: 15,
+  UNDEFINED: 0,
+  UNDERWATER: 10,
+  WATER: 8,
 };
 
 const MobFlagsMap: Record<string, number> = {
-  RENT: 0,
-  SHOP: 1,
-  WEAPON_SHOP: 2,
-  ARMOUR_SHOP: 3,
-  FOOD_SHOP: 4,
-  PET_SHOP: 5,
-  GUILD: 6,
-  SCOUT_GUILD: 7,
-  MAGE_GUILD: 8,
-  CLERIC_GUILD: 9,
-  WARRIOR_GUILD: 10,
-  RANGER_GUILD: 11,
   AGGRESSIVE_MOB: 12,
-  QUEST_MOB: 13,
-  PASSIVE_MOB: 14,
+  ARMOUR_SHOP: 3,
+  CLERIC_GUILD: 9,
   ELITE_MOB: 15,
-  SUPER_MOB: 16,
+  FOOD_SHOP: 4,
+  GUILD: 6,
+  MAGE_GUILD: 8,
   MILKABLE: 17,
+  PASSIVE_MOB: 14,
+  PET_SHOP: 5,
+  QUEST_MOB: 13,
+  RANGER_GUILD: 11,
   RATTLESNAKE: 18,
+  RENT: 0,
+  SCOUT_GUILD: 7,
+  SHOP: 1,
+  SUPER_MOB: 16,
+  WARRIOR_GUILD: 10,
+  WEAPON_SHOP: 2,
 };
 
 const LoadFlagsMap: Record<string, number> = {
-  TREASURE: 0,
   ARMOUR: 1,
-  WEAPON: 2,
-  WATER: 3,
+  ATTENTION: 14,
+  BOAT: 13,
+  CLOCK: 16,
+  COACH: 22,
+  DARK_WORD: 20,
+  DEATHTRAP: 24,
+  EQUIPMENT: 21,
+  FERRY: 23,
   FOOD: 4,
   HERB: 5,
-  KEY: 6,
-  MULE: 7,
   HORSE: 8,
-  PACK_HORSE: 9,
-  TRAINED_HORSE: 10,
-  ROHIRRIM: 11,
-  WARG: 12,
-  BOAT: 13,
-  ATTENTION: 14,
-  TOWER: 15,
-  CLOCK: 16,
+  KEY: 6,
   MAIL: 17,
+  MULE: 7,
+  PACK_HORSE: 9,
   STABLE: 18,
+  TOWER: 15,
+  TRAINED_HORSE: 10,
+  TREASURE: 0,
+  WARG: 12,
+  WATER: 3,
+  WEAPON: 2,
   WHITE_WORD: 19,
-  DARK_WORD: 20,
-  EQUIPMENT: 21,
-  COACH: 22,
-  FERRY: 23,
-  DEATHTRAP: 24,
 };
 
 const ExitFlagsMap: Record<string, number> = {
-  EXIT: 0,
-  NO_EXIT: 0, // NO_EXIT is mapped to the EXIT flag (inverted logic in MMapper)
-  DOOR: 1,
-  ROAD: 2,
   CLIMB: 3,
-  RANDOM: 4,
-  SPECIAL: 5,
-  NO_MATCH: 6,
-  FLOW: 7,
-  NO_FLEE: 8,
   DAMAGE: 9,
+  DOOR: 1,
+  EXIT: 0,
   FALL: 10,
+  FLOW: 7,
   GUARDED: 11,
+  NO_EXIT: 0, // NO_EXIT is mapped to the EXIT flag (inverted logic in MMapper)
+  NO_FLEE: 8,
+  NO_MATCH: 6,
+  RANDOM: 4,
+  ROAD: 2,
+  SPECIAL: 5,
   UNMAPPED: 12,
 };
 
 const DoorFlagsMap: Record<string, number> = {
+  ACTION: 9,
+  CALLABLE: 6,
+  DELAYED: 5,
   HIDDEN: 0,
+  KNOCKABLE: 7,
+  MAGIC: 8,
   NEED_KEY: 1,
+  NO_BASH: 10,
   NO_BLOCK: 2,
   NO_BREAK: 3,
   NO_PICK: 4,
-  DELAYED: 5,
-  CALLABLE: 6,
-  KNOCKABLE: 7,
-  MAGIC: 8,
-  ACTION: 9,
-  NO_BASH: 10,
 };
 
 const NUM_EXITS = DIRECTIONS.length;
@@ -174,19 +173,13 @@ const DirMap: Record<string, number> = DIRECTIONS.reduce((acc, dir, index) => {
 }, {} as Record<string, number>);
 
 const DIR_ALIAS_MAP: Record<string, string> = {
+  d: "down",
+  e: "east",
   n: "north",
   s: "south",
-  e: "east",
-  w: "west",
   u: "up",
-  d: "down",
+  w: "west",
 };
-
-let STRICT_MODE = false;
-
-// Global tracker for unknown flags
-const unknownFlags = new Map<string, Set<string>>();
-
 
 function normalizeForHash(text: string): string {
   // MMapper removes ANSI marks, but Arda.xml shouldn't have them?
@@ -209,7 +202,14 @@ function getZoneKey(x: number, y: number): string {
   return `${calcZoneCoord(x)},${calcZoneCoord(-y)}`;
 }
 
-function parseFlags(flags: string | string[] | undefined, map: Record<string, number>, context: string, category: string): number {
+function parseFlags(
+  flags: string | string[] | undefined,
+  map: Record<string, number>,
+  context: string,
+  category: string,
+  unknownFlags: Map<string, Set<string>>,
+  strict: boolean
+): number {
   if (!flags) return 0;
   const flagArray = Array.isArray(flags) ? flags : [flags];
   let result = 0;
@@ -225,7 +225,7 @@ function parseFlags(flags: string | string[] | undefined, map: Record<string, nu
       if (!flagsForCategory.has(f)) {
         flagsForCategory.add(f);
         const msg = `Unknown flag "${f}" in category "${category}" (first seen in "${context}")`;
-        if (STRICT_MODE) {
+        if (strict) {
           throw new Error(msg);
         }
         console.warn(`Warning: ${msg}`);
@@ -240,7 +240,20 @@ function ensureArray<T>(val: T | T[] | undefined): T[] {
   return Array.isArray(val) ? val : [val];
 }
 
-function convert(xmlPath: string, outputDir: string) {
+export interface ConvertOptions {
+  strict?: boolean;
+}
+
+/**
+ * Converts Arda.xml map data into a chunked JSON format.
+ * @param xmlPath Path to the Arda.xml file.
+ * @param outputDir Directory where the JSON files will be written.
+ * @param options Conversion options.
+ */
+export function convertMap(xmlPath: string, outputDir: string, options: ConvertOptions = {}) {
+  const strict = !!options.strict;
+  const unknownFlags = new Map<string, Set<string>>();
+
   console.log(`Loading ${xmlPath}...`);
   const xmlData = fs.readFileSync(xmlPath, 'utf8');
   const parser = new XMLParser({
@@ -316,8 +329,8 @@ function convert(xmlPath: string, outputDir: string) {
       const dir = DirMap[xmlDir];
       if (dir !== undefined && dir < NUM_EXITS) {
         jsonExits[dir].name = (exit['@_doorname'] || exit.doorname || "").toString();
-        jsonExits[dir].flags = parseFlags(exit.exitflag, ExitFlagsMap, `room ${room['@_id']} exit ${xmlDir}`, 'exitflag');
-        jsonExits[dir].dflags = parseFlags(exit.doorflag, DoorFlagsMap, `room ${room['@_id']} exit ${xmlDir}`, 'dflags');
+        jsonExits[dir].flags = parseFlags(exit.exitflag, ExitFlagsMap, `room ${room['@_id']} exit ${xmlDir}`, 'exitflag', unknownFlags, strict);
+        jsonExits[dir].dflags = parseFlags(exit.doorflag, DoorFlagsMap, `room ${room['@_id']} exit ${xmlDir}`, 'dflags', unknownFlags, strict);
 
         // In the original jsonmapstorage.cpp, "in" and "out" are populated.
         // MM2 XML has "to". In MMapper, an exit is usually bidirectional unless flags say otherwise.
@@ -327,12 +340,12 @@ function convert(xmlPath: string, outputDir: string) {
           const seqId = xmlIdToSequential.get(toId);
           if (seqId !== undefined) {
             // jsonmapstorage.cpp uses strings for IDs in the arrays too
-            (jsonExits[dir].out as unknown as string[]).push(seqId.toString());
+            (jsonExits[dir].out).push(seqId.toString());
           }
         });
       } else if (rawXmlDir) {
         const msg = `Unrecognized exit direction "${rawXmlDir}" (normalized as "${xmlDir}") in room ${room['@_id']}`;
-        if (STRICT_MODE) {
+        if (strict) {
           throw new Error(msg);
         }
         console.warn(`Warning: ${msg}`);
@@ -351,8 +364,8 @@ function convert(xmlPath: string, outputDir: string) {
       portable: room.portable === "NOT_PORTABLE" ? 0 : 1,
       rideable: room.ridable === "RIDABLE" ? 1 : 0,
       sundeath: room.sundeath === "SUNDEATH" ? 1 : 0,
-      mobflags: parseFlags(room.mobflag, MobFlagsMap, `room ${room['@_id']}`, 'mobflag'),
-      loadflags: parseFlags(room.loadflag, LoadFlagsMap, `room ${room['@_id']}`, 'loadflag'),
+      mobflags: parseFlags(room.mobflag, MobFlagsMap, `room ${room['@_id']}`, 'mobflag', unknownFlags, strict),
+      loadflags: parseFlags(room.loadflag, LoadFlagsMap, `room ${room['@_id']}`, 'loadflag', unknownFlags, strict),
       exits: jsonExits,
     });
   });
@@ -403,36 +416,44 @@ function printUsage() {
   console.log("  --help      Show this help message");
 }
 
-const args = process.argv.slice(2);
-const positionalArgs: string[] = [];
+function runCli() {
+  const args = process.argv.slice(2);
+  const positionalArgs: string[] = [];
+  const options: ConvertOptions = {};
 
-for (let i = 0; i < args.length; i++) {
-  const arg = args[i];
-  if (arg === '--strict') {
-    STRICT_MODE = true;
-  } else if (arg === '--help' || arg === '-h') {
-    printUsage();
-    process.exit(0);
-  } else if (arg.startsWith('-')) {
-    console.error(`Error: Unknown option "${arg}"`);
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--strict') {
+      options.strict = true;
+    } else if (arg === '--help' || arg === '-h') {
+      printUsage();
+      process.exit(0);
+    } else if (arg.startsWith('-')) {
+      console.error(`Error: Unknown option "${arg}"`);
+      printUsage();
+      process.exit(1);
+    } else {
+      positionalArgs.push(arg);
+    }
+  }
+
+  if (positionalArgs.length < 2) {
+    console.error("Error: Missing required arguments.");
     printUsage();
     process.exit(1);
-  } else {
-    positionalArgs.push(arg);
+  }
+
+  const [xmlPath, outputDir] = positionalArgs;
+
+  try {
+    convertMap(xmlPath, outputDir, options);
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : err);
+    process.exit(1);
   }
 }
 
-if (positionalArgs.length < 2) {
-  console.error("Error: Missing required arguments.");
-  printUsage();
-  process.exit(1);
-}
-
-const [xmlPath, outputDir] = positionalArgs;
-
-try {
-  convert(xmlPath, outputDir);
-} catch (err) {
-  console.error(err);
-  process.exit(1);
+// Run the CLI if this script is executed directly
+if (require.main === module) {
+  runCli();
 }

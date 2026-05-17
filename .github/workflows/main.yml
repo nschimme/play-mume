@@ -10,9 +10,6 @@ on:
 permissions:
   contents: read
 
-env:
-  ARDA_VERSION: 42
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,7 +20,7 @@ jobs:
           submodules: 'recursive'
       - name: Build Docker Image
         run: |
-          docker build --target builder --build-arg ARDA_VERSION=${{ env.ARDA_VERSION }} -t play-mume-builder .
+          docker build --target builder -t play-mume-builder .
       - name: Extract Build Artifacts
         run: |
           docker create --name temp-container play-mume-builder
