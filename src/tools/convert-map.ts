@@ -228,13 +228,15 @@ function getZoneKey(x: number, y: number): string {
   return `${calcZoneCoord(x)},${calcZoneCoord(-y)}`;
 }
 
-function parseFlags(flags: string | string[] | undefined, map: Record<string, number>): number {
+function parseFlags(flags: string | string[] | undefined, map: Record<string, number>, context: string): number {
   if (!flags) return 0;
   const flagArray = Array.isArray(flags) ? flags : [flags];
   let result = 0;
   for (const f of flagArray) {
     if (map[f] !== undefined) {
       result |= (1 << map[f]);
+    } else {
+      console.warn(`Warning: Unknown flag "${f}" in context "${context}"`);
     }
   }
   return result;
@@ -245,7 +247,7 @@ function ensureArray<T>(val: T | T[] | undefined): T[] {
   return Array.isArray(val) ? val : [val];
 }
 
-async function convert(xmlPath: string, outputDir: string) {
+function convert(xmlPath: string, outputDir: string) {
   console.log(`Loading ${xmlPath}...`);
   const xmlData = fs.readFileSync(xmlPath, 'utf8');
   const parser = new XMLParser({
@@ -316,11 +318,12 @@ async function convert(xmlPath: string, outputDir: string) {
     }));
 
     ensureArray(room.exit).forEach(exit => {
-      const dir = DirMap[exit['@_dir']];
+      const xmlDir = (exit['@_dir'] || "").toLowerCase();
+      const dir = DirMap[xmlDir];
       if (dir !== undefined && dir < NUM_EXITS) {
         jsonExits[dir].name = (exit['@_doorname'] || exit.doorname || "").toString();
-        jsonExits[dir].flags = parseFlags(exit.exitflag, ExitFlagsMap);
-        jsonExits[dir].dflags = parseFlags(exit.doorflag, DoorFlagsMap);
+        jsonExits[dir].flags = parseFlags(exit.exitflag, ExitFlagsMap, `room ${room['@_id']} exit ${xmlDir} flags`);
+        jsonExits[dir].dflags = parseFlags(exit.doorflag, DoorFlagsMap, `room ${room['@_id']} exit ${xmlDir} dflags`);
 
         // In the original jsonmapstorage.cpp, "in" and "out" are populated.
         // MM2 XML has "to". In MMapper, an exit is usually bidirectional unless flags say otherwise.
@@ -348,8 +351,8 @@ async function convert(xmlPath: string, outputDir: string) {
       portable: room.portable === "NOT_PORTABLE" ? 0 : 1,
       rideable: room.ridable === "RIDABLE" ? 1 : 0,
       sundeath: room.sundeath === "SUNDEATH" ? 1 : 0,
-      mobflags: parseFlags(room.mobflag, MobFlagsMap),
-      loadflags: parseFlags(room.loadflag, LoadFlagsMap),
+      mobflags: parseFlags(room.mobflag, MobFlagsMap, `room ${room['@_id']} mobflags`),
+      loadflags: parseFlags(room.loadflag, LoadFlagsMap, `room ${room['@_id']} loadflags`),
       exits: jsonExits,
     });
   });
@@ -390,7 +393,9 @@ if (args.length < 2) {
   process.exit(1);
 }
 
-convert(args[0], args[1]).catch(err => {
+try {
+  convert(args[0], args[1]);
+} catch (err) {
   console.error(err);
   process.exit(1);
-});
+}
