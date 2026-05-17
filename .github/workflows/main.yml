@@ -9,8 +9,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 jobs:
   build:
@@ -33,7 +31,7 @@ jobs:
       - name: Build with Webpack
         run: npm run build
       - name: Download Arda.xml
-        run: curl -L https://raw.githubusercontent.com/MUME/arda/refs/heads/main/arda.xml -o arda.xml
+        run: curl -L https://raw.githubusercontent.com/MUME/arda/main/arda.xml -o arda.xml
       - name: Convert Map
         run: npm run convert-map -- arda.xml dist/mapdata
       - name: Upload Pages Artifact
@@ -44,6 +42,9 @@ jobs:
         run: npm test
 
   deploy:
+    permissions:
+      pages: write
+      id-token: write
     needs: build
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest

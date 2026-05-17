@@ -39,6 +39,29 @@ interface XmlExit {
   exitflag?: string | string[];
 }
 
+interface ZoneRoom {
+  x: number;
+  y: number;
+  z: number;
+  id: string;
+  name: string;
+  desc: string;
+  sector: number;
+  light: number;
+  portable: number;
+  rideable: number;
+  sundeath: number;
+  mobflags: number;
+  loadflags: number;
+  exits: {
+    name: string;
+    dflags: number;
+    flags: number;
+    in: string[];
+    out: string[];
+  }[];
+}
+
 // Enums and Constants matching MMapper
 const ZONE_WIDTH = 20;
 const ROOM_INDEX_FILE_NAME_SIZE = 2;
@@ -250,7 +273,7 @@ async function convert(xmlPath: string, outputDir: string) {
   const rooms = parsed.map.room;
   console.log(`Processing ${rooms.length} rooms...`);
 
-  const zones: Record<string, unknown[]> = {};
+  const zones: Record<string, ZoneRoom[]> = {};
   const roomIndex: Record<string, Record<string, number[][]>> = {};
   let minX = Infinity, minY = Infinity, minZ = Infinity;
   let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
@@ -264,9 +287,9 @@ async function convert(xmlPath: string, outputDir: string) {
   rooms.forEach((room, index) => {
     const name = (room['@_name'] || room.name || "").toString();
     const desc = (room.description || "").toString();
-    const x = parseInt(room.coord['@_x']);
-    const y = parseInt(room.coord['@_y']);
-    const z = parseInt(room.coord['@_z']);
+    const x = parseInt(room.coord['@_x'], 10);
+    const y = parseInt(room.coord['@_y'], 10);
+    const z = parseInt(room.coord['@_z'], 10);
 
     minX = Math.min(minX, x);
     minY = Math.min(minY, -y); // Negate y for bounds
@@ -288,8 +311,8 @@ async function convert(xmlPath: string, outputDir: string) {
       name: "",
       dflags: 0,
       flags: 0,
-      in: [] as number[],
-      out: [] as number[],
+      in: [] as string[],
+      out: [] as string[],
     }));
 
     ensureArray(room.exit).forEach(exit => {
@@ -363,7 +386,7 @@ async function convert(xmlPath: string, outputDir: string) {
 
 const args = process.argv.slice(2);
 if (args.length < 2) {
-  console.log("Usage: ts-node convert-map.ts <path-to-arda.xml> <output-directory>");
+  console.log("Usage: npm run convert-map -- <path-to-arda.xml> <output-directory>");
   process.exit(1);
 }
 

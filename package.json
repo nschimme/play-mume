@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@types/jquery": "^3.5.32",
-    "@types/node": "*",
+    "@types/node": "^18.19.0",
     "@types/spark-md5": "*",
     "@typescript-eslint/eslint-plugin": "^7.10.0",
     "@typescript-eslint/parser": "^7.10.0",
