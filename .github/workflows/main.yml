@@ -5,6 +5,12 @@ on:
     branches: [ "**" ]
   pull_request:
     branches: [ "**" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   build:
@@ -24,8 +30,16 @@ jobs:
         run: npm run lint:check
       - name: Compile TypeScript
         run: npm run tsc
-      - name: Run Webpack Development Build
-        run: npm run dev
+      - name: Build with Webpack
+        run: npm run build
+      - name: Download Arda.xml
+        run: curl -L https://raw.githubusercontent.com/MUME/arda/refs/heads/main/arda.xml -o arda.xml
+      - name: Convert Map
+        run: npm run convert-map -- arda.xml dist/mapdata
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
       - name: Run tests
         run: npm test
 
@@ -33,30 +47,10 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: 'recursive'
-      - name: Use Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - name: Install dependencies
-        run: npm install
-      - name: Build with Webpack
-        run: npm run build
-      - name: Prepare deployment directory
-        run: |
-          mkdir deploy_dir
-          cp -r dist/. deploy_dir/
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./deploy_dir
-          publish_branch: gh-pages
-          keep_files: false
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
-          commit_message: 'Deploy to GitHub Pages'
-          full_commit_message: 'Deploy to GitHub Pages'
+        id: deployment
+        uses: actions/deploy-pages@v4

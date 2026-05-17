@@ -10,7 +10,8 @@
     "lint:check": "eslint . --ext .js,.ts",
     "build": "webpack --mode production",
     "dev": "webpack --mode development",
-    "watch": "webpack --mode development --watch"
+    "watch": "webpack --mode development --watch",
+    "convert-map": "ts-node src/tools/convert-map.ts"
   },
   "dependencies": {
     "jquery": "^3.7.1",
@@ -20,12 +21,14 @@
   },
   "devDependencies": {
     "@types/jquery": "^3.5.32",
+    "@types/node": "*",
     "@types/spark-md5": "*",
     "@typescript-eslint/eslint-plugin": "^7.10.0",
     "@typescript-eslint/parser": "^7.10.0",
     "copy-webpack-plugin": "*",
     "css-loader": "*",
     "eslint": "^8.57.0",
+    "fast-xml-parser": "^5.8.0",
     "html-webpack-plugin": "*",
     "pixi.js": "^8.10.1",
     "sass": "*",
@@ -33,6 +36,7 @@
     "script-loader": "^0.7.2",
     "style-loader": "*",
     "ts-loader": "*",
+    "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "webpack": "*",
     "webpack-cli": "*"
