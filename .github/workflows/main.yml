@@ -10,6 +10,9 @@ on:
 permissions:
   contents: read
 
+env:
+  ARDA_VERSION: 42
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -18,26 +21,14 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: 'recursive'
-      - name: Use Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - name: Install dependencies
-        run: npm install
-      - name: Run ESLint
-        run: npm run lint:check
-      - name: Compile TypeScript
-        run: npm run tsc
-      - name: Run tests
-        run: npm test
-      - name: Build with Webpack
-        run: npm run build
-      - name: Download Arda.xml
-        env:
-          ARDA_VERSION: 42
-        run: curl -fL https://raw.githubusercontent.com/MUME/arda/${ARDA_VERSION}/arda.xml -o arda.xml
-      - name: Convert Map
-        run: npm run convert-map -- --strict arda.xml dist/mapdata
+      - name: Build Docker Image
+        run: |
+          docker build --build-arg ARDA_VERSION=${{ env.ARDA_VERSION }} -t play-mume-builder .
+      - name: Extract Build Artifacts
+        run: |
+          docker create --name temp-container play-mume-builder
+          docker cp temp-container:/usr/src/app/dist ./dist
+          docker rm temp-container
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:

@@ -395,24 +395,40 @@ function convert(xmlPath: string, outputDir: string) {
   console.log("Conversion complete!");
 }
 
+function printUsage() {
+  console.log("Usage: npm run convert-map -- [options] <path-to-arda.xml> <output-directory>");
+  console.log("");
+  console.log("Options:");
+  console.log("  --strict    Treat unknown flags or directions as errors");
+  console.log("  --help      Show this help message");
+}
+
 const args = process.argv.slice(2);
-let xmlPath = "";
-let outputDir = "";
+const positionalArgs: string[] = [];
 
 for (let i = 0; i < args.length; i++) {
-  if (args[i] === '--strict') {
+  const arg = args[i];
+  if (arg === '--strict') {
     STRICT_MODE = true;
-  } else if (!xmlPath) {
-    xmlPath = args[i];
-  } else if (!outputDir) {
-    outputDir = args[i];
+  } else if (arg === '--help' || arg === '-h') {
+    printUsage();
+    process.exit(0);
+  } else if (arg.startsWith('-')) {
+    console.error(`Error: Unknown option "${arg}"`);
+    printUsage();
+    process.exit(1);
+  } else {
+    positionalArgs.push(arg);
   }
 }
 
-if (!xmlPath || !outputDir) {
-  console.log("Usage: npm run convert-map -- [--strict] <path-to-arda.xml> <output-directory>");
+if (positionalArgs.length < 2) {
+  console.error("Error: Missing required arguments.");
+  printUsage();
   process.exit(1);
 }
+
+const [xmlPath, outputDir] = positionalArgs;
 
 try {
   convert(xmlPath, outputDir);
