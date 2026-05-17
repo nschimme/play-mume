@@ -6,7 +6,8 @@ WORKDIR /usr/src/app
 RUN apk add --no-cache curl
 
 # Install dependencies first for better layer caching
-COPY package.json package-lock.json ./
+# package-lock.json is gitignored, so we only copy package.json
+COPY package.json ./
 RUN npm install
 
 # Copy the rest of the source code
