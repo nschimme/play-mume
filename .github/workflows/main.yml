@@ -33,9 +33,9 @@ jobs:
       - name: Build with Webpack
         run: npm run build
       - name: Download Arda.xml
-        run: curl -fL https://raw.githubusercontent.com/MUME/arda/main/arda.xml -o arda.xml
+        run: curl -fL https://raw.githubusercontent.com/MUME/arda/42/arda.xml -o arda.xml
       - name: Convert Map
-        run: npm run convert-map -- arda.xml dist/mapdata
+        run: npm run convert-map -- --strict arda.xml dist/mapdata
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:

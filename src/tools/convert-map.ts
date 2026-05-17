@@ -172,6 +172,17 @@ const DirMap: Record<string, number> = DIRECTIONS.reduce((acc, dir, index) => {
   return acc;
 }, {} as Record<string, number>);
 
+const DIR_ALIAS_MAP: Record<string, string> = {
+  n: "north",
+  s: "south",
+  e: "east",
+  w: "west",
+  u: "up",
+  d: "down",
+};
+
+let STRICT_MODE = false;
+
 // Global tracker for unknown flags
 const unknownFlags = new Map<string, Set<string>>();
 
@@ -240,7 +251,11 @@ function parseFlags(flags: string | string[] | undefined, map: Record<string, nu
       }
       if (!flagsForCategory.has(f)) {
         flagsForCategory.add(f);
-        console.warn(`Warning: Unknown flag "${f}" in category "${category}" (first seen in "${context}")`);
+        const msg = `Unknown flag "${f}" in category "${category}" (first seen in "${context}")`;
+        if (STRICT_MODE) {
+          throw new Error(msg);
+        }
+        console.warn(`Warning: ${msg}`);
       }
     }
   }
@@ -323,7 +338,8 @@ function convert(xmlPath: string, outputDir: string) {
     }));
 
     ensureArray(room.exit).forEach(exit => {
-      const xmlDir = (exit['@_dir'] || "").toLowerCase();
+      const rawXmlDir = (exit['@_dir'] || "").toLowerCase();
+      const xmlDir = DIR_ALIAS_MAP[rawXmlDir] ?? rawXmlDir;
       const dir = DirMap[xmlDir];
       if (dir !== undefined && dir < NUM_EXITS) {
         jsonExits[dir].name = (exit['@_doorname'] || exit.doorname || "").toString();
@@ -341,6 +357,12 @@ function convert(xmlPath: string, outputDir: string) {
             (jsonExits[dir].out as unknown as string[]).push(seqId.toString());
           }
         });
+      } else if (rawXmlDir) {
+        const msg = `Unrecognized exit direction "${rawXmlDir}" (normalized as "${xmlDir}") in room ${room['@_id']}`;
+        if (STRICT_MODE) {
+          throw new Error(msg);
+        }
+        console.warn(`Warning: ${msg}`);
       }
     });
 
@@ -401,13 +423,26 @@ function convert(xmlPath: string, outputDir: string) {
 }
 
 const args = process.argv.slice(2);
-if (args.length < 2) {
-  console.log("Usage: npm run convert-map -- <path-to-arda.xml> <output-directory>");
+let xmlPath = "";
+let outputDir = "";
+
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--strict') {
+    STRICT_MODE = true;
+  } else if (!xmlPath) {
+    xmlPath = args[i];
+  } else if (!outputDir) {
+    outputDir = args[i];
+  }
+}
+
+if (!xmlPath || !outputDir) {
+  console.log("Usage: npm run convert-map -- [--strict] <path-to-arda.xml> <output-directory>");
   process.exit(1);
 }
 
 try {
-  convert(args[0], args[1]);
+  convert(xmlPath, outputDir);
 } catch (err) {
   console.error(err);
   process.exit(1);
