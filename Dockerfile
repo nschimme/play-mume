@@ -12,8 +12,9 @@ RUN npm run tsc
 RUN npm run build
 RUN npm test
 
-# Download Arda.xml pinned to tag 42
-RUN curl -fL https://raw.githubusercontent.com/MUME/arda/42/arda.xml -o arda.xml
+# Download Arda.xml pinned to a specific version (e.g. tag 42)
+ARG ARDA_VERSION=42
+RUN curl -fL https://raw.githubusercontent.com/MUME/arda/${ARDA_VERSION}/arda.xml -o arda.xml
 
 # Convert map to JSON format
 RUN npm run convert-map -- --strict arda.xml dist/mapdata

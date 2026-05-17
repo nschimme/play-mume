@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { XMLParser } from 'fast-xml-parser';
 import * as crypto from 'crypto';
+import { DIRECTIONS, normalizeWhitespace, translitUnicodeToAsciiLikeMMapper } from '../mume.shared';
 
 // Types for Arda.xml
 interface XmlMap {
@@ -166,7 +167,6 @@ const DoorFlagsMap: Record<string, number> = {
   NO_BASH: 10,
 };
 
-const DIRECTIONS = ["NORTH", "SOUTH", "EAST", "WEST", "UP", "DOWN", "UNKNOWN", "NONE"];
 const NUM_EXITS = DIRECTIONS.length;
 const DirMap: Record<string, number> = DIRECTIONS.reduce((acc, dir, index) => {
   acc[dir.toLowerCase()] = index;
@@ -187,34 +187,6 @@ let STRICT_MODE = false;
 // Global tracker for unknown flags
 const unknownFlags = new Map<string, Set<string>>();
 
-// Utility functions
-function normalizeWhitespace(str: string): string {
-  return str.replace(/\s+/g, ' ').trim();
-}
-
-// Adapted from mume.mapper.ts
-function translitUnicodeToAsciiLikeMMapper(unicode: string): string {
-  const table = [
-    /*192*/ 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'C', 'E', 'E', 'E', 'E', 'I', 'I', 'I', 'I',
-    /*208*/ 'D', 'N', 'O', 'O', 'O', 'O', 'O', 'x', 'O', 'U', 'U', 'U', 'U', 'Y', 'b', 'B',
-    /*224*/ 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'c', 'e', 'e', 'e', 'e', 'i', 'i', 'i', 'i',
-    /*248*/ 'o', 'n', 'o', 'o', 'o', 'o', 'o', ':', 'o', 'u', 'u', 'u', 'u', 'y', 'b', 'y',
-  ];
-
-  let ascii = "";
-  for (const charString of unicode) {
-    const ch = charString.charCodeAt(0);
-    if (ch > 128) {
-      if (ch < 192)
-        ascii += "z"; // sic
-      else
-        ascii += table[ch - 192];
-    } else {
-      ascii += charString;
-    }
-  }
-  return ascii;
-}
 
 function normalizeForHash(text: string): string {
   // MMapper removes ANSI marks, but Arda.xml shouldn't have them?
@@ -345,7 +317,7 @@ function convert(xmlPath: string, outputDir: string) {
       if (dir !== undefined && dir < NUM_EXITS) {
         jsonExits[dir].name = (exit['@_doorname'] || exit.doorname || "").toString();
         jsonExits[dir].flags = parseFlags(exit.exitflag, ExitFlagsMap, `room ${room['@_id']} exit ${xmlDir}`, 'exitflag');
-        jsonExits[dir].dflags = parseFlags(exit.doorflag, DoorFlagsMap, `room ${room['@_id']} exit ${xmlDir}`, 'doorflag');
+        jsonExits[dir].dflags = parseFlags(exit.doorflag, DoorFlagsMap, `room ${room['@_id']} exit ${xmlDir}`, 'dflags');
 
         // In the original jsonmapstorage.cpp, "in" and "out" are populated.
         // MM2 XML has "to". In MMapper, an exit is usually bidirectional unless flags say otherwise.
