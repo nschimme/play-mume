@@ -137,6 +137,7 @@ const LoadFlagsMap: Record<string, number> = {
 
 const ExitFlagsMap: Record<string, number> = {
   EXIT: 0,
+  NO_EXIT: 0, // NO_EXIT is mapped to the EXIT flag (inverted logic in MMapper)
   DOOR: 1,
   ROAD: 2,
   CLIMB: 3,

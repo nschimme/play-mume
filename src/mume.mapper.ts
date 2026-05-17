@@ -18,20 +18,10 @@
 import $ from 'jquery';
 import * as PIXI from 'pixi.js';
 import SparkMD5 from 'spark-md5';
+import { Dir, translitUnicodeToAsciiLikeMMapper } from './mume.shared';
 
 const ROOM_PIXELS = 48;
 const MAP_DATA_PATH = "mapdata/v1/";
-enum Dir { // Must match MM2's defs.
-    NORTH = 0,
-    SOUTH = 1,
-    EAST = 2,
-    WEST = 3,
-    LAST_GROUND_DIR = WEST,
-    UP = 4,
-    DOWN = 5,
-    NONE = 6,
-    UNKNOWN = 7,
-}
 
 /* Like JQuery.when(), but the master Promise is resolved only when all
  * promises are resolved or rejected, not at the first rejection. */
@@ -59,34 +49,6 @@ const whenAll = function<T>( deferreds: JQueryPromise<T>[] )
     return master;
 }
 
-// Adapted from MMapper2: the result must be identical for the hashes to match
-const translitUnicodeToAsciiLikeMMapper = function( unicode: string ): string
-{
-    const table = [
-        /*192*/ 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'C', 'E', 'E', 'E', 'E', 'I', 'I', 'I', 'I',
-        /*208*/ 'D', 'N', 'O', 'O', 'O', 'O', 'O', 'x', 'O', 'U', 'U', 'U', 'U', 'Y', 'b', 'B',
-        /*224*/ 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'c', 'e', 'e', 'e', 'e', 'i', 'i', 'i', 'i',
-        /*248*/ 'o', 'n', 'o', 'o', 'o', 'o', 'o', ':', 'o', 'u', 'u', 'u', 'u', 'y', 'b', 'y', ];
-
-    let ascii = "";
-    for ( const charString of unicode )
-    {
-        const ch = charString.charCodeAt( 0 );
-        if (ch > 128)
-        {
-          if (ch < 192)
-            ascii += "z"; // sic
-          else
-            ascii += table[ ch - 192 ];
-        }
-        else
-        {
-            ascii += charString;
-        }
-    }
-
-    return ascii;
-}
 
 
 /* This is the "entry point" to this library for the rest of the code. */
