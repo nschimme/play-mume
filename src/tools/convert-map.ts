@@ -176,7 +176,11 @@ const DIR_ALIAS_MAP: Record<string, string> = {
   d: "down",
   e: "east",
   n: "north",
+  ne: "northeast",
+  nw: "northwest",
   s: "south",
+  se: "southeast",
+  sw: "southwest",
   u: "up",
   w: "west",
 };
@@ -211,7 +215,10 @@ function parseFlags(
   strict: boolean
 ): number {
   if (!flags) return 0;
-  const flagArray = Array.isArray(flags) ? flags : [flags];
+  const rawFlagArray = Array.isArray(flags) ? flags : [flags];
+  const flagArray = rawFlagArray
+    .map((f) => (f || "").toString().trim().toUpperCase())
+    .filter((f) => f.length > 0);
   let result = 0;
   for (const f of flagArray) {
     if (map[f] !== undefined) {
@@ -352,6 +359,12 @@ export function convertMap(xmlPath: string, outputDir: string, options: ConvertO
       }
     });
 
+    const terrain = (room.terrain || "UNDEFINED").toString().trim().toUpperCase();
+    const light = (room.light || "DARK").toString().trim().toUpperCase();
+    const portable = (room.portable || "PORTABLE").toString().trim().toUpperCase();
+    const rideable = (room.ridable || "NOT_RIDABLE").toString().trim().toUpperCase();
+    const sundeath = (room.sundeath || "NO_SUNDEATH").toString().trim().toUpperCase();
+
     zones[zoneKey].push({
       x: x,
       y: -y,
@@ -359,11 +372,11 @@ export function convertMap(xmlPath: string, outputDir: string, options: ConvertO
       id: index.toString(),
       name: name,
       desc: desc,
-      sector: TerrainMap[room.terrain || "UNDEFINED"] || 0,
-      light: room.light === "LIT" ? 1 : 0,
-      portable: room.portable === "NOT_PORTABLE" ? 0 : 1,
-      rideable: room.ridable === "RIDABLE" ? 1 : 0,
-      sundeath: room.sundeath === "SUNDEATH" ? 1 : 0,
+      sector: TerrainMap[terrain] || 0,
+      light: light === "LIT" ? 1 : 0,
+      portable: portable === "NOT_PORTABLE" ? 0 : 1,
+      rideable: rideable === "RIDABLE" ? 1 : 0,
+      sundeath: sundeath === "SUNDEATH" ? 1 : 0,
       mobflags: parseFlags(room.mobflag, MobFlagsMap, `room ${room['@_id']}`, 'mobflag', unknownFlags, strict),
       loadflags: parseFlags(room.loadflag, LoadFlagsMap, `room ${room['@_id']}`, 'loadflag', unknownFlags, strict),
       exits: jsonExits,
