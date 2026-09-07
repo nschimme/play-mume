@@ -104,8 +104,9 @@ $(window).on('load', function () {
     let parser: MumeXmlParser;
     let tagEventHandler;
 
-    if (DecafMUD.instances && DecafMUD.instances[0] && DecafMUD.instances[0].textInputFilter) {
-      parser = DecafMUD.instances[0].textInputFilter as MumeXmlParser;
+    if (DecafMUD.instances && DecafMUD.instances[0]) {
+      const decafInstance = DecafMUD.instances[0];
+      parser = decafInstance.textInputFilter as MumeXmlParser;
       if (!parser || typeof parser.filterInputText !== 'function') {
          console.error("Bug: expected to find a MumeXmlParser instance.");
          throw new Error("MumeXmlParser not found or invalid.");
@@ -114,6 +115,20 @@ $(window).on('load', function () {
       tagEventHandler = map.processTag.bind(map);
       $(parser).on(MumeXmlParser.SIG_TAG_END, tagEventHandler);
       console.log('The map widget will now receive parsing events');
+
+      // Connect GMCP Room.Info handler to pathMachine
+      if (decafInstance.gmcp && typeof decafInstance.gmcp.getFunction === 'function') {
+        const originalRoomInfo = decafInstance.gmcp.getFunction('Room.Info');
+        decafInstance.gmcp.packages.Room = decafInstance.gmcp.packages.Room || {};
+        decafInstance.gmcp.packages.Room.Info = function (data: { id?: number | string }) {
+          if (map && map.pathMachine) {
+            map.pathMachine.processGmcpRoomInfo(data);
+          }
+          if (typeof originalRoomInfo === 'function') {
+            originalRoomInfo.call(this, data);
+          }
+        };
+      }
     } else {
       console.error('DecafMUD instance or textInputFilter not found for map integration.');
       throw new Error('DecafMUD instance or textInputFilter not found.');

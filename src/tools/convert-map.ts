@@ -13,6 +13,7 @@ interface XmlMap {
 
 interface XmlRoom {
   '@_id': string;
+  '@_server_id'?: string;
   '@_name'?: string;
   name?: string;
   description?: string;
@@ -45,6 +46,7 @@ interface ZoneRoom {
   y: number;
   z: number;
   id: string;
+  server_id?: number;
   name: string;
   desc: string;
   sector: number;
@@ -186,9 +188,10 @@ const DIR_ALIAS_MAP: Record<string, string> = {
 };
 
 function normalizeForHash(text: string): string {
-  // MMapper removes ANSI marks, but Arda.xml shouldn't have them?
-  // Just in case, we'll keep it simple as Arda.xml is usually clean.
-  return translitUnicodeToAsciiLikeMMapper(text);
+  // Remove ANSI escape marks just in case, then transliterate unicode to ASCII
+  // eslint-disable-next-line no-control-regex
+  const plainText = text.replace(/\x1b\[[0-9;:]*[a-zA-Z]/g, '');
+  return translitUnicodeToAsciiLikeMMapper(plainText);
 }
 
 function getHash(name: string, desc: string): string {
@@ -290,6 +293,7 @@ export function convertMap(xmlPath: string, outputDir: string, options: ConvertO
 
   const zones: Record<string, ZoneRoom[]> = {};
   const roomIndex: Record<string, Record<string, number[][]>> = {};
+  const serverIndex: Record<string, number[][]> = {};
   let minX = Infinity, minY = Infinity, minZ = Infinity;
   let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
 
@@ -318,6 +322,19 @@ export function convertMap(xmlPath: string, outputDir: string, options: ConvertO
     if (!roomIndex[prefix]) roomIndex[prefix] = {};
     if (!roomIndex[prefix][hash]) roomIndex[prefix][hash] = [];
     roomIndex[prefix][hash].push([x, -y, z]);
+
+    let serverId: number | undefined;
+    if (room['@_server_id']) {
+      const parsedServerId = parseInt(room['@_server_id'], 10);
+      if (!isNaN(parsedServerId) && parsedServerId > 0) {
+        serverId = parsedServerId;
+        const serverIdStr = serverId.toString();
+        if (!serverIndex[serverIdStr]) {
+          serverIndex[serverIdStr] = [];
+        }
+        serverIndex[serverIdStr].push([x, -y, z]);
+      }
+    }
 
     const zoneKey = getZoneKey(x, y);
     if (!zones[zoneKey]) zones[zoneKey] = [];
@@ -365,7 +382,7 @@ export function convertMap(xmlPath: string, outputDir: string, options: ConvertO
     const rideable = (room.ridable || "NOT_RIDABLE").toString().trim().toUpperCase();
     const sundeath = (room.sundeath || "NO_SUNDEATH").toString().trim().toUpperCase();
 
-    zones[zoneKey].push({
+    const zoneRoom: ZoneRoom = {
       x: x,
       y: -y,
       z: z,
@@ -380,7 +397,12 @@ export function convertMap(xmlPath: string, outputDir: string, options: ConvertO
       mobflags: parseFlags(room.mobflag, MobFlagsMap, `room ${room['@_id']}`, 'mobflag', unknownFlags, strict),
       loadflags: parseFlags(room.loadflag, LoadFlagsMap, `room ${room['@_id']}`, 'loadflag', unknownFlags, strict),
       exits: jsonExits,
-    });
+    };
+    if (serverId !== undefined) {
+      zoneRoom.server_id = serverId;
+    }
+
+    zones[zoneKey].push(zoneRoom);
   });
 
   // Write files
@@ -409,6 +431,9 @@ export function convertMap(xmlPath: string, outputDir: string, options: ConvertO
   for (const [prefix, data] of Object.entries(roomIndex)) {
     fs.writeFileSync(path.join(roomIndexDir, `${prefix}.json`), JSON.stringify(data));
   }
+
+  console.log("Writing server index...");
+  fs.writeFileSync(path.join(v1Dir, 'serverindex.json'), JSON.stringify(serverIndex));
 
   if (unknownFlags.size > 0) {
     console.warn("\nSummary of unknown flags encountered:");

@@ -109,7 +109,7 @@ export class MumeMap
 
 
 /* Analogy to MMapper2's path machine, although ours is a currently just a
- * naive room+desc exact search with no "path" to speak of.
+ * naive room+desc exact search with no "path" to speak of, enhanced with server_id lookup.
  */
 class MumePathMachine
 {
@@ -118,6 +118,7 @@ class MumePathMachine
     public mapData: MumeMapData;
     public mapIndex: MumeMapIndex;
     public roomName: string | null;
+    public currentServerId: number | null;
     public here: RoomCoords | null;
 
     constructor( mapData: MumeMapData, mapIndex: MumeMapIndex )
@@ -125,7 +126,21 @@ class MumePathMachine
         this.mapData = mapData;
         this.mapIndex = mapIndex;
         this.roomName = null;
+        this.currentServerId = null;
         this.here = null;
+    }
+
+    /* Process GMCP Room.Info messages if available. */
+    public processGmcpRoomInfo( data: { id?: number | string } ): void
+    {
+        if ( data && data.id !== undefined && data.id !== null )
+        {
+            const serverId = typeof data.id === "number" ? data.id : parseInt( String( data.id ), 10 );
+            if ( !isNaN( serverId ) && serverId > 0 )
+            {
+                this.currentServerId = serverId;
+            }
+        }
     }
 
     /* This receives an event from MumeXmlParser when it encounters a closing tag.
@@ -134,13 +149,16 @@ class MumePathMachine
     {
         console.log( "MumePathMachine processes tag " + tag.name );
         if ( tag.name === "name" )
+        {
             this.roomName = tag.text;
+        }
         else if ( tag.name === "description" )
         {
             if ( this.roomName )
             {
-                this.enterRoom( this.roomName, tag.text );
+                this.enterRoom( this.roomName, tag.text, this.currentServerId );
                 this.roomName = null;
+                this.currentServerId = null;
             }
             else
             {
@@ -151,18 +169,33 @@ class MumePathMachine
         else if ( tag.name === "room" )
         {
             this.roomName = null;
+            this.currentServerId = null;
         }
     }
 
     /* Internal function called when we got a complete room. */
-    private enterRoom( name: string, desc: string ): void
+    private enterRoom( name: string, desc: string, serverId: number | null ): void
     {
-        this.mapIndex.findPosByNameDesc( name, desc )
-            .done( ( coordinates: RoomCoords[] ) =>
-            {
-                this.here = coordinates[0];
-                $(this).triggerHandler( MumePathMachine.SIG_MOVEMENT, [ coordinates[0] ] );
-            } );
+        const onFound = ( coordinates: RoomCoords[] ) =>
+        {
+            this.here = coordinates[0];
+            $(this).triggerHandler( MumePathMachine.SIG_MOVEMENT, [ coordinates[0] ] );
+        };
+
+        if ( serverId !== null && serverId > 0 )
+        {
+            this.mapIndex.findPosByServerId( serverId )
+                .done( onFound )
+                .fail( () =>
+                {
+                    console.log( "MumePathMachine: server_id %d not found in map index, falling back to name+desc hash", serverId );
+                    this.mapIndex.findPosByNameDesc( name, desc ).done( onFound );
+                } );
+        }
+        else
+        {
+            this.mapIndex.findPosByNameDesc( name, desc ).done( onFound );
+        }
     }
 }
 
@@ -170,7 +203,7 @@ class MumePathMachine
 
 /* Queries and caches the server-hosted index of rooms.
  * For v1 format, that's a roomname+roomdesc => coords index, 2.4MB total,
- * split into 10kB JSON chunks.
+ * split into 10kB JSON chunks, plus an optional serverindex.json mapping server_id => coords.
  */
 class MumeMapIndex
 {
@@ -180,11 +213,15 @@ class MumeMapIndex
 
     private cache: Map<string, RoomCoords[]>;
     private cachedChunks: Set<string>;
+    private serverIdCache: Map<number, RoomCoords[]> | null;
+    private serverIndexPromise: JQueryDeferred<Map<number, RoomCoords[]>> | null;
 
     constructor()
     {
         this.cache = new Map<string, RoomCoords[]>();
         this.cachedChunks = new Set<string>();
+        this.serverIdCache = null;
+        this.serverIndexPromise = null;
     }
 
     /* Normalize into text that should match what MMapper used to produce the
@@ -193,7 +230,8 @@ class MumeMapIndex
     public static normalizeString( input: string )
     {
         // MMapper indexed the plain text without any escape, obviously.
-        const text = input.replace( MumeMapIndex.ANY_ANSI_ESCAPE, '' );
+        // eslint-disable-next-line no-control-regex
+        const text = input.replace( /\x1B\[[0-9;:]*[A-Za-z]/g, '' );
 
         // MMapper applies these conversions to ensure the hashes in the index
         // are resilient to trivial changes.
@@ -308,6 +346,76 @@ class MumeMapIndex
                 result.reject();
             } );
 
+        return result;
+    }
+
+    private loadServerIndex(): JQueryDeferred<Map<number, RoomCoords[]>>
+    {
+        if ( this.serverIdCache !== null )
+        {
+            return $.Deferred<Map<number, RoomCoords[]>>().resolve( this.serverIdCache );
+        }
+        if ( this.serverIndexPromise !== null )
+        {
+            return this.serverIndexPromise;
+        }
+
+        const deferred = $.Deferred<Map<number, RoomCoords[]>>();
+        this.serverIndexPromise = deferred;
+
+        const url = MAP_DATA_PATH + "serverindex.json";
+        $.getJSON( url )
+            .done( ( json: Record<string, number[][]> ) =>
+            {
+                const cache = new Map<number, RoomCoords[]>();
+                for ( const [ idStr, rawCoordsArray ] of Object.entries( json ) )
+                {
+                    const serverId = parseInt( idStr, 10 );
+                    if ( isNaN( serverId ) || !Array.isArray( rawCoordsArray ) ) continue;
+
+                    const coordsArray: RoomCoords[] = [];
+                    for ( const rawCoords of rawCoordsArray )
+                    {
+                        if ( Array.isArray( rawCoords ) && rawCoords.length === 3 )
+                        {
+                            coordsArray.push( new RoomCoords( rawCoords[0], rawCoords[1], rawCoords[2] ) );
+                        }
+                    }
+                    if ( coordsArray.length > 0 )
+                    {
+                        cache.set( serverId, coordsArray );
+                    }
+                }
+                this.serverIdCache = cache;
+                deferred.resolve( cache );
+            } )
+            .fail( ( _jqxhr: JQuery.jqXHR, textStatus: string, error: string ) =>
+            {
+                console.warn( "Loading serverindex.json failed: %s, %O. Falling back to hash lookup.", textStatus, error );
+                this.serverIdCache = new Map<number, RoomCoords[]>();
+                deferred.resolve( this.serverIdCache );
+            } );
+
+        return deferred;
+    }
+
+    public findPosByServerId( serverId: number ): JQueryDeferred<RoomCoords[]>
+    {
+        const result = $.Deferred<RoomCoords[]>();
+        this.loadServerIndex().done( ( cache ) =>
+        {
+            const coordinates = cache.get( serverId );
+            if ( coordinates !== undefined && coordinates.length > 0 )
+            {
+                console.log( "MumeMapIndex: found server_id %d in %O", serverId, coordinates );
+                result.resolve( coordinates );
+            }
+            else
+            {
+                console.log( "MumeMapIndex: unknown server_id %d", serverId );
+                result.reject();
+            }
+        } );
         return result;
     }
 }

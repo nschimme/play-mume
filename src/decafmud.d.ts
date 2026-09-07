@@ -19,6 +19,7 @@
 
 interface DecafMUDInstance {
   textInputFilter?: any;
+  gmcp?: any;
   socket: DecafMUDSocket;
   sendInput: (command: string) => void;
 }

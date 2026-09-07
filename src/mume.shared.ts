@@ -41,7 +41,9 @@ export function translitUnicodeToAsciiLikeMMapper(unicode: string): string {
 }
 
 export function normalizeWhitespace(str: string): string {
-  return str.replace(/\s+/g, ' ').trim();
+  // MMapper's ParserUtils::normalizeWhitespace collapses all whitespace runs
+  // (including spaces, newlines, tabs) into a single space, without leading/trailing trim.
+  return str.replace(/\s+/g, ' ');
 }
 
 export const DIRECTIONS = ["NORTH", "SOUTH", "EAST", "WEST", "UP", "DOWN", "UNKNOWN", "NONE"];
