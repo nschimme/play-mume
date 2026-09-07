@@ -25,6 +25,8 @@ import { throttle } from './utils';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let originalRoomInfoHandler: ((data: any) => void) | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let originalEventMovedHandler: ((data: any) => void) | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let decafInstanceRef: any;
 
   $(window).on("load", function (_e: JQuery.Event) {
@@ -36,7 +38,7 @@ import { throttle } from './utils';
       if (opener && opener.DecafMUD && opener.DecafMUD.instances && opener.DecafMUD.instances[0]) {
         decafInstanceRef = opener.DecafMUD.instances[0];
 
-        // Hook GMCP Room.Info in map.html window if connected
+        // Hook GMCP Room.Info and Event.Moved in map.html window if connected
         if (decafInstanceRef && decafInstanceRef.gmcp) {
           originalRoomInfoHandler = typeof decafInstanceRef.gmcp.getFunction === 'function' ? decafInstanceRef.gmcp.getFunction('Room.Info') : undefined;
           decafInstanceRef.gmcp.packages.Room = decafInstanceRef.gmcp.packages.Room || {};
@@ -47,6 +49,18 @@ import { throttle } from './utils';
             }
             if (typeof prevRoomInfo === 'function') {
               prevRoomInfo.call(this, data);
+            }
+          };
+
+          originalEventMovedHandler = typeof decafInstanceRef.gmcp.getFunction === 'function' ? decafInstanceRef.gmcp.getFunction('Event.Moved') : undefined;
+          decafInstanceRef.gmcp.packages.Event = decafInstanceRef.gmcp.packages.Event || {};
+          const prevEventMoved = originalEventMovedHandler;
+          decafInstanceRef.gmcp.packages.Event.Moved = function (data: { dir?: string }) {
+            if (map && map.pathMachine) {
+              map.pathMachine.processGmcpEventMoved(data);
+            }
+            if (typeof prevEventMoved === 'function') {
+              prevEventMoved.call(this, data);
             }
           };
         }
@@ -72,11 +86,20 @@ import { throttle } from './utils';
   });
 
   $(window).on("unload", function (_e: JQuery.Event) {
-    if (decafInstanceRef && decafInstanceRef.gmcp && decafInstanceRef.gmcp.packages && decafInstanceRef.gmcp.packages.Room) {
-      if (originalRoomInfoHandler !== undefined) {
-        decafInstanceRef.gmcp.packages.Room.Info = originalRoomInfoHandler;
-      } else {
-        delete decafInstanceRef.gmcp.packages.Room.Info;
+    if (decafInstanceRef && decafInstanceRef.gmcp && decafInstanceRef.gmcp.packages) {
+      if (decafInstanceRef.gmcp.packages.Room) {
+        if (originalRoomInfoHandler !== undefined) {
+          decafInstanceRef.gmcp.packages.Room.Info = originalRoomInfoHandler;
+        } else {
+          delete decafInstanceRef.gmcp.packages.Room.Info;
+        }
+      }
+      if (decafInstanceRef.gmcp.packages.Event) {
+        if (originalEventMovedHandler !== undefined) {
+          decafInstanceRef.gmcp.packages.Event.Moved = originalEventMovedHandler;
+        } else {
+          delete decafInstanceRef.gmcp.packages.Event.Moved;
+        }
       }
     }
   });

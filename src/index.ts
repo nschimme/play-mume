@@ -131,6 +131,17 @@ $(window).on('load', function () {
             originalRoomInfo.call(this, data);
           }
         };
+
+        const originalEventMoved = typeof decafInstance.gmcp.getFunction === 'function' ? decafInstance.gmcp.getFunction('Event.Moved') : undefined;
+        decafInstance.gmcp.packages.Event = decafInstance.gmcp.packages.Event || {};
+        decafInstance.gmcp.packages.Event.Moved = function (data: { dir?: string }) {
+          if (map && map.pathMachine) {
+            map.pathMachine.processGmcpEventMoved(data);
+          }
+          if (typeof originalEventMoved === 'function') {
+            originalEventMoved.call(this, data);
+          }
+        };
       }
     } else {
       console.error('DecafMUD instance not found for map integration.');

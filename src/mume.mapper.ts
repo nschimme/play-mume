@@ -117,6 +117,8 @@ class MumePathMachine
     public roomName: string | null;
     public currentServerId: number | null;
     public here: RoomCoords | null;
+    private pendingRoomInfo: { serverId: number | null; name: string; desc: string; time: number } | null;
+    private hasMoved = false;
 
     constructor( mapData: MumeMapData, mapIndex: MumeMapIndex )
     {
@@ -125,9 +127,10 @@ class MumePathMachine
         this.roomName = null;
         this.currentServerId = null;
         this.here = null;
+        this.pendingRoomInfo = null;
     }
 
-    /* Process GMCP Room.Info messages directly. */
+    /* Process GMCP Room.Info messages. Handles out-of-order GMCP delivery robustly and ignores scouting. */
     public processGmcpRoomInfo( data: { id?: number | string; name?: string; desc?: string } ): void
     {
         if ( !data ) return;
@@ -145,13 +148,37 @@ class MumePathMachine
         const name = data.name || "";
         const desc = data.desc || "";
 
-        // If either server_id is available or we have room name and desc, trigger room positioning directly from GMCP!
-        if ( serverId !== null || ( name && desc ) )
+        if ( serverId === null && (!name || !desc) ) return;
+
+        // If initial load or we already received Event.Moved, update room position immediately
+        if ( this.here === null || this.hasMoved )
         {
             this.enterRoom( name, desc, serverId );
+            this.hasMoved = false;
+            this.pendingRoomInfo = null;
+        }
+        else
+        {
+            this.pendingRoomInfo = { serverId, name, desc, time: Date.now() };
         }
     }
 
+    /* Process GMCP Event.Moved messages. Handle room positioning whether Room.Info arrived before or after Event.Moved. */
+    public processGmcpEventMoved( _data?: { dir?: string } ): void
+    {
+        if ( this.pendingRoomInfo && ( Date.now() - this.pendingRoomInfo.time < 500 ) )
+        {
+            const { name, desc, serverId } = this.pendingRoomInfo;
+            this.enterRoom( name, desc, serverId );
+            this.pendingRoomInfo = null;
+            this.hasMoved = false;
+        }
+        else
+        {
+            this.hasMoved = true;
+            this.pendingRoomInfo = null;
+        }
+    }
 
     /* Internal function called when we got a complete room. */
     private enterRoom( name: string, desc: string, serverId: number | null ): void
