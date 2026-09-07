@@ -112,21 +112,14 @@ class MumePathMachine
 
     public mapData: MumeMapData;
     public mapIndex: MumeMapIndex;
-    public roomName: string | null;
-    public currentServerId: number | null;
     public here: RoomCoords | null;
-    private pendingRoomInfo: { serverId: number | null; name: string; desc: string; time: number } | null;
-    private hasMoved = false;
     private currentLookupToken = 0;
 
     constructor( mapData: MumeMapData, mapIndex: MumeMapIndex )
     {
         this.mapData = mapData;
         this.mapIndex = mapIndex;
-        this.roomName = null;
-        this.currentServerId = null;
         this.here = null;
-        this.pendingRoomInfo = null;
     }
 
     /* Process GMCP Room.Info messages. Handles out-of-order GMCP delivery robustly. */
@@ -161,8 +154,6 @@ class MumePathMachine
             return;
         }
 
-        this.pendingRoomInfo = null;
-        this.hasMoved = false;
         console.log( "MumePathMachine: entering room immediately (serverId=%O, name=%O)", serverId, name );
         this.enterRoom( name, desc, serverId );
     }
@@ -171,8 +162,6 @@ class MumePathMachine
     public processGmcpEventMoved( data?: { dir?: string } ): void
     {
         console.log( "MumePathMachine: processGmcpEventMoved received (dir=%O)", data?.dir );
-        this.pendingRoomInfo = null;
-        this.hasMoved = false;
     }
 
     /* Internal function called when we got a complete room. */
