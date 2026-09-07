@@ -40,6 +40,12 @@ export function translitUnicodeToAsciiLikeMMapper(unicode: string): string {
   return ascii;
 }
 
+export const ZONE_SIZE = 20;
+
+export function calcZoneCoord(n: number): number {
+  return Math.floor(n / ZONE_SIZE) * ZONE_SIZE;
+}
+
 export function normalizeWhitespace(str: string): string {
   // MMapper's ParserUtils::normalizeWhitespace collapses all whitespace runs
   // (including spaces, newlines, tabs) into a single space, without leading/trailing trim.

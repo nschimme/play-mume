@@ -24,6 +24,8 @@ import { throttle } from './utils';
 
   let originalRoomInfoHandler: ((data: unknown) => void) | undefined;
   let originalEventMovedHandler: ((data: unknown) => void) | undefined;
+  let wrapperRoomInfoHandler: ((data: unknown) => void) | undefined;
+  let wrapperEventMovedHandler: ((data: unknown) => void) | undefined;
   let decafInstanceRef: DecafMUDInstance | undefined;
 
   $(window).on("load", function (_e: JQuery.Event) {
@@ -41,25 +43,27 @@ import { throttle } from './utils';
           if (typeof gmcp.registerHandler === 'function') {
             originalRoomInfoHandler = gmcp.getFunction ? gmcp.getFunction('Room.Info') : undefined;
             const prevRoomInfo = originalRoomInfoHandler;
-            gmcp.registerHandler('Room.Info', (data: unknown) => {
+            wrapperRoomInfoHandler = (data: unknown) => {
               if (map && map.pathMachine) {
                 map.pathMachine.processGmcpRoomInfo(data as GMCPRoomInfoData);
               }
               if (typeof prevRoomInfo === 'function') {
                 prevRoomInfo(data);
               }
-            });
+            };
+            gmcp.registerHandler('Room.Info', wrapperRoomInfoHandler);
 
             originalEventMovedHandler = gmcp.getFunction ? gmcp.getFunction('Event.Moved') : undefined;
             const prevEventMoved = originalEventMovedHandler;
-            gmcp.registerHandler('Event.Moved', (data: unknown) => {
+            wrapperEventMovedHandler = (data: unknown) => {
               if (map && map.pathMachine) {
                 map.pathMachine.processGmcpEventMoved(data as GMCPEventMovedData);
               }
               if (typeof prevEventMoved === 'function') {
                 prevEventMoved(data);
               }
-            });
+            };
+            gmcp.registerHandler('Event.Moved', wrapperEventMovedHandler);
           }
         }
 
@@ -85,14 +89,14 @@ import { throttle } from './utils';
 
   $(window).on("unload", function (_e: JQuery.Event) {
     if (decafInstanceRef && decafInstanceRef.gmcp && decafInstanceRef.gmcp.packages) {
-      if (decafInstanceRef.gmcp.packages.Room) {
+      if (decafInstanceRef.gmcp.packages.Room && decafInstanceRef.gmcp.packages.Room.Info === wrapperRoomInfoHandler) {
         if (originalRoomInfoHandler !== undefined) {
           decafInstanceRef.gmcp.packages.Room.Info = originalRoomInfoHandler;
         } else {
           delete decafInstanceRef.gmcp.packages.Room.Info;
         }
       }
-      if (decafInstanceRef.gmcp.packages.Event) {
+      if (decafInstanceRef.gmcp.packages.Event && decafInstanceRef.gmcp.packages.Event.Moved === wrapperEventMovedHandler) {
         if (originalEventMovedHandler !== undefined) {
           decafInstanceRef.gmcp.packages.Event.Moved = originalEventMovedHandler;
         } else {

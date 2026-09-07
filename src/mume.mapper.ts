@@ -18,7 +18,7 @@
 import $ from 'jquery';
 import * as PIXI from 'pixi.js';
 import SparkMD5 from 'spark-md5';
-import { Dir, normalizeWhitespace, translitUnicodeToAsciiLikeMMapper } from './mume.shared';
+import { Dir, calcZoneCoord, normalizeWhitespace, translitUnicodeToAsciiLikeMMapper } from './mume.shared';
 
 const ROOM_PIXELS = 48;
 const MAP_DATA_PATH = "mapdata/v1/";
@@ -117,6 +117,7 @@ class MumePathMachine
     public here: RoomCoords | null;
     private pendingRoomInfo: { serverId: number | null; name: string; desc: string; time: number } | null;
     private hasMoved = false;
+    private currentLookupToken = 0;
 
     constructor( mapData: MumeMapData, mapIndex: MumeMapIndex )
     {
@@ -128,7 +129,7 @@ class MumePathMachine
         this.pendingRoomInfo = null;
     }
 
-    /* Process GMCP Room.Info messages. Handles out-of-order GMCP delivery robustly and ignores scouting. */
+    /* Process GMCP Room.Info messages. Handles out-of-order GMCP delivery robustly. */
     public processGmcpRoomInfo( data: { id?: number | string; num?: number | string; vnum?: number | string; name?: string; desc?: string } ): void
     {
         if ( !data )
@@ -171,6 +172,7 @@ class MumePathMachine
         else
         {
             console.log( "MumePathMachine: buffering pending room info waiting for Event.Moved (serverId=%O, name=%O)", serverId, name );
+            // If a previous Room.Info was buffered without Event.Moved (e.g. scouting or multiple Room.Infos), overwrite it
             this.pendingRoomInfo = { serverId, name, desc, time: Date.now() };
         }
     }
@@ -200,18 +202,28 @@ class MumePathMachine
     /* Internal function called when we got a complete room. */
     private enterRoom( name: string, desc: string, serverId: number | null ): void
     {
-        console.log( "MumePathMachine.enterRoom: attempting lookup for serverId=%O, name=%O, desc_len=%d", serverId, name, desc.length );
+        const token = ++this.currentLookupToken;
+        console.log( "MumePathMachine.enterRoom [%d]: attempting lookup for serverId=%O, name=%O, desc_len=%d", token, serverId, name, desc.length );
 
         const onFound = ( coordinates: RoomCoords[] ) =>
         {
-            console.log( "MumePathMachine.enterRoom: successfully found room coords %O for serverId=%O, name=%O", coordinates[0], serverId, name );
+            if ( token !== this.currentLookupToken )
+            {
+                console.log( "MumePathMachine.enterRoom [%d]: ignoring stale lookup result (current token is %d)", token, this.currentLookupToken );
+                return;
+            }
+            console.log( "MumePathMachine.enterRoom [%d]: successfully found room coords %O for serverId=%O, name=%O", token, coordinates[0], serverId, name );
             this.here = coordinates[0];
             $(this).triggerHandler( MumePathMachine.SIG_MOVEMENT, [ coordinates[0] ] );
         };
 
         const onNotFound = () =>
         {
-            console.warn( "MumePathMachine.enterRoom: FAILED to find room coordinates for serverId=%O, name=%O, desc_len=%d", serverId, name, desc.length );
+            if ( token !== this.currentLookupToken )
+            {
+                return;
+            }
+            console.warn( "MumePathMachine.enterRoom [%d]: FAILED to find room coordinates for serverId=%O, name=%O, desc_len=%d", token, serverId, name, desc.length );
         };
 
         if ( serverId !== null && serverId > 0 )
@@ -763,8 +775,8 @@ class MumeMapData
                 y < this.metaData.minY || y > this.metaData.maxY )
             return null;
 
-        const zoneX = x - ( x % MumeMapData.ZONE_SIZE );
-        const zoneY = y - ( y % MumeMapData.ZONE_SIZE );
+        const zoneX = calcZoneCoord( x );
+        const zoneY = calcZoneCoord( y );
         const zone = zoneX + "," + zoneY;
 
         return zone;
