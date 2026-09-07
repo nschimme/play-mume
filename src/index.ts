@@ -35,7 +35,7 @@ import { throttle } from './utils';
 import './errorhandler';
 import './mume.macros';
 import './mume.menu';
-import { MumeMap, MumeXmlParser } from './mume.mapper';
+import { MumeMap } from './mume.mapper';
 
 let globalMapWindow: Window | null | undefined;
 let _globalSplit: Split.Instance | undefined;
@@ -58,8 +58,6 @@ $(window).on('load', function () {
     return;
   }
 
-  DecafMUD.plugins.TextInputFilter.mumexml = MumeXmlParser;
-
   new DecafMUD({
     host: 'mume.org',
     port: 443,
@@ -78,7 +76,6 @@ $(window).on('load', function () {
       start_full: false,
     },
     language: 'en',
-    textinputfilter: 'mumexml',
     socket: 'websocket',
   });
 

@@ -1741,33 +1741,3 @@ class MumeMapDisplay
 
 
 
-/* Fast passthrough input text filter.
- * XML mode is no longer used for room mapping or prompts as GMCP provides clean JSON events.
- */
-export class MumeXmlParser
-{
-    // instanceof doesn't work cross-window
-    private readonly isMumeXmlParser = true;
-    private decaf: DecafMUDInstance;
-
-    constructor( decaf: DecafMUDInstance )
-    {
-        this.decaf = decaf;
-    }
-
-    public clear(): void
-    {
-        // No-op
-    }
-
-    public connected(): void
-    {
-        // No-op
-    }
-
-    /* Fast, performant passthrough: return rawInput directly without regex XML parsing. */
-    public filterInputText( rawInput: string ): string
-    {
-        return rawInput;
-    }
-}
