@@ -78,6 +78,7 @@ interface DecafMUDStatic {
 declare var DecafMUD: DecafMUDStatic;
 
 declare interface DecafMUDSocket {
+  connected?: boolean;
   write(data: string): void;
 }
 

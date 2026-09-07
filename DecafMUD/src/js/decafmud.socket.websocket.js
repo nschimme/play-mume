@@ -71,10 +71,18 @@ DecafWebSocket.prototype.setup = function() {
 /** Connects to the remote server. All the necessary data is pulled from
  *  the {@link DecafMUD} instance's options, so there aren't any parameters. */
 DecafWebSocket.prototype.connect = function() {
-	// If we're connected, disconnect.
-	if ( this.connected && this.websocket ) {
-		this.websocket.close();
-		this.websocket = null; }
+	// Clean up any existing socket before opening a new connection
+	if ( this.websocket ) {
+		this.websocket.onopen = null;
+		this.websocket.onclose = null;
+		this.websocket.onmessage = null;
+		this.websocket.onerror = null;
+		if ( this.websocket.readyState === 0 || this.websocket.readyState === 1 ) {
+			try { this.websocket.close(); } catch (e) {}
+		}
+		this.websocket = null;
+	}
+	this.connected = false;
 	
 	// Determine the port to connect on.
 	var port = this.port;
@@ -127,8 +135,13 @@ DecafWebSocket.prototype.connect = function() {
 DecafWebSocket.prototype.close = function() {
 	this.connected = false;
 	if ( this.websocket ) {
-		this.websocket.close();
-		this.websocket = null; }
+		this.websocket.onopen = null;
+		this.websocket.onclose = null;
+		this.websocket.onmessage = null;
+		this.websocket.onerror = null;
+		try { this.websocket.close(); } catch (e) {}
+		this.websocket = null;
+	}
 }
 
 /** Ensure that the socket is connected to a remote server.
@@ -179,13 +192,15 @@ DecafWebSocket.prototype.onOpen = function(websocket, event) {
  * @private
  * @event */
 DecafWebSocket.prototype.onClose = function(websocket, event) {
-	
-	// Were we connected?
-	if ( this.connected ) {
-		this.connected = false;
+	var wasConnected = this.connected;
+	this.connected = false;
+
+	if ( this.websocket === websocket ) {
+		this.websocket = null;
+	}
+
+	if ( wasConnected ) {
 		this.decaf.socketClosed();
-		if ( this.websocket == websocket )
-			this.websocket = null;
 	}
 }
 

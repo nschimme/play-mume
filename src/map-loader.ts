@@ -77,7 +77,7 @@ import { throttle } from './utils';
     });
   });
 
-  $(window).on("unload", function (_e: JQuery.Event) {
+  $(window).on("pagehide", function (_e: JQuery.Event) {
     while (unregisterCallbacks.length > 0) {
       const unregister = unregisterCallbacks.pop();
       if (typeof unregister === 'function') {

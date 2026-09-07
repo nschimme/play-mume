@@ -105,8 +105,12 @@ $(window).on('load', function () {
       if (decafInstance.gmcp) {
         const gmcp = decafInstance.gmcp;
         const sendSupportsAdd = (gmcpObj: GMCPPlugin) => {
-          if (typeof gmcpObj.sendGMCP === 'function') {
-            gmcpObj.sendGMCP('Core.Supports.Add', ['Char 1', 'Room 1', 'Event 1']);
+          if (typeof gmcpObj.sendGMCP === 'function' && decafInstance.socket?.connected) {
+            try {
+              gmcpObj.sendGMCP('Core.Supports.Add', ['Char 1', 'Room 1', 'Event 1']);
+            } catch (err) {
+              console.warn('Failed to send GMCP Core.Supports.Add:', err);
+            }
           }
         };
 
@@ -118,8 +122,10 @@ $(window).on('load', function () {
           sendSupportsAdd(this as GMCPPlugin);
         };
 
-        // If GMCP option negotiation already completed before MumeMap loaded, send immediately
-        sendSupportsAdd(gmcp);
+        // If GMCP option negotiation already completed before MumeMap loaded and socket is connected, send immediately
+        if (decafInstance.socket?.connected) {
+          sendSupportsAdd(gmcp);
+        }
 
         if (typeof gmcp.registerHandler === 'function') {
           gmcp.registerHandler('Room.Info', (data: unknown) => {
@@ -161,6 +167,7 @@ $(window).on('load', function () {
     handleSizeChange();
   }).fail(function(error: unknown) {
     console.error("Failed to load MumeMap:", error);
+    $('#mume-map').html('<p style="color:#aaa;text-align:center;padding-top:20px;">Map unable to load. Please refresh to try again.</p>');
   });
 
   if ('serviceWorker' in navigator) {
@@ -172,7 +179,7 @@ $(window).on('load', function () {
   }
 });
 
-$(window).on('unload', function () {
+$(window).on('pagehide', function () {
   if (globalMapWindow != undefined) {
     globalMapWindow.close();
   }
