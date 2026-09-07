@@ -22,12 +22,9 @@ import { throttle } from './utils';
 (function () {
   "use strict";
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let originalRoomInfoHandler: ((data: any) => void) | undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let originalEventMovedHandler: ((data: any) => void) | undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let decafInstanceRef: any;
+  let originalRoomInfoHandler: ((data: unknown) => void) | undefined;
+  let originalEventMovedHandler: ((data: unknown) => void) | undefined;
+  let decafInstanceRef: DecafMUDInstance | undefined;
 
   $(window).on("load", function (_e: JQuery.Event) {
     MumeMap.load("mume-map").done(function (map: MumeMap) {
@@ -40,24 +37,25 @@ import { throttle } from './utils';
 
         // Hook GMCP Room.Info and Event.Moved in map.html window if connected
         if (decafInstanceRef && decafInstanceRef.gmcp) {
-          originalRoomInfoHandler = typeof decafInstanceRef.gmcp.getFunction === 'function' ? decafInstanceRef.gmcp.getFunction('Room.Info') : undefined;
-          decafInstanceRef.gmcp.packages.Room = decafInstanceRef.gmcp.packages.Room || {};
+          const gmcp = decafInstanceRef.gmcp;
+          originalRoomInfoHandler = gmcp.getFunction ? gmcp.getFunction('Room.Info') : undefined;
+          gmcp.packages.Room = gmcp.packages.Room || {};
           const prevRoomInfo = originalRoomInfoHandler;
-          decafInstanceRef.gmcp.packages.Room.Info = function (data: { id?: number | string; name?: string; desc?: string }) {
+          gmcp.packages.Room.Info = function (data: unknown) {
             if (map && map.pathMachine) {
-              map.pathMachine.processGmcpRoomInfo(data);
+              map.pathMachine.processGmcpRoomInfo(data as GMCPRoomInfoData);
             }
             if (typeof prevRoomInfo === 'function') {
               prevRoomInfo.call(this, data);
             }
           };
 
-          originalEventMovedHandler = typeof decafInstanceRef.gmcp.getFunction === 'function' ? decafInstanceRef.gmcp.getFunction('Event.Moved') : undefined;
-          decafInstanceRef.gmcp.packages.Event = decafInstanceRef.gmcp.packages.Event || {};
+          originalEventMovedHandler = gmcp.getFunction ? gmcp.getFunction('Event.Moved') : undefined;
+          gmcp.packages.Event = gmcp.packages.Event || {};
           const prevEventMoved = originalEventMovedHandler;
-          decafInstanceRef.gmcp.packages.Event.Moved = function (data: { dir?: string }) {
+          gmcp.packages.Event.Moved = function (data: unknown) {
             if (map && map.pathMachine) {
-              map.pathMachine.processGmcpEventMoved(data);
+              map.pathMachine.processGmcpEventMoved(data as GMCPEventMovedData);
             }
             if (typeof prevEventMoved === 'function') {
               prevEventMoved.call(this, data);

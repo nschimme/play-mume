@@ -101,42 +101,42 @@ $(window).on('load', function () {
     if (DecafMUD.instances && DecafMUD.instances[0]) {
       const decafInstance = DecafMUD.instances[0];
 
-      // Hook into GMCP enablement and Room.Info package
+      // Hook into GMCP enablement and Room.Info / Event.Moved packages
       if (decafInstance.gmcp) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const sendSupportsAdd = (gmcpObj: any) => {
+        const gmcp = decafInstance.gmcp;
+        const sendSupportsAdd = (gmcpObj: GMCPPlugin) => {
           if (typeof gmcpObj.sendGMCP === 'function') {
             gmcpObj.sendGMCP('Core.Supports.Add', ['Char 1', 'Room 1', 'Event 1']);
           }
         };
 
-        const originalWill = decafInstance.gmcp._will;
-        decafInstance.gmcp._will = function (...args: unknown[]) {
+        const originalWill = gmcp._will;
+        gmcp._will = function (...args: unknown[]) {
           if (typeof originalWill === 'function') {
             originalWill.apply(this, args);
           }
-          sendSupportsAdd(this);
+          sendSupportsAdd(this as GMCPPlugin);
         };
 
         // If GMCP option negotiation already completed before MumeMap loaded, send immediately
-        sendSupportsAdd(decafInstance.gmcp);
+        sendSupportsAdd(gmcp);
 
-        const originalRoomInfo = typeof decafInstance.gmcp.getFunction === 'function' ? decafInstance.gmcp.getFunction('Room.Info') : undefined;
-        decafInstance.gmcp.packages.Room = decafInstance.gmcp.packages.Room || {};
-        decafInstance.gmcp.packages.Room.Info = function (data: { id?: number | string; name?: string; desc?: string }) {
+        const originalRoomInfo = gmcp.getFunction ? gmcp.getFunction('Room.Info') : undefined;
+        gmcp.packages.Room = gmcp.packages.Room || {};
+        gmcp.packages.Room.Info = function (data: unknown) {
           if (map && map.pathMachine) {
-            map.pathMachine.processGmcpRoomInfo(data);
+            map.pathMachine.processGmcpRoomInfo(data as GMCPRoomInfoData);
           }
           if (typeof originalRoomInfo === 'function') {
             originalRoomInfo.call(this, data);
           }
         };
 
-        const originalEventMoved = typeof decafInstance.gmcp.getFunction === 'function' ? decafInstance.gmcp.getFunction('Event.Moved') : undefined;
-        decafInstance.gmcp.packages.Event = decafInstance.gmcp.packages.Event || {};
-        decafInstance.gmcp.packages.Event.Moved = function (data: { dir?: string }) {
+        const originalEventMoved = gmcp.getFunction ? gmcp.getFunction('Event.Moved') : undefined;
+        gmcp.packages.Event = gmcp.packages.Event || {};
+        gmcp.packages.Event.Moved = function (data: unknown) {
           if (map && map.pathMachine) {
-            map.pathMachine.processGmcpEventMoved(data);
+            map.pathMachine.processGmcpEventMoved(data as GMCPEventMovedData);
           }
           if (typeof originalEventMoved === 'function') {
             originalEventMoved.call(this, data);
