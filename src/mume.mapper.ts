@@ -129,14 +129,19 @@ class MumePathMachine
     }
 
     /* Process GMCP Room.Info messages. Handles out-of-order GMCP delivery robustly and ignores scouting. */
-    public processGmcpRoomInfo( data: { id?: number | string; name?: string; desc?: string } ): void
+    public processGmcpRoomInfo( data: { id?: number | string; num?: number | string; vnum?: number | string; name?: string; desc?: string } ): void
     {
-        if ( !data ) return;
+        if ( !data )
+        {
+            console.debug( "MumePathMachine: processGmcpRoomInfo received empty data payload" );
+            return;
+        }
 
         let serverId: number | null = null;
-        if ( data.id !== undefined && data.id !== null )
+        const rawId = data.id !== undefined && data.id !== null ? data.id : (data.num !== undefined && data.num !== null ? data.num : data.vnum);
+        if ( rawId !== undefined && rawId !== null )
         {
-            const parsed = typeof data.id === "number" ? data.id : parseInt( String( data.id ), 10 );
+            const parsed = typeof rawId === "number" ? rawId : parseInt( String( rawId ), 10 );
             if ( !isNaN( parsed ) && parsed > 0 )
             {
                 serverId = parsed;
@@ -146,33 +151,47 @@ class MumePathMachine
         const name = data.name || "";
         const desc = data.desc || "";
 
-        if ( serverId === null && (!name || !desc) ) return;
+        console.log( "MumePathMachine: processGmcpRoomInfo received rawId=%O (parsed serverId=%O), name=%O, desc_len=%d",
+            rawId, serverId, name, desc.length );
+
+        if ( serverId === null && (!name || !desc) )
+        {
+            console.warn( "MumePathMachine: processGmcpRoomInfo ignoring incomplete room data (serverId is null and name/desc missing)" );
+            return;
+        }
 
         // If initial load or we already received Event.Moved, update room position immediately
         if ( this.here === null || this.hasMoved )
         {
+            console.log( "MumePathMachine: entering room immediately (here=%O, hasMoved=%s)", this.here, this.hasMoved );
             this.enterRoom( name, desc, serverId );
             this.hasMoved = false;
             this.pendingRoomInfo = null;
         }
         else
         {
+            console.log( "MumePathMachine: buffering pending room info waiting for Event.Moved (serverId=%O, name=%O)", serverId, name );
             this.pendingRoomInfo = { serverId, name, desc, time: Date.now() };
         }
     }
 
     /* Process GMCP Event.Moved messages. Handle room positioning whether Room.Info arrived before or after Event.Moved. */
-    public processGmcpEventMoved( _data?: { dir?: string } ): void
+    public processGmcpEventMoved( data?: { dir?: string } ): void
     {
-        if ( this.pendingRoomInfo && ( Date.now() - this.pendingRoomInfo.time < 500 ) )
+        console.log( "MumePathMachine: processGmcpEventMoved received (dir=%O, pendingRoomInfo=%O, hasMoved=%s)",
+            data?.dir, this.pendingRoomInfo, this.hasMoved );
+
+        if ( this.pendingRoomInfo )
         {
             const { name, desc, serverId } = this.pendingRoomInfo;
+            console.log( "MumePathMachine: processGmcpEventMoved applying pending room info (serverId=%O, name=%O)", serverId, name );
             this.enterRoom( name, desc, serverId );
             this.pendingRoomInfo = null;
             this.hasMoved = false;
         }
         else
         {
+            console.log( "MumePathMachine: processGmcpEventMoved set hasMoved=true (waiting for Room.Info)" );
             this.hasMoved = true;
             this.pendingRoomInfo = null;
         }
@@ -181,10 +200,18 @@ class MumePathMachine
     /* Internal function called when we got a complete room. */
     private enterRoom( name: string, desc: string, serverId: number | null ): void
     {
+        console.log( "MumePathMachine.enterRoom: attempting lookup for serverId=%O, name=%O, desc_len=%d", serverId, name, desc.length );
+
         const onFound = ( coordinates: RoomCoords[] ) =>
         {
+            console.log( "MumePathMachine.enterRoom: successfully found room coords %O for serverId=%O, name=%O", coordinates[0], serverId, name );
             this.here = coordinates[0];
             $(this).triggerHandler( MumePathMachine.SIG_MOVEMENT, [ coordinates[0] ] );
+        };
+
+        const onNotFound = () =>
+        {
+            console.warn( "MumePathMachine.enterRoom: FAILED to find room coordinates for serverId=%O, name=%O, desc_len=%d", serverId, name, desc.length );
         };
 
         if ( serverId !== null && serverId > 0 )
@@ -194,12 +221,16 @@ class MumePathMachine
                 .fail( () =>
                 {
                     console.log( "MumePathMachine: server_id %d not found in map index, falling back to name+desc hash", serverId );
-                    this.mapIndex.findPosByNameDesc( name, desc ).done( onFound );
+                    this.mapIndex.findPosByNameDesc( name, desc )
+                        .done( onFound )
+                        .fail( onNotFound );
                 } );
         }
         else
         {
-            this.mapIndex.findPosByNameDesc( name, desc ).done( onFound );
+            this.mapIndex.findPosByNameDesc( name, desc )
+                .done( onFound )
+                .fail( onNotFound );
         }
     }
 }
@@ -226,6 +257,8 @@ class MumeMapIndex
         this.cachedChunks = new Set<string>();
         this.serverIdCache = null;
         this.serverIndexPromise = null;
+        // Preload serverindex.json asynchronously upon instantiation
+        this.loadServerIndex();
     }
 
     /* Normalize into text that should match what MMapper used to produce the
@@ -367,6 +400,7 @@ class MumeMapIndex
         this.serverIndexPromise = deferred;
 
         const url = MAP_DATA_PATH + "serverindex.json";
+        console.log( "MumeMapIndex: fetching serverindex.json from %s", url );
         $.getJSON( url )
             .done( ( json: Record<string, number[][]> ) =>
             {
@@ -390,6 +424,7 @@ class MumeMapIndex
                     }
                 }
                 this.serverIdCache = cache;
+                console.log( "MumeMapIndex: serverindex.json loaded successfully with %d mapped server_id entries", cache.size );
                 deferred.resolve( cache );
             } )
             .fail( ( _jqxhr: JQuery.jqXHR, textStatus: string, error: string ) =>
