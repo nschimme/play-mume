@@ -16,39 +16,39 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
 import $ from 'jquery';
-import { MumeMap, MumeXmlParser, RoomCoords, MumeXmlParserTag } from './mume.mapper';
+import { MumeMap, RoomCoords } from './mume.mapper';
 import { throttle } from './utils';
 
 (function () {
   "use strict";
 
-  let tagEventHandler: ((_event: unknown, tag: MumeXmlParserTag) => void) | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let originalRoomInfoHandler: ((data: any) => void) | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let decafInstanceRef: any;
 
   $(window).on("load", function (_e: JQuery.Event) {
     MumeMap.load("mume-map").done(function (map: MumeMap) {
-      let parser: MumeXmlParser | undefined;
       let matches: RegExpExecArray | null;
 
       const opener = window.opener as Window; // Cast once
 
       if (opener && opener.DecafMUD && opener.DecafMUD.instances && opener.DecafMUD.instances[0]) {
-        const decafInstance = opener.DecafMUD.instances[0];
-        if (decafInstance) {
-            parser = decafInstance.textInputFilter as MumeXmlParser;
-        }
+        decafInstanceRef = opener.DecafMUD.instances[0];
 
-
-        if (!parser || typeof parser.filterInputText !== 'function') {
-          console.error("Bug: expected to find a MumeXmlParser instance in opener window or textInputFilter is invalid.");
-          parser = undefined;
-        }
-
-        if (parser) {
-          tagEventHandler = map.processTag.bind(map);
-          $(parser).on(MumeXmlParser.SIG_TAG_END, tagEventHandler);
-          console.log("The main window will now send data to the map window");
-        } else {
-            console.log("MumeXmlParser not found or invalid on opener, map events not bound.");
+        // Hook GMCP Room.Info in map.html window if connected
+        if (decafInstanceRef && decafInstanceRef.gmcp) {
+          originalRoomInfoHandler = typeof decafInstanceRef.gmcp.getFunction === 'function' ? decafInstanceRef.gmcp.getFunction('Room.Info') : undefined;
+          decafInstanceRef.gmcp.packages.Room = decafInstanceRef.gmcp.packages.Room || {};
+          const prevRoomInfo = originalRoomInfoHandler;
+          decafInstanceRef.gmcp.packages.Room.Info = function (data: { id?: number | string; name?: string; desc?: string }) {
+            if (map && map.pathMachine) {
+              map.pathMachine.processGmcpRoomInfo(data);
+            }
+            if (typeof prevRoomInfo === 'function') {
+              prevRoomInfo.call(this, data);
+            }
+          };
         }
 
         if ((matches = /^#(\d+),(\d+),(\d+)$/.exec(location.hash))) {
@@ -72,14 +72,11 @@ import { throttle } from './utils';
   });
 
   $(window).on("unload", function (_e: JQuery.Event) {
-    const opener = window.opener as Window;
-    if (opener && opener.DecafMUD && opener.DecafMUD.instances && opener.DecafMUD.instances[0]) {
-      const decafInstance = opener.DecafMUD.instances[0];
-      if (decafInstance) {
-        const parser = decafInstance.textInputFilter;
-        if (tagEventHandler && parser) {
-          $(parser).off(MumeXmlParser.SIG_TAG_END, tagEventHandler);
-        }
+    if (decafInstanceRef && decafInstanceRef.gmcp && decafInstanceRef.gmcp.packages && decafInstanceRef.gmcp.packages.Room) {
+      if (originalRoomInfoHandler !== undefined) {
+        decafInstanceRef.gmcp.packages.Room.Info = originalRoomInfoHandler;
+      } else {
+        delete decafInstanceRef.gmcp.packages.Room.Info;
       }
     }
   });

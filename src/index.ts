@@ -101,32 +101,28 @@ $(window).on('load', function () {
   });
 
   MumeMap.load('mume-map').done(function (map: MumeMap) {
-    let parser: MumeXmlParser;
-    let tagEventHandler;
-
     if (DecafMUD.instances && DecafMUD.instances[0]) {
       const decafInstance = DecafMUD.instances[0];
-      parser = decafInstance.textInputFilter as MumeXmlParser;
-      if (!parser || typeof parser.filterInputText !== 'function') {
-         console.error("Bug: expected to find a MumeXmlParser instance.");
-         throw new Error("MumeXmlParser not found or invalid.");
-      }
-
-      tagEventHandler = map.processTag.bind(map);
-      $(parser).on(MumeXmlParser.SIG_TAG_END, tagEventHandler);
-      console.log('The map widget will now receive parsing events');
 
       // Hook into GMCP enablement and Room.Info package
       if (decafInstance.gmcp) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sendSupportsAdd = (gmcpObj: any) => {
+          if (typeof gmcpObj.sendGMCP === 'function') {
+            gmcpObj.sendGMCP('Core.Supports.Add', ['Char 1', 'Room 1', 'Event 1']);
+          }
+        };
+
         const originalWill = decafInstance.gmcp._will;
         decafInstance.gmcp._will = function (...args: unknown[]) {
           if (typeof originalWill === 'function') {
             originalWill.apply(this, args);
           }
-          if (typeof this.sendGMCP === 'function') {
-            this.sendGMCP('Core.Supports.Add', ['Char 1', 'Room 1', 'Event 1']);
-          }
+          sendSupportsAdd(this);
         };
+
+        // If GMCP option negotiation already completed before MumeMap loaded, send immediately
+        sendSupportsAdd(decafInstance.gmcp);
 
         const originalRoomInfo = typeof decafInstance.gmcp.getFunction === 'function' ? decafInstance.gmcp.getFunction('Room.Info') : undefined;
         decafInstance.gmcp.packages.Room = decafInstance.gmcp.packages.Room || {};
@@ -140,8 +136,8 @@ $(window).on('load', function () {
         };
       }
     } else {
-      console.error('DecafMUD instance or textInputFilter not found for map integration.');
-      throw new Error('DecafMUD instance or textInputFilter not found.');
+      console.error('DecafMUD instance not found for map integration.');
+      throw new Error('DecafMUD instance not found.');
     }
 
     globalMap = map;
