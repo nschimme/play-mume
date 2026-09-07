@@ -116,11 +116,21 @@ $(window).on('load', function () {
       $(parser).on(MumeXmlParser.SIG_TAG_END, tagEventHandler);
       console.log('The map widget will now receive parsing events');
 
-      // Connect GMCP Room.Info handler to pathMachine
-      if (decafInstance.gmcp && typeof decafInstance.gmcp.getFunction === 'function') {
-        const originalRoomInfo = decafInstance.gmcp.getFunction('Room.Info');
+      // Hook into GMCP enablement and Room.Info package
+      if (decafInstance.gmcp) {
+        const originalWill = decafInstance.gmcp._will;
+        decafInstance.gmcp._will = function (...args: unknown[]) {
+          if (typeof originalWill === 'function') {
+            originalWill.apply(this, args);
+          }
+          if (typeof this.sendGMCP === 'function') {
+            this.sendGMCP('Core.Supports.Add', ['Char 1', 'Room 1', 'Event 1']);
+          }
+        };
+
+        const originalRoomInfo = typeof decafInstance.gmcp.getFunction === 'function' ? decafInstance.gmcp.getFunction('Room.Info') : undefined;
         decafInstance.gmcp.packages.Room = decafInstance.gmcp.packages.Room || {};
-        decafInstance.gmcp.packages.Room.Info = function (data: { id?: number | string }) {
+        decafInstance.gmcp.packages.Room.Info = function (data: { id?: number | string; name?: string; desc?: string }) {
           if (map && map.pathMachine) {
             map.pathMachine.processGmcpRoomInfo(data);
           }

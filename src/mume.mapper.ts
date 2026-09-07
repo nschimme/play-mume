@@ -155,34 +155,10 @@ class MumePathMachine
         }
     }
 
-    /* This receives an event from MumeXmlParser when it encounters a closing tag.
-     * */
+    /* No longer parsing room location updates from XML tags as GMCP Room.Info supplies room data directly. */
     public processTag( _event: unknown, tag: MumeXmlParserTag ): void
     {
-        console.log( "MumePathMachine processes tag " + tag.name );
-        if ( tag.name === "name" )
-        {
-            this.roomName = tag.text;
-        }
-        else if ( tag.name === "description" )
-        {
-            if ( this.roomName )
-            {
-                this.enterRoom( this.roomName, tag.text, this.currentServerId );
-                this.roomName = null;
-                this.currentServerId = null;
-            }
-            else
-            {
-                throw new Error("Bug: the MumePathMachine got a room description but no room name: " +
-                    tag.text.substr( 0, 50 ) + "...");
-            }
-        }
-        else if ( tag.name === "room" )
-        {
-            this.roomName = null;
-            this.currentServerId = null;
-        }
+        console.log( "MumePathMachine ignores XML tag " + tag.name );
     }
 
     /* Internal function called when we got a complete room. */
