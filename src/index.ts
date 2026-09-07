@@ -122,25 +122,17 @@ $(window).on('load', function () {
         sendSupportsAdd(gmcp);
 
         if (typeof gmcp.registerHandler === 'function') {
-          const originalRoomInfo = gmcp.getFunction ? gmcp.getFunction('Room.Info') : undefined;
           gmcp.registerHandler('Room.Info', (data: unknown) => {
             console.log('GMCP Room.Info handler received:', data);
             if (map && map.pathMachine) {
               map.pathMachine.processGmcpRoomInfo(data as GMCPRoomInfoData);
             }
-            if (typeof originalRoomInfo === 'function') {
-              originalRoomInfo(data);
-            }
           });
 
-          const originalEventMoved = gmcp.getFunction ? gmcp.getFunction('Event.Moved') : undefined;
           gmcp.registerHandler('Event.Moved', (data: unknown) => {
             console.log('GMCP Event.Moved handler received:', data);
             if (map && map.pathMachine) {
               map.pathMachine.processGmcpEventMoved(data as GMCPEventMovedData);
-            }
-            if (typeof originalEventMoved === 'function') {
-              originalEventMoved(data);
             }
           });
         }

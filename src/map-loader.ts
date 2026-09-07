@@ -22,9 +22,7 @@ import { throttle } from './utils';
 (function () {
   "use strict";
 
-  let originalRoomInfoHandler: ((data: unknown) => void) | undefined;
-  let originalEventMovedHandler: ((data: unknown) => void) | undefined;
-  let decafInstanceRef: DecafMUDInstance | undefined;
+  const unregisterCallbacks: (() => void)[] = [];
 
   $(window).on("load", function (_e: JQuery.Event) {
     MumeMap.load("mume-map").done(function (map: MumeMap) {
@@ -33,33 +31,29 @@ import { throttle } from './utils';
       const opener = window.opener as Window; // Cast once
 
       if (opener && opener.DecafMUD && opener.DecafMUD.instances && opener.DecafMUD.instances[0]) {
-        decafInstanceRef = opener.DecafMUD.instances[0];
+        const decafInstanceRef = opener.DecafMUD.instances[0];
 
         // Hook GMCP Room.Info and Event.Moved in map.html window if connected
         if (decafInstanceRef && decafInstanceRef.gmcp) {
           const gmcp = decafInstanceRef.gmcp;
           if (typeof gmcp.registerHandler === 'function') {
-            originalRoomInfoHandler = gmcp.getFunction ? gmcp.getFunction('Room.Info') : undefined;
-            const prevRoomInfo = originalRoomInfoHandler;
-            gmcp.registerHandler('Room.Info', (data: unknown) => {
+            const unregisterRoomInfo = gmcp.registerHandler('Room.Info', (data: unknown) => {
               if (map && map.pathMachine) {
                 map.pathMachine.processGmcpRoomInfo(data as GMCPRoomInfoData);
               }
-              if (typeof prevRoomInfo === 'function') {
-                prevRoomInfo(data);
-              }
             });
+            if (typeof unregisterRoomInfo === 'function') {
+              unregisterCallbacks.push(unregisterRoomInfo);
+            }
 
-            originalEventMovedHandler = gmcp.getFunction ? gmcp.getFunction('Event.Moved') : undefined;
-            const prevEventMoved = originalEventMovedHandler;
-            gmcp.registerHandler('Event.Moved', (data: unknown) => {
+            const unregisterEventMoved = gmcp.registerHandler('Event.Moved', (data: unknown) => {
               if (map && map.pathMachine) {
                 map.pathMachine.processGmcpEventMoved(data as GMCPEventMovedData);
               }
-              if (typeof prevEventMoved === 'function') {
-                prevEventMoved(data);
-              }
             });
+            if (typeof unregisterEventMoved === 'function') {
+              unregisterCallbacks.push(unregisterEventMoved);
+            }
           }
         }
 
@@ -84,20 +78,10 @@ import { throttle } from './utils';
   });
 
   $(window).on("unload", function (_e: JQuery.Event) {
-    if (decafInstanceRef && decafInstanceRef.gmcp && decafInstanceRef.gmcp.packages) {
-      if (decafInstanceRef.gmcp.packages.Room) {
-        if (originalRoomInfoHandler !== undefined) {
-          decafInstanceRef.gmcp.packages.Room.Info = originalRoomInfoHandler;
-        } else {
-          delete decafInstanceRef.gmcp.packages.Room.Info;
-        }
-      }
-      if (decafInstanceRef.gmcp.packages.Event) {
-        if (originalEventMovedHandler !== undefined) {
-          decafInstanceRef.gmcp.packages.Event.Moved = originalEventMovedHandler;
-        } else {
-          delete decafInstanceRef.gmcp.packages.Event.Moved;
-        }
+    while (unregisterCallbacks.length > 0) {
+      const unregister = unregisterCallbacks.pop();
+      if (typeof unregister === 'function') {
+        unregister();
       }
     }
   });

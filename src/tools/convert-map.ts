@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { XMLParser } from 'fast-xml-parser';
 import * as crypto from 'crypto';
-import { DIRECTIONS, normalizeWhitespace, translitUnicodeToAsciiLikeMMapper } from '../mume.shared';
+import { DIRECTIONS, calcZoneCoord, normalizeWhitespace, translitUnicodeToAsciiLikeMMapper } from '../mume.shared';
 
 // Types for Arda.xml
 interface XmlMap {
@@ -66,7 +66,6 @@ interface ZoneRoom {
 }
 
 // Enums and Constants matching MMapper
-const ZONE_WIDTH = 20;
 const ROOM_INDEX_FILE_NAME_SIZE = 2;
 
 const TerrainMap: Record<string, number> = {
@@ -201,9 +200,6 @@ function getHash(name: string, desc: string): string {
 }
 
 function getZoneKey(x: number, y: number): string {
-  const calcZoneCoord = (n: number) => {
-    return Math.floor(n / ZONE_WIDTH) * ZONE_WIDTH;
-  };
   // y is negated in JSON format
   return `${calcZoneCoord(x)},${calcZoneCoord(-y)}`;
 }

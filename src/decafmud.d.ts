@@ -34,8 +34,9 @@ interface GMCPPlugin {
   _will?: (...args: unknown[]) => void;
   sendGMCP?: (pckg: string, data?: unknown) => void;
   getFunction?: (pckg: string) => ((data?: unknown) => void) | undefined;
-  registerHandler?: (pckg: string, callback: (data: unknown) => void) => void;
-  packages: Record<string, Record<string, (data: unknown) => void>>;
+  registerHandler?: (pckg: string, callback: (data: unknown) => void) => (() => void);
+  unregisterHandler?: (pckg: string, callback: (data: unknown) => void) => void;
+  packages: Record<string, Record<string, unknown>>;
 }
 
 interface DecafMUDInstance {
