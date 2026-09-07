@@ -161,42 +161,18 @@ class MumePathMachine
             return;
         }
 
-        // If initial load or we already received Event.Moved, update room position immediately
-        if ( this.here === null || this.hasMoved )
-        {
-            console.log( "MumePathMachine: entering room immediately (here=%O, hasMoved=%s)", this.here, this.hasMoved );
-            this.enterRoom( name, desc, serverId );
-            this.hasMoved = false;
-            this.pendingRoomInfo = null;
-        }
-        else
-        {
-            console.log( "MumePathMachine: buffering pending room info waiting for Event.Moved (serverId=%O, name=%O)", serverId, name );
-            // If a previous Room.Info was buffered without Event.Moved (e.g. scouting or multiple Room.Infos), overwrite it
-            this.pendingRoomInfo = { serverId, name, desc, time: Date.now() };
-        }
+        this.pendingRoomInfo = null;
+        this.hasMoved = false;
+        console.log( "MumePathMachine: entering room immediately (serverId=%O, name=%O)", serverId, name );
+        this.enterRoom( name, desc, serverId );
     }
 
-    /* Process GMCP Event.Moved messages. Handle room positioning whether Room.Info arrived before or after Event.Moved. */
+    /* Process GMCP Event.Moved messages. */
     public processGmcpEventMoved( data?: { dir?: string } ): void
     {
-        console.log( "MumePathMachine: processGmcpEventMoved received (dir=%O, pendingRoomInfo=%O, hasMoved=%s)",
-            data?.dir, this.pendingRoomInfo, this.hasMoved );
-
-        if ( this.pendingRoomInfo )
-        {
-            const { name, desc, serverId } = this.pendingRoomInfo;
-            console.log( "MumePathMachine: processGmcpEventMoved applying pending room info (serverId=%O, name=%O)", serverId, name );
-            this.enterRoom( name, desc, serverId );
-            this.pendingRoomInfo = null;
-            this.hasMoved = false;
-        }
-        else
-        {
-            console.log( "MumePathMachine: processGmcpEventMoved set hasMoved=true (waiting for Room.Info)" );
-            this.hasMoved = true;
-            this.pendingRoomInfo = null;
-        }
+        console.log( "MumePathMachine: processGmcpEventMoved received (dir=%O)", data?.dir );
+        this.pendingRoomInfo = null;
+        this.hasMoved = false;
     }
 
     /* Internal function called when we got a complete room. */
