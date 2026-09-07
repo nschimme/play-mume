@@ -17,16 +17,59 @@
 
 // src/decafmud.d.ts
 
+interface GMCPRoomInfoData {
+  id?: number | string;
+  name?: string;
+  desc?: string;
+  area?: string;
+  environment?: string;
+  exits?: Record<string, unknown>;
+}
+
+interface GMCPEventMovedData {
+  dir?: string;
+}
+
+interface GMCPPlugin {
+  _will?: (...args: unknown[]) => void;
+  sendGMCP?: (pckg: string, data?: unknown) => void;
+  getFunction?: (pckg: string) => ((data?: unknown) => void) | undefined;
+  registerHandler?: (pckg: string, callback: (data: unknown) => void) => void;
+  packages: Record<string, Record<string, (data: unknown) => void>>;
+}
+
 interface DecafMUDInstance {
-  textInputFilter?: any;
+  textInputFilter?: unknown;
+  gmcp?: GMCPPlugin;
   socket: DecafMUDSocket;
   sendInput: (command: string) => void;
 }
 
+interface DecafMUDOptions {
+  host?: string;
+  port?: number;
+  autoreconnect?: boolean;
+  autoconnect?: boolean;
+  set_socket?: {
+    wsport?: number;
+    wspath?: string;
+    ssl?: boolean;
+  };
+  interface?: string;
+  set_interface?: {
+    container?: string;
+    connect_hint?: boolean;
+    repeat_input?: boolean;
+    start_full?: boolean;
+  };
+  language?: string;
+  socket?: string;
+}
+
 interface DecafMUDStatic {
-  new (options: any): DecafMUDInstance;
+  new (options: DecafMUDOptions): DecafMUDInstance;
   plugins?: {
-    TextInputFilter?: any;
+    TextInputFilter?: Record<string, unknown>;
   };
   instances?: DecafMUDInstance[];
 }

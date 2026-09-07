@@ -16,39 +16,51 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
 import $ from 'jquery';
-import { MumeMap, MumeXmlParser, RoomCoords, MumeXmlParserTag } from './mume.mapper';
+import { MumeMap, RoomCoords } from './mume.mapper';
 import { throttle } from './utils';
 
 (function () {
   "use strict";
 
-  let tagEventHandler: ((_event: unknown, tag: MumeXmlParserTag) => void) | undefined;
+  let originalRoomInfoHandler: ((data: unknown) => void) | undefined;
+  let originalEventMovedHandler: ((data: unknown) => void) | undefined;
+  let decafInstanceRef: DecafMUDInstance | undefined;
 
   $(window).on("load", function (_e: JQuery.Event) {
     MumeMap.load("mume-map").done(function (map: MumeMap) {
-      let parser: MumeXmlParser | undefined;
       let matches: RegExpExecArray | null;
 
       const opener = window.opener as Window; // Cast once
 
       if (opener && opener.DecafMUD && opener.DecafMUD.instances && opener.DecafMUD.instances[0]) {
-        const decafInstance = opener.DecafMUD.instances[0];
-        if (decafInstance) {
-            parser = decafInstance.textInputFilter as MumeXmlParser;
-        }
+        decafInstanceRef = opener.DecafMUD.instances[0];
 
+        // Hook GMCP Room.Info and Event.Moved in map.html window if connected
+        if (decafInstanceRef && decafInstanceRef.gmcp) {
+          const gmcp = decafInstanceRef.gmcp;
+          if (typeof gmcp.registerHandler === 'function') {
+            originalRoomInfoHandler = gmcp.getFunction ? gmcp.getFunction('Room.Info') : undefined;
+            const prevRoomInfo = originalRoomInfoHandler;
+            gmcp.registerHandler('Room.Info', (data: unknown) => {
+              if (map && map.pathMachine) {
+                map.pathMachine.processGmcpRoomInfo(data as GMCPRoomInfoData);
+              }
+              if (typeof prevRoomInfo === 'function') {
+                prevRoomInfo(data);
+              }
+            });
 
-        if (!parser || typeof parser.filterInputText !== 'function') {
-          console.error("Bug: expected to find a MumeXmlParser instance in opener window or textInputFilter is invalid.");
-          parser = undefined;
-        }
-
-        if (parser) {
-          tagEventHandler = map.processTag.bind(map);
-          $(parser).on(MumeXmlParser.SIG_TAG_END, tagEventHandler);
-          console.log("The main window will now send data to the map window");
-        } else {
-            console.log("MumeXmlParser not found or invalid on opener, map events not bound.");
+            originalEventMovedHandler = gmcp.getFunction ? gmcp.getFunction('Event.Moved') : undefined;
+            const prevEventMoved = originalEventMovedHandler;
+            gmcp.registerHandler('Event.Moved', (data: unknown) => {
+              if (map && map.pathMachine) {
+                map.pathMachine.processGmcpEventMoved(data as GMCPEventMovedData);
+              }
+              if (typeof prevEventMoved === 'function') {
+                prevEventMoved(data);
+              }
+            });
+          }
         }
 
         if ((matches = /^#(\d+),(\d+),(\d+)$/.exec(location.hash))) {
@@ -72,13 +84,19 @@ import { throttle } from './utils';
   });
 
   $(window).on("unload", function (_e: JQuery.Event) {
-    const opener = window.opener as Window;
-    if (opener && opener.DecafMUD && opener.DecafMUD.instances && opener.DecafMUD.instances[0]) {
-      const decafInstance = opener.DecafMUD.instances[0];
-      if (decafInstance) {
-        const parser = decafInstance.textInputFilter;
-        if (tagEventHandler && parser) {
-          $(parser).off(MumeXmlParser.SIG_TAG_END, tagEventHandler);
+    if (decafInstanceRef && decafInstanceRef.gmcp && decafInstanceRef.gmcp.packages) {
+      if (decafInstanceRef.gmcp.packages.Room) {
+        if (originalRoomInfoHandler !== undefined) {
+          decafInstanceRef.gmcp.packages.Room.Info = originalRoomInfoHandler;
+        } else {
+          delete decafInstanceRef.gmcp.packages.Room.Info;
+        }
+      }
+      if (decafInstanceRef.gmcp.packages.Event) {
+        if (originalEventMovedHandler !== undefined) {
+          decafInstanceRef.gmcp.packages.Event.Moved = originalEventMovedHandler;
+        } else {
+          delete decafInstanceRef.gmcp.packages.Event.Moved;
         }
       }
     }

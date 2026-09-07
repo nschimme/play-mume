@@ -35,7 +35,7 @@ import { throttle } from './utils';
 import './errorhandler';
 import './mume.macros';
 import './mume.menu';
-import { MumeMap, MumeXmlParser } from './mume.mapper';
+import { MumeMap } from './mume.mapper';
 
 let globalMapWindow: Window | null | undefined;
 let _globalSplit: Split.Instance | undefined;
@@ -58,8 +58,6 @@ $(window).on('load', function () {
     return;
   }
 
-  DecafMUD.plugins.TextInputFilter.mumexml = MumeXmlParser;
-
   new DecafMUD({
     host: 'mume.org',
     port: 443,
@@ -78,7 +76,6 @@ $(window).on('load', function () {
       start_full: false,
     },
     language: 'en',
-    textinputfilter: 'mumexml',
     socket: 'websocket',
   });
 
@@ -101,22 +98,54 @@ $(window).on('load', function () {
   });
 
   MumeMap.load('mume-map').done(function (map: MumeMap) {
-    let parser: MumeXmlParser;
-    let tagEventHandler;
+    if (DecafMUD.instances && DecafMUD.instances[0]) {
+      const decafInstance = DecafMUD.instances[0];
 
-    if (DecafMUD.instances && DecafMUD.instances[0] && DecafMUD.instances[0].textInputFilter) {
-      parser = DecafMUD.instances[0].textInputFilter as MumeXmlParser;
-      if (!parser || typeof parser.filterInputText !== 'function') {
-         console.error("Bug: expected to find a MumeXmlParser instance.");
-         throw new Error("MumeXmlParser not found or invalid.");
+      // Register GMCP module handlers using DecafMUD GMCP plugin methods
+      if (decafInstance.gmcp) {
+        const gmcp = decafInstance.gmcp;
+        const sendSupportsAdd = (gmcpObj: GMCPPlugin) => {
+          if (typeof gmcpObj.sendGMCP === 'function') {
+            gmcpObj.sendGMCP('Core.Supports.Add', ['Char 1', 'Room 1', 'Event 1']);
+          }
+        };
+
+        const originalWill = gmcp._will;
+        gmcp._will = function (...args: unknown[]) {
+          if (typeof originalWill === 'function') {
+            originalWill.apply(this, args);
+          }
+          sendSupportsAdd(this as GMCPPlugin);
+        };
+
+        // If GMCP option negotiation already completed before MumeMap loaded, send immediately
+        sendSupportsAdd(gmcp);
+
+        if (typeof gmcp.registerHandler === 'function') {
+          const originalRoomInfo = gmcp.getFunction ? gmcp.getFunction('Room.Info') : undefined;
+          gmcp.registerHandler('Room.Info', (data: unknown) => {
+            if (map && map.pathMachine) {
+              map.pathMachine.processGmcpRoomInfo(data as GMCPRoomInfoData);
+            }
+            if (typeof originalRoomInfo === 'function') {
+              originalRoomInfo(data);
+            }
+          });
+
+          const originalEventMoved = gmcp.getFunction ? gmcp.getFunction('Event.Moved') : undefined;
+          gmcp.registerHandler('Event.Moved', (data: unknown) => {
+            if (map && map.pathMachine) {
+              map.pathMachine.processGmcpEventMoved(data as GMCPEventMovedData);
+            }
+            if (typeof originalEventMoved === 'function') {
+              originalEventMoved(data);
+            }
+          });
+        }
       }
-
-      tagEventHandler = map.processTag.bind(map);
-      $(parser).on(MumeXmlParser.SIG_TAG_END, tagEventHandler);
-      console.log('The map widget will now receive parsing events');
     } else {
-      console.error('DecafMUD instance or textInputFilter not found for map integration.');
-      throw new Error('DecafMUD instance or textInputFilter not found.');
+      console.error('DecafMUD instance not found for map integration.');
+      throw new Error('DecafMUD instance not found.');
     }
 
     globalMap = map;
