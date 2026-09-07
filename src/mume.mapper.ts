@@ -130,16 +130,28 @@ class MumePathMachine
         this.here = null;
     }
 
-    /* Process GMCP Room.Info messages if available. */
-    public processGmcpRoomInfo( data: { id?: number | string } ): void
+    /* Process GMCP Room.Info messages directly. */
+    public processGmcpRoomInfo( data: { id?: number | string; name?: string; desc?: string } ): void
     {
-        if ( data && data.id !== undefined && data.id !== null )
+        if ( !data ) return;
+
+        let serverId: number | null = null;
+        if ( data.id !== undefined && data.id !== null )
         {
-            const serverId = typeof data.id === "number" ? data.id : parseInt( String( data.id ), 10 );
-            if ( !isNaN( serverId ) && serverId > 0 )
+            const parsed = typeof data.id === "number" ? data.id : parseInt( String( data.id ), 10 );
+            if ( !isNaN( parsed ) && parsed > 0 )
             {
-                this.currentServerId = serverId;
+                serverId = parsed;
             }
+        }
+
+        const name = data.name || "";
+        const desc = data.desc || "";
+
+        // If either server_id is available or we have room name and desc, trigger room positioning directly from GMCP!
+        if ( serverId !== null || ( name && desc ) )
+        {
+            this.enterRoom( name, desc, serverId );
         }
     }
 

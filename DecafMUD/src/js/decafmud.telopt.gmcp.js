@@ -51,6 +51,7 @@ GMCP.prototype._will = function() {
 			"client"	: "DecafMUD",
 			"version"	: DecafMUD.version.toString()
 		});
+		g.sendGMCP("Core.Supports.Add", ["Char 1", "Room 1", "Event 1"]);
 	}, 0);
 	
 	// Also, start the ping loop.
