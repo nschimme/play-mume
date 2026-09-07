@@ -34,6 +34,7 @@ interface GMCPPlugin {
   _will?: (...args: unknown[]) => void;
   sendGMCP?: (pckg: string, data?: unknown) => void;
   getFunction?: (pckg: string) => ((data?: unknown) => void) | undefined;
+  registerHandler?: (pckg: string, callback: (data: unknown) => void) => void;
   packages: Record<string, Record<string, (data: unknown) => void>>;
 }
 

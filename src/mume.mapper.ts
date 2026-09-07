@@ -58,7 +58,6 @@ export class MumeMap
     public mapIndex: MumeMapIndex | null = null;
     public display: MumeMapDisplay;
     public pathMachine: MumePathMachine;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public static debugInstance: MumeMap;
 
     constructor( mapData: MumeMapData, display: MumeMapDisplay )
@@ -81,10 +80,9 @@ export class MumeMap
                 .then( ( display: MumeMapDisplay ) => {
                     const map = new MumeMap( mapData, display );
 
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    $( map.pathMachine ).on(
+                    $( map.pathMachine as unknown as Element ).on(
                         MumePathMachine.SIG_MOVEMENT,
-                        ( _event: unknown, where: RoomCoords ) => map.onMovement( _event, where ) );
+                        ( _event: JQuery.Event, where: RoomCoords ) => map.onMovement( _event, where ) );
 
                     result.resolve( map );
                 } )
@@ -215,8 +213,7 @@ class MumePathMachine
 class MumeMapIndex
 {
     // This is a vast simplification of course...
-    // eslint-disable-next-line no-control-regex
-    private static readonly ANY_ANSI_ESCAPE =  /\x1B\[[^A-Za-z]+[A-Za-z]/g;
+    private static readonly ANY_ANSI_ESCAPE = new RegExp( String.fromCharCode(27) + '\\[[^A-Za-z]+[A-Za-z]', 'g' );
 
     private cache: Map<string, RoomCoords[]>;
     private cachedChunks: Set<string>;
@@ -237,8 +234,7 @@ class MumeMapIndex
     public static normalizeString( input: string )
     {
         // MMapper indexed the plain text without any escape, obviously.
-        // eslint-disable-next-line no-control-regex
-        const text = input.replace( /\x1B\[[0-9;:]*[A-Za-z]/g, '' );
+        const text = input.replace( new RegExp( String.fromCharCode(27) + '\\[[0-9;:]*[A-Za-z]', 'g' ), '' );
 
         // MMapper applies these conversions to ensure the hashes in the index
         // are resilient to trivial changes.

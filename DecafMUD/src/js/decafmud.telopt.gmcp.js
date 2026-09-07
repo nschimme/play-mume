@@ -111,7 +111,16 @@ GMCP.prototype.getFunction = function(pckg) {
 	return undefined;
 }
 
-/** Helper to add 
+/** Helper to register a handler for a GMCP package/message. */
+GMCP.prototype.registerHandler = function(pckg, callback) {
+	var parts = pckg.split('.'), last = parts.pop(), top = this.packages;
+	while (parts.length > 0) {
+		var part = parts.shift();
+		if ( top[part] === undefined ) { top[part] = {}; }
+		top = top[part];
+	}
+	top[last] = callback;
+}
 
 /** The package structure. */
 GMCP.prototype.packages = {};

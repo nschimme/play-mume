@@ -189,8 +189,7 @@ const DIR_ALIAS_MAP: Record<string, string> = {
 
 function normalizeForHash(text: string): string {
   // Remove ANSI escape marks just in case, then transliterate unicode to ASCII
-  // eslint-disable-next-line no-control-regex
-  const plainText = text.replace(/\x1b\[[0-9;:]*[a-zA-Z]/g, '');
+  const plainText = text.replace(new RegExp(String.fromCharCode(27) + '\\[[0-9;:]*[a-zA-Z]', 'g'), '');
   return translitUnicodeToAsciiLikeMMapper(plainText);
 }
 

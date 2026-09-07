@@ -38,29 +38,29 @@ import { throttle } from './utils';
         // Hook GMCP Room.Info and Event.Moved in map.html window if connected
         if (decafInstanceRef && decafInstanceRef.gmcp) {
           const gmcp = decafInstanceRef.gmcp;
-          originalRoomInfoHandler = gmcp.getFunction ? gmcp.getFunction('Room.Info') : undefined;
-          gmcp.packages.Room = gmcp.packages.Room || {};
-          const prevRoomInfo = originalRoomInfoHandler;
-          gmcp.packages.Room.Info = function (data: unknown) {
-            if (map && map.pathMachine) {
-              map.pathMachine.processGmcpRoomInfo(data as GMCPRoomInfoData);
-            }
-            if (typeof prevRoomInfo === 'function') {
-              prevRoomInfo.call(this, data);
-            }
-          };
+          if (typeof gmcp.registerHandler === 'function') {
+            originalRoomInfoHandler = gmcp.getFunction ? gmcp.getFunction('Room.Info') : undefined;
+            const prevRoomInfo = originalRoomInfoHandler;
+            gmcp.registerHandler('Room.Info', (data: unknown) => {
+              if (map && map.pathMachine) {
+                map.pathMachine.processGmcpRoomInfo(data as GMCPRoomInfoData);
+              }
+              if (typeof prevRoomInfo === 'function') {
+                prevRoomInfo(data);
+              }
+            });
 
-          originalEventMovedHandler = gmcp.getFunction ? gmcp.getFunction('Event.Moved') : undefined;
-          gmcp.packages.Event = gmcp.packages.Event || {};
-          const prevEventMoved = originalEventMovedHandler;
-          gmcp.packages.Event.Moved = function (data: unknown) {
-            if (map && map.pathMachine) {
-              map.pathMachine.processGmcpEventMoved(data as GMCPEventMovedData);
-            }
-            if (typeof prevEventMoved === 'function') {
-              prevEventMoved.call(this, data);
-            }
-          };
+            originalEventMovedHandler = gmcp.getFunction ? gmcp.getFunction('Event.Moved') : undefined;
+            const prevEventMoved = originalEventMovedHandler;
+            gmcp.registerHandler('Event.Moved', (data: unknown) => {
+              if (map && map.pathMachine) {
+                map.pathMachine.processGmcpEventMoved(data as GMCPEventMovedData);
+              }
+              if (typeof prevEventMoved === 'function') {
+                prevEventMoved(data);
+              }
+            });
+          }
         }
 
         if ((matches = /^#(\d+),(\d+),(\d+)$/.exec(location.hash))) {

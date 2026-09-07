@@ -101,7 +101,7 @@ $(window).on('load', function () {
     if (DecafMUD.instances && DecafMUD.instances[0]) {
       const decafInstance = DecafMUD.instances[0];
 
-      // Hook into GMCP enablement and Room.Info / Event.Moved packages
+      // Register GMCP module handlers using DecafMUD GMCP plugin methods
       if (decafInstance.gmcp) {
         const gmcp = decafInstance.gmcp;
         const sendSupportsAdd = (gmcpObj: GMCPPlugin) => {
@@ -121,27 +121,27 @@ $(window).on('load', function () {
         // If GMCP option negotiation already completed before MumeMap loaded, send immediately
         sendSupportsAdd(gmcp);
 
-        const originalRoomInfo = gmcp.getFunction ? gmcp.getFunction('Room.Info') : undefined;
-        gmcp.packages.Room = gmcp.packages.Room || {};
-        gmcp.packages.Room.Info = function (data: unknown) {
-          if (map && map.pathMachine) {
-            map.pathMachine.processGmcpRoomInfo(data as GMCPRoomInfoData);
-          }
-          if (typeof originalRoomInfo === 'function') {
-            originalRoomInfo.call(this, data);
-          }
-        };
+        if (typeof gmcp.registerHandler === 'function') {
+          const originalRoomInfo = gmcp.getFunction ? gmcp.getFunction('Room.Info') : undefined;
+          gmcp.registerHandler('Room.Info', (data: unknown) => {
+            if (map && map.pathMachine) {
+              map.pathMachine.processGmcpRoomInfo(data as GMCPRoomInfoData);
+            }
+            if (typeof originalRoomInfo === 'function') {
+              originalRoomInfo(data);
+            }
+          });
 
-        const originalEventMoved = gmcp.getFunction ? gmcp.getFunction('Event.Moved') : undefined;
-        gmcp.packages.Event = gmcp.packages.Event || {};
-        gmcp.packages.Event.Moved = function (data: unknown) {
-          if (map && map.pathMachine) {
-            map.pathMachine.processGmcpEventMoved(data as GMCPEventMovedData);
-          }
-          if (typeof originalEventMoved === 'function') {
-            originalEventMoved.call(this, data);
-          }
-        };
+          const originalEventMoved = gmcp.getFunction ? gmcp.getFunction('Event.Moved') : undefined;
+          gmcp.registerHandler('Event.Moved', (data: unknown) => {
+            if (map && map.pathMachine) {
+              map.pathMachine.processGmcpEventMoved(data as GMCPEventMovedData);
+            }
+            if (typeof originalEventMoved === 'function') {
+              originalEventMoved(data);
+            }
+          });
+        }
       }
     } else {
       console.error('DecafMUD instance not found for map integration.');
