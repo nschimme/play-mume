@@ -108,10 +108,20 @@ GMCP.prototype.getFunction = function(pckg) {
 	}
 	
 	if (typeof top === 'function') { return top; }
+	if (Array.isArray(top)) {
+		var handlers = top.slice();
+		return function(data) {
+			for (var i = 0; i < handlers.length; i++) {
+				if (typeof handlers[i] === 'function') {
+					handlers[i].call(this, data);
+				}
+			}
+		};
+	}
 	return undefined;
 }
 
-/** Helper to register a handler for a GMCP package/message. */
+/** Helper to register a handler for a GMCP package/message. Returns an unregister function. */
 GMCP.prototype.registerHandler = function(pckg, callback) {
 	var parts = pckg.split('.'), last = parts.pop(), top = this.packages;
 	while (parts.length > 0) {
@@ -119,7 +129,45 @@ GMCP.prototype.registerHandler = function(pckg, callback) {
 		if ( top[part] === undefined ) { top[part] = {}; }
 		top = top[part];
 	}
-	top[last] = callback;
+
+	var existing = top[last];
+	if (existing === undefined) {
+		top[last] = [callback];
+	} else if (Array.isArray(existing)) {
+		existing.push(callback);
+	} else if (typeof existing === 'function') {
+		top[last] = [existing, callback];
+	} else {
+		top[last] = [callback];
+	}
+
+	var g = this;
+	return function() {
+		g.unregisterHandler(pckg, callback);
+	};
+}
+
+/** Helper to unregister a handler for a GMCP package/message. */
+GMCP.prototype.unregisterHandler = function(pckg, callback) {
+	var parts = pckg.split('.'), last = parts.pop(), top = this.packages;
+	while (parts.length > 0) {
+		var part = parts.shift();
+		if ( top[part] === undefined ) { return; }
+		top = top[part];
+	}
+
+	var existing = top[last];
+	if (Array.isArray(existing)) {
+		var index = existing.indexOf(callback);
+		if (index !== -1) {
+			existing.splice(index, 1);
+		}
+		if (existing.length === 0) {
+			delete top[last];
+		}
+	} else if (existing === callback) {
+		delete top[last];
+	}
 }
 
 /** The package structure. */
