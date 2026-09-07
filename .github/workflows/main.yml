@@ -5,6 +5,10 @@ on:
     branches: [ "**" ]
   pull_request:
     branches: [ "**" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -14,49 +18,30 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: 'recursive'
-      - name: Use Node.js
-        uses: actions/setup-node@v3
+      - name: Build Docker Image
+        run: |
+          docker build --target builder -t play-mume-builder .
+      - name: Extract Build Artifacts
+        run: |
+          docker create --name temp-container play-mume-builder
+          docker cp temp-container:/usr/src/app/dist ./dist
+          docker rm temp-container
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          node-version: '18'
-      - name: Install dependencies
-        run: npm install
-      - name: Run ESLint
-        run: npm run lint:check
-      - name: Compile TypeScript
-        run: npm run tsc
-      - name: Run Webpack Development Build
-        run: npm run dev
-      - name: Run tests
-        run: npm test
+          path: ./dist
 
   deploy:
+    permissions:
+      pages: write
+      id-token: write
     needs: build
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: 'recursive'
-      - name: Use Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - name: Install dependencies
-        run: npm install
-      - name: Build with Webpack
-        run: npm run build
-      - name: Prepare deployment directory
-        run: |
-          mkdir deploy_dir
-          cp -r dist/. deploy_dir/
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./deploy_dir
-          publish_branch: gh-pages
-          keep_files: false
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
-          commit_message: 'Deploy to GitHub Pages'
-          full_commit_message: 'Deploy to GitHub Pages'
+        id: deployment
+        uses: actions/deploy-pages@v4

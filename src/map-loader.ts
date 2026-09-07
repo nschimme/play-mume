@@ -16,39 +16,45 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
 import $ from 'jquery';
-import { MumeMap, MumeXmlParser, RoomCoords, MumeXmlParserTag } from './mume.mapper';
+import { MumeMap, RoomCoords } from './mume.mapper';
 import { throttle } from './utils';
 
 (function () {
   "use strict";
 
-  let tagEventHandler: ((_event: unknown, tag: MumeXmlParserTag) => void) | undefined;
+  const unregisterCallbacks: (() => void)[] = [];
 
   $(window).on("load", function (_e: JQuery.Event) {
     MumeMap.load("mume-map").done(function (map: MumeMap) {
-      let parser: MumeXmlParser | undefined;
       let matches: RegExpExecArray | null;
 
       const opener = window.opener as Window; // Cast once
 
       if (opener && opener.DecafMUD && opener.DecafMUD.instances && opener.DecafMUD.instances[0]) {
-        const decafInstance = opener.DecafMUD.instances[0];
-        if (decafInstance) {
-            parser = decafInstance.textInputFilter as MumeXmlParser;
-        }
+        const decafInstanceRef = opener.DecafMUD.instances[0];
 
+        // Hook GMCP Room.Info and Event.Moved in map.html window if connected
+        if (decafInstanceRef && decafInstanceRef.gmcp) {
+          const gmcp = decafInstanceRef.gmcp;
+          if (typeof gmcp.registerHandler === 'function') {
+            const unregisterRoomInfo = gmcp.registerHandler('Room.Info', (data: unknown) => {
+              if (map && map.pathMachine) {
+                map.pathMachine.processGmcpRoomInfo(data as GMCPRoomInfoData);
+              }
+            });
+            if (typeof unregisterRoomInfo === 'function') {
+              unregisterCallbacks.push(unregisterRoomInfo);
+            }
 
-        if (!parser || typeof parser.filterInputText !== 'function') {
-          console.error("Bug: expected to find a MumeXmlParser instance in opener window or textInputFilter is invalid.");
-          parser = undefined;
-        }
-
-        if (parser) {
-          tagEventHandler = map.processTag.bind(map);
-          $(parser).on(MumeXmlParser.SIG_TAG_END, tagEventHandler);
-          console.log("The main window will now send data to the map window");
-        } else {
-            console.log("MumeXmlParser not found or invalid on opener, map events not bound.");
+            const unregisterEventMoved = gmcp.registerHandler('Event.Moved', (data: unknown) => {
+              if (map && map.pathMachine) {
+                map.pathMachine.processGmcpEventMoved(data as GMCPEventMovedData);
+              }
+            });
+            if (typeof unregisterEventMoved === 'function') {
+              unregisterCallbacks.push(unregisterEventMoved);
+            }
+          }
         }
 
         if ((matches = /^#(\d+),(\d+),(\d+)$/.exec(location.hash))) {
@@ -71,15 +77,11 @@ import { throttle } from './utils';
     });
   });
 
-  $(window).on("unload", function (_e: JQuery.Event) {
-    const opener = window.opener as Window;
-    if (opener && opener.DecafMUD && opener.DecafMUD.instances && opener.DecafMUD.instances[0]) {
-      const decafInstance = opener.DecafMUD.instances[0];
-      if (decafInstance) {
-        const parser = decafInstance.textInputFilter;
-        if (tagEventHandler && parser) {
-          $(parser).off(MumeXmlParser.SIG_TAG_END, tagEventHandler);
-        }
+  $(window).on("pagehide", function (_e: JQuery.Event) {
+    while (unregisterCallbacks.length > 0) {
+      const unregister = unregisterCallbacks.pop();
+      if (typeof unregister === 'function') {
+        unregister();
       }
     }
   });

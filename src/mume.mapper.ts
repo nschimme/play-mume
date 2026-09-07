@@ -18,20 +18,10 @@
 import $ from 'jquery';
 import * as PIXI from 'pixi.js';
 import SparkMD5 from 'spark-md5';
+import { Dir, calcZoneCoord, normalizeWhitespace, translitUnicodeToAsciiLikeMMapper } from './mume.shared';
 
 const ROOM_PIXELS = 48;
 const MAP_DATA_PATH = "mapdata/v1/";
-enum Dir { // Must match MM2's defs.
-    NORTH = 0,
-    SOUTH = 1,
-    EAST = 2,
-    WEST = 3,
-    LAST_GROUND_DIR = WEST,
-    UP = 4,
-    DOWN = 5,
-    NONE = 6,
-    UNKNOWN = 7,
-}
 
 /* Like JQuery.when(), but the master Promise is resolved only when all
  * promises are resolved or rejected, not at the first rejection. */
@@ -59,34 +49,6 @@ const whenAll = function<T>( deferreds: JQueryPromise<T>[] )
     return master;
 }
 
-// Adapted from MMapper2: the result must be identical for the hashes to match
-const translitUnicodeToAsciiLikeMMapper = function( unicode: string ): string
-{
-    const table = [
-        /*192*/ 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'C', 'E', 'E', 'E', 'E', 'I', 'I', 'I', 'I',
-        /*208*/ 'D', 'N', 'O', 'O', 'O', 'O', 'O', 'x', 'O', 'U', 'U', 'U', 'U', 'Y', 'b', 'B',
-        /*224*/ 'a', 'a', 'a', 'a', 'a', 'a', 'a', 'c', 'e', 'e', 'e', 'e', 'i', 'i', 'i', 'i',
-        /*248*/ 'o', 'n', 'o', 'o', 'o', 'o', 'o', ':', 'o', 'u', 'u', 'u', 'u', 'y', 'b', 'y', ];
-
-    let ascii = "";
-    for ( const charString of unicode )
-    {
-        const ch = charString.charCodeAt( 0 );
-        if (ch > 128)
-        {
-          if (ch < 192)
-            ascii += "z"; // sic
-          else
-            ascii += table[ ch - 192 ];
-        }
-        else
-        {
-            ascii += charString;
-        }
-    }
-
-    return ascii;
-}
 
 
 /* This is the "entry point" to this library for the rest of the code. */
@@ -96,8 +58,6 @@ export class MumeMap
     public mapIndex: MumeMapIndex | null = null;
     public display: MumeMapDisplay;
     public pathMachine: MumePathMachine;
-    public processTag: ( _event: unknown, tag: MumeXmlParserTag ) => void;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public static debugInstance: MumeMap;
 
     constructor( mapData: MumeMapData, display: MumeMapDisplay )
@@ -106,8 +66,6 @@ export class MumeMap
         this.display = display;
         this.mapIndex = new MumeMapIndex();
         this.pathMachine = new MumePathMachine( this.mapData, this.mapIndex );
-        this.processTag =
-            ( _event: unknown, tag: MumeXmlParserTag ) => this.pathMachine.processTag( _event, tag );
 
         MumeMap.debugInstance = this;
     }
@@ -122,10 +80,9 @@ export class MumeMap
                 .then( ( display: MumeMapDisplay ) => {
                     const map = new MumeMap( mapData, display );
 
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    $( map.pathMachine ).on(
+                    $( map.pathMachine as unknown as Element ).on(
                         MumePathMachine.SIG_MOVEMENT,
-                        ( _event: unknown, where: RoomCoords ) => map.onMovement( _event, where ) );
+                        ( _event: JQuery.Event, where: RoomCoords ) => map.onMovement( _event, where ) );
 
                     result.resolve( map );
                 } )
@@ -147,7 +104,7 @@ export class MumeMap
 
 
 /* Analogy to MMapper2's path machine, although ours is a currently just a
- * naive room+desc exact search with no "path" to speak of.
+ * naive room+desc exact search with no "path" to speak of, enhanced with server_id lookup.
  */
 class MumePathMachine
 {
@@ -155,52 +112,103 @@ class MumePathMachine
 
     public mapData: MumeMapData;
     public mapIndex: MumeMapIndex;
-    public roomName: string | null;
     public here: RoomCoords | null;
+    private currentLookupToken = 0;
 
     constructor( mapData: MumeMapData, mapIndex: MumeMapIndex )
     {
         this.mapData = mapData;
         this.mapIndex = mapIndex;
-        this.roomName = null;
         this.here = null;
     }
 
-    /* This receives an event from MumeXmlParser when it encounters a closing tag.
-     * */
-    public processTag( _event: unknown, tag: MumeXmlParserTag ): void
+    /* Process GMCP Room.Info messages. Handles out-of-order GMCP delivery robustly. */
+    public processGmcpRoomInfo( data: { id?: number | string; num?: number | string; vnum?: number | string; name?: string; desc?: string } ): void
     {
-        console.log( "MumePathMachine processes tag " + tag.name );
-        if ( tag.name === "name" )
-            this.roomName = tag.text;
-        else if ( tag.name === "description" )
+        if ( !data )
         {
-            if ( this.roomName )
+            console.debug( "MumePathMachine: processGmcpRoomInfo received empty data payload" );
+            return;
+        }
+
+        let serverId: number | null = null;
+        const rawId = data.id !== undefined && data.id !== null ? data.id : (data.num !== undefined && data.num !== null ? data.num : data.vnum);
+        if ( rawId !== undefined && rawId !== null )
+        {
+            const parsed = typeof rawId === "number" ? rawId : parseInt( String( rawId ), 10 );
+            if ( !isNaN( parsed ) && parsed > 0 )
             {
-                this.enterRoom( this.roomName, tag.text );
-                this.roomName = null;
-            }
-            else
-            {
-                throw new Error("Bug: the MumePathMachine got a room description but no room name: " +
-                    tag.text.substr( 0, 50 ) + "...");
+                serverId = parsed;
             }
         }
-        else if ( tag.name === "room" )
+
+        const name = data.name || "";
+        const desc = data.desc || "";
+
+        console.log( "MumePathMachine: processGmcpRoomInfo received rawId=%O (parsed serverId=%O), name=%O, desc_len=%d",
+            rawId, serverId, name, desc.length );
+
+        if ( serverId === null && (!name || !desc) )
         {
-            this.roomName = null;
+            console.warn( "MumePathMachine: processGmcpRoomInfo ignoring incomplete room data (serverId is null and name/desc missing)" );
+            return;
         }
+
+        console.log( "MumePathMachine: entering room immediately (serverId=%O, name=%O)", serverId, name );
+        this.enterRoom( name, desc, serverId );
+    }
+
+    /* Process GMCP Event.Moved messages. */
+    public processGmcpEventMoved( data?: { dir?: string } ): void
+    {
+        console.log( "MumePathMachine: processGmcpEventMoved received (dir=%O)", data?.dir );
     }
 
     /* Internal function called when we got a complete room. */
-    private enterRoom( name: string, desc: string ): void
+    private enterRoom( name: string, desc: string, serverId: number | null ): void
     {
-        this.mapIndex.findPosByNameDesc( name, desc )
-            .done( ( coordinates: RoomCoords[] ) =>
+        const token = ++this.currentLookupToken;
+        console.log( "MumePathMachine.enterRoom [%d]: attempting lookup for serverId=%O, name=%O, desc_len=%d", token, serverId, name, desc.length );
+
+        const onFound = ( coordinates: RoomCoords[] ) =>
+        {
+            if ( token !== this.currentLookupToken )
             {
-                this.here = coordinates[0];
-                $(this).triggerHandler( MumePathMachine.SIG_MOVEMENT, [ coordinates[0] ] );
-            } );
+                console.log( "MumePathMachine.enterRoom [%d]: ignoring stale lookup result (current token is %d)", token, this.currentLookupToken );
+                return;
+            }
+            console.log( "MumePathMachine.enterRoom [%d]: successfully found room coords %O for serverId=%O, name=%O", token, coordinates[0], serverId, name );
+            this.here = coordinates[0];
+            $(this).triggerHandler( MumePathMachine.SIG_MOVEMENT, [ coordinates[0] ] );
+        };
+
+        const onNotFound = () =>
+        {
+            if ( token !== this.currentLookupToken )
+            {
+                return;
+            }
+            console.warn( "MumePathMachine.enterRoom [%d]: FAILED to find room coordinates for serverId=%O, name=%O, desc_len=%d", token, serverId, name, desc.length );
+        };
+
+        if ( serverId !== null && serverId > 0 )
+        {
+            this.mapIndex.findPosByServerId( serverId )
+                .done( onFound )
+                .fail( () =>
+                {
+                    console.log( "MumePathMachine: server_id %d not found in map index, falling back to name+desc hash", serverId );
+                    this.mapIndex.findPosByNameDesc( name, desc )
+                        .done( onFound )
+                        .fail( onNotFound );
+                } );
+        }
+        else
+        {
+            this.mapIndex.findPosByNameDesc( name, desc )
+                .done( onFound )
+                .fail( onNotFound );
+        }
     }
 }
 
@@ -208,21 +216,26 @@ class MumePathMachine
 
 /* Queries and caches the server-hosted index of rooms.
  * For v1 format, that's a roomname+roomdesc => coords index, 2.4MB total,
- * split into 10kB JSON chunks.
+ * split into 10kB JSON chunks, plus an optional serverindex.json mapping server_id => coords.
  */
 class MumeMapIndex
 {
     // This is a vast simplification of course...
-    // eslint-disable-next-line no-control-regex
-    private static readonly ANY_ANSI_ESCAPE =  /\x1B\[[^A-Za-z]+[A-Za-z]/g;
+    private static readonly ANY_ANSI_ESCAPE = new RegExp( String.fromCharCode(27) + '\\[[^A-Za-z]+[A-Za-z]', 'g' );
 
     private cache: Map<string, RoomCoords[]>;
     private cachedChunks: Set<string>;
+    private serverIdCache: Map<number, RoomCoords[]> | null;
+    private serverIndexPromise: JQueryDeferred<Map<number, RoomCoords[]>> | null;
 
     constructor()
     {
         this.cache = new Map<string, RoomCoords[]>();
         this.cachedChunks = new Set<string>();
+        this.serverIdCache = null;
+        this.serverIndexPromise = null;
+        // Preload serverindex.json asynchronously upon instantiation
+        this.loadServerIndex();
     }
 
     /* Normalize into text that should match what MMapper used to produce the
@@ -231,7 +244,7 @@ class MumeMapIndex
     public static normalizeString( input: string )
     {
         // MMapper indexed the plain text without any escape, obviously.
-        const text = input.replace( MumeMapIndex.ANY_ANSI_ESCAPE, '' );
+        const text = input.replace( new RegExp( String.fromCharCode(27) + '\\[[0-9;:]*[A-Za-z]', 'g' ), '' );
 
         // MMapper applies these conversions to ensure the hashes in the index
         // are resilient to trivial changes.
@@ -245,7 +258,7 @@ class MumeMapIndex
     public static hashNameDesc( name: string, desc: string )
     {
         const normName = MumeMapIndex.normalizeString( name );
-        const normDesc = MumeMapIndex.normalizeString( desc.replace(/\s+/g, " ") );
+        const normDesc = MumeMapIndex.normalizeString( normalizeWhitespace( desc ) );
         const namedesc = normName + "\n" + normDesc;
 
         const hash = SparkMD5.hash( namedesc );
@@ -346,6 +359,78 @@ class MumeMapIndex
                 result.reject();
             } );
 
+        return result;
+    }
+
+    private loadServerIndex(): JQueryDeferred<Map<number, RoomCoords[]>>
+    {
+        if ( this.serverIdCache !== null )
+        {
+            return $.Deferred<Map<number, RoomCoords[]>>().resolve( this.serverIdCache );
+        }
+        if ( this.serverIndexPromise !== null )
+        {
+            return this.serverIndexPromise;
+        }
+
+        const deferred = $.Deferred<Map<number, RoomCoords[]>>();
+        this.serverIndexPromise = deferred;
+
+        const url = MAP_DATA_PATH + "serverindex.json";
+        console.log( "MumeMapIndex: fetching serverindex.json from %s", url );
+        $.getJSON( url )
+            .done( ( json: Record<string, number[][]> ) =>
+            {
+                const cache = new Map<number, RoomCoords[]>();
+                for ( const [ idStr, rawCoordsArray ] of Object.entries( json ) )
+                {
+                    const serverId = parseInt( idStr, 10 );
+                    if ( isNaN( serverId ) || !Array.isArray( rawCoordsArray ) ) continue;
+
+                    const coordsArray: RoomCoords[] = [];
+                    for ( const rawCoords of rawCoordsArray )
+                    {
+                        if ( Array.isArray( rawCoords ) && rawCoords.length === 3 )
+                        {
+                            coordsArray.push( new RoomCoords( rawCoords[0], rawCoords[1], rawCoords[2] ) );
+                        }
+                    }
+                    if ( coordsArray.length > 0 )
+                    {
+                        cache.set( serverId, coordsArray );
+                    }
+                }
+                this.serverIdCache = cache;
+                console.log( "MumeMapIndex: serverindex.json loaded successfully with %d mapped server_id entries", cache.size );
+                deferred.resolve( cache );
+            } )
+            .fail( ( _jqxhr: JQuery.jqXHR, textStatus: string, error: string ) =>
+            {
+                console.warn( "Loading serverindex.json failed: %s, %O. Falling back to hash lookup.", textStatus, error );
+                this.serverIdCache = new Map<number, RoomCoords[]>();
+                deferred.resolve( this.serverIdCache );
+            } );
+
+        return deferred;
+    }
+
+    public findPosByServerId( serverId: number ): JQueryDeferred<RoomCoords[]>
+    {
+        const result = $.Deferred<RoomCoords[]>();
+        this.loadServerIndex().done( ( cache ) =>
+        {
+            const coordinates = cache.get( serverId );
+            if ( coordinates !== undefined && coordinates.length > 0 )
+            {
+                console.log( "MumeMapIndex: found server_id %d in %O", serverId, coordinates );
+                result.resolve( coordinates );
+            }
+            else
+            {
+                console.log( "MumeMapIndex: unknown server_id %d", serverId );
+                result.reject();
+            }
+        } );
         return result;
     }
 }
@@ -655,8 +740,8 @@ class MumeMapData
                 y < this.metaData.minY || y > this.metaData.maxY )
             return null;
 
-        const zoneX = x - ( x % MumeMapData.ZONE_SIZE );
-        const zoneY = y - ( y % MumeMapData.ZONE_SIZE );
+        const zoneX = calcZoneCoord( x );
+        const zoneY = calcZoneCoord( y );
         const zone = zoneX + "," + zoneY;
 
         return zone;
@@ -1691,382 +1776,3 @@ class MumeMapDisplay
 
 
 
-export interface MumeXmlParserTag
-{
-    name: string;
-    attr: string;
-    text: string;
-}
-
-enum MumeXmlMode
-{
-    // Not requested. We won't interpret <xml> tags, as players could send us fakes.
-    Off,
-    // We will request XML mode as soon as we're done with the login prompt.
-    AsSoonAsPossible,
-    // We requested XML mode and will enable it as soon as we get a <xml>
-    Desirable,
-    // We are in XML mode, interpreting <tags>
-    On,
-}
-
-class ScoutingState
-{
-    public active: boolean = false;
-    // We stop scouting automatically after a bit if somehow we missed the STOP message
-    private scoutingBytes: number = 0;
-
-    private static readonly START = /^You quietly scout (north|east|south|west|up|down)wards\.\.\.\s*$/m;
-    private static readonly STOP = /^You stop scouting\.\s*$/m;
-
-    public pushText( text: string ): void
-    {
-        const startMatch = text.match( ScoutingState.START );
-        if ( startMatch )
-        {
-            let startIndex = startMatch.index;
-            if ( startIndex === undefined ) // Shouldn't happen, but it does keep TS happy
-                startIndex = text.indexOf( "You quietly scout" );
-            this.scoutingBytes = text.length - ( startIndex + startMatch[0].length );
-
-            this.active = true;
-            console.log( "Starting to scout, ignoring new rooms." );
-        }
-        else if ( this.active )
-        {
-            this.scoutingBytes += text.length;
-
-            if ( text.match( ScoutingState.STOP ) )
-            {
-                this.active = false;
-                console.log( "Done scouting." );
-            }
-            else if ( this.scoutingBytes > 102400 )
-            {
-                this.active = false;
-                console.warn( "Force-disabling scout mode after a while" );
-            }
-        }
-    }
-
-    public endTag( tag: MumeXmlParserTag ): void
-    {
-        if ( this.active && tag.name === "movement" )
-        {
-            // This typically happens when scouting a oneway
-            this.active = false;
-            console.log( "Aborting scout because of movement" );
-        }
-    }
-}
-
-/* Filters out the XML-like tags that MUME can send in "XML mode", and sends
- * them as events instead.
- *
- * Sample input:
- * <xml>XML mode is now on.
- * <prompt>!f- CW&gt;</prompt>f
- * You flee head over heels.
- * You flee north.
- * <movement dir=north/>
- * <room><name>A Flat Marsh</name>
- * <description>The few, low patches of tangled rushes add a clear tone to the otherwise sombre
- * colour of this flat marshland. Some puddles are scattered behind them, where
- * there are many pebbles of varying sizes. Most of these pebbles have been
- * covered by a thin layer of dark, green moss.
- * </description>A large green shrub grows in the middle of a large pool of mud.
- * </room><exits>Exits: north, east, south.
- * </exits>
- * <prompt>!%- CW&gt;</prompt>cha xml off
- * </xml>XML mode is now off.
- *
- * Matching event output:
- * { name: "prompt",      attr: "",          text: "!f- CW>" }
- * { name: "movement",    attr: "dir=north", text: "" }
- * { name: "name",        attr: "",          text: "A Flat Marsh" }
- * { name: "description", attr: "",          text: "The few... sombre\n...moss.\n" }
- * { name: "room",        attr: "",          text: "A large green...mud.\n" }
- * { name: "exits",       attr: "",          text: "Exits: north, east, south.\n" }
- * { name: "prompt",      attr: "",          text: "!%- CW>" }
- * { name: "xml",         attr: "",          text: "" }
- *
- * Tag hierarchy does not carry a lot of meaning and is not conveyed in the
- * events sent. The text of the XML is always empty as it would be useless but
- * grow huge over the course of the session.
- *
- * At the time of writing, MUME emits at most 1 attribute for tags encountered
- * during mortal sessions, and never quotes it.
- *
- * One registers to events by calling:
- * parser.on( MumeXmlParser.SIG_TAG_END, function( tag ) { /* Use tag.name etc here *./ } );
- */
-export class MumeXmlParser
-{
-    // instanceof doesn't work cross-window
-    private readonly isMumeXmlParser = true;
-
-    private tagStack!: MumeXmlParserTag[];
-    private plainText!: string;
-    private mode!: MumeXmlMode;
-    private xmlDesirableBytes: number = 0;
-    private decaf: DecafMUDInstance;
-    private scouting!: ScoutingState
-
-    constructor( decaf: DecafMUDInstance )
-    {
-        this.decaf = decaf;
-        this.clear();
-    }
-
-    public static readonly SIG_TAG_END = "tagend";
-
-    public clear(): void
-    {
-        this.tagStack = [];
-        this.plainText = "";
-        this.mode = MumeXmlMode.Off;
-        this.scouting = new ScoutingState();
-    }
-
-    public connected(): void
-    {
-        this.clear();
-        this.mode = MumeXmlMode.AsSoonAsPossible;
-    }
-
-    private setXmlModeDesirable(): void
-    {
-        this.mode = MumeXmlMode.Desirable;
-        this.xmlDesirableBytes = 0;
-    }
-
-    private static readonly ENTER_GAME_LINES = new RegExp(
-        /^Reconnecting\.\s*$/.source + "|" +
-        /^Never forget! Try to role-play\.\.\.\s*$/.source, 'm' );
-
-    private detectXml( input: string ): { text: string, xml: string, }
-    {
-        switch ( this.mode )
-        {
-        case MumeXmlMode.AsSoonAsPossible:
-            if ( input.match( MumeXmlParser.ENTER_GAME_LINES ) )
-            {
-                // Negociating XML mode at once sends a double login prompt,
-                // which is unsightly as it is the first thing that players
-                // see. WebSockets do not let us send the negociation string
-                // before the MUD outputs anything, like MM2 does.
-
-                // Wait until we're done with the pre-play to request XML mode +
-                // gratuitous descs. Hopefully, the first screen won't be split
-                // across filterInputText() calls, or we'll have to keep state.
-                this.decaf.socket.write( "~$#EX2\n1G\n" );
-                this.setXmlModeDesirable();
-                console.log( "Negotiating MUME XML mode" );
-            }
-
-            // fall through
-
-        case MumeXmlMode.Off:
-            return { text: input, xml: "", };
-
-        case MumeXmlMode.Desirable: {
-            const xmlStart = input.indexOf( "<xml>", 0 );
-
-            // If somehow XML doesn't get enabled right after we asked for it, at
-            // least the xmlDesirableBytes will reduce the window during which
-            // someone might send us a fake <xml> tag and confuse the parser, which
-            // would be dangerous in the middle of PK for example.
-            if ( xmlStart !== -1 && this.xmlDesirableBytes + xmlStart < 1024 )
-            {
-                console.log( "Enabled MUME XML mode" );
-                this.mode = MumeXmlMode.On;
-                return { text: input.substr( 0, xmlStart ), xml: input.substr( xmlStart ), };
-            }
-
-            if ( this.xmlDesirableBytes >= 1024 )
-                this.mode = MumeXmlMode.Off;
-
-            this.xmlDesirableBytes += input.length;
-
-            return { text: input, xml: "", };
-        }
-        case MumeXmlMode.On:
-            return { text: "", xml: input, };
-        }
-    }
-
-    private topTag(): MumeXmlParserTag | null
-    {
-        if ( this.tagStack.length == 0 )
-            return null;
-        else
-            return this.tagStack[ this.tagStack.length - 1 ];
-    }
-
-    // True if the current input is wrapped in <gratuitous>, ie. something for
-    // the benefit of the client but that the player doesn't want to see.
-    private isGratuitous(): boolean
-    {
-        for ( const tag of this.tagStack )
-            if ( tag.name === "gratuitous" )
-                return true;
-
-        return false;
-    }
-
-    private resetPlainText(): string
-    {
-        const plainText = this.plainText;
-        this.plainText = "";
-
-        return plainText;
-    }
-
-    /* Matches a start or end tag and captures the following:
-     * 1. any text preceeding the tag
-     * 2. "/" if this is an end tag
-     * 3. tag name
-     * 4. any attributes
-     * 5. "/" if this is a leaf tag (IOW, no end tag will follow).
-     * 6. any text following the tag
-     *
-     * Pardon the write-only RE, JavaScript doesn't have /x.
-     */
-    private static readonly TAG_RE = /([^<]*)<(\/?)(\w+)(?: ([^/>]+))?(\/?)>([^<]*)/g;
-
-    private static decodeEntities( text: string ): string
-    {
-        const decodedText = text
-            .replace( /&lt;/g, "<" )
-            .replace( /&gt;/g, ">" )
-            .replace( /&amp;/g, "&" );
-
-        return decodedText;
-    }
-
-    /* Takes text with pseudo-XML as input, returns plain text and emits events.
-     */
-    public filterInputText( rawInput: string ): string
-    {
-        if ( this.mode === MumeXmlMode.Off )
-            return rawInput;
-
-        const input = this.detectXml( rawInput );
-        let matched: boolean = false;
-        let matches: RegExpExecArray | null;
-
-        while ( ( matches = MumeXmlParser.TAG_RE.exec( input.xml ) ) !== null )
-        {
-            const [ , textBefore, isEnd, tagName, attr, isLeaf, textAfter ] = matches;
-
-            matched = true;
-
-            if ( textBefore )
-                this.pushText( textBefore );
-
-            if ( isLeaf )
-            {
-                this.startTag( tagName, attr );
-                this.endTag( tagName );
-            }
-            else if ( isEnd )
-            {
-                this.endTag( tagName );
-            }
-            else
-            {
-                this.startTag( tagName, attr );
-            }
-
-            if ( textAfter )
-                this.pushText( textAfter );
-        }
-
-        if ( ! matched )
-            this.pushText( input.xml );
-
-        return input.text + this.resetPlainText();
-    }
-
-    private pushText( raw: string ): void
-    {
-        const text = MumeXmlParser.decodeEntities( raw );
-        const topTag = this.topTag();
-
-        this.scouting.pushText( text );
-
-        if ( !topTag || topTag.name === "xml" )
-        {
-            this.plainText += text;
-        }
-        else
-        {
-            if ( topTag.text.length + text.length > 1500 )
-            {
-                console.warn( "Run-away MumeXmlParser tag " +
-                    topTag.name + ", force-closing the tag." );
-                this.tagStack.pop();
-            }
-
-            if ( !this.isGratuitous() )
-                this.plainText += text;
-
-            topTag.text += text;
-        }
-    }
-
-    private startTag( tagName: string, attr: string ): void
-    {
-        if ( this.tagStack.length > 5 )
-        {
-            const tags = this.tagStack.map( t => t.name ).join();
-            console.warn( `Ignoring MumeXmlParser tag ${tagName} because of deeply nested tags: ${tags}` );
-            return;
-        }
-
-        this.tagStack.push( { name: tagName, attr, text: "" } );
-    }
-
-    private endTag( tagName: string ): void
-    {
-        if ( tagName === "xml" )
-        {
-            // Most likely, the player typed "cha xml" by mistake. Hopefully he'll
-            // reenable it soon, otherwise we prefer to break rather than remain
-            // wide open to attack.
-            this.setXmlModeDesirable();
-        }
-
-        // Find the most recent tag in the stack which matches tagName
-        let matchingTagIndex: number | null = null;
-        for ( let i = this.tagStack.length - 1; i >= 0; --i )
-        {
-            if ( this.tagStack[i].name === tagName )
-            {
-                matchingTagIndex = i;
-                break;
-            }
-        }
-
-        // Perform some sanity checks
-        if ( matchingTagIndex == null )
-        {
-            console.warn( "Ignoring unmatched closing MumeXmlParser tag " + tagName );
-            return;
-        }
-        else if ( matchingTagIndex + 1 !== this.tagStack.length )
-        {
-            const tags = this.tagStack.slice( matchingTagIndex + 1 ).map( t => t.name ).join();
-            console.warn( "Closing MumeXmlParser tag " + tagName +
-                " with the following other tags open: " + tags );
-            this.tagStack.length = matchingTagIndex + 1;
-
-            // fall through
-        }
-
-        const topTag = this.tagStack.pop() as MumeXmlParserTag;
-        this.scouting.endTag( topTag );
-        if ( !this.scouting.active )
-            $(this).triggerHandler( MumeXmlParser.SIG_TAG_END, [ topTag, ] );
-    }
-}

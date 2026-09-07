@@ -35,7 +35,7 @@ import { throttle } from './utils';
 import './errorhandler';
 import './mume.macros';
 import './mume.menu';
-import { MumeMap, MumeXmlParser } from './mume.mapper';
+import { MumeMap } from './mume.mapper';
 
 let globalMapWindow: Window | null | undefined;
 let _globalSplit: Split.Instance | undefined;
@@ -58,8 +58,6 @@ $(window).on('load', function () {
     return;
   }
 
-  DecafMUD.plugins.TextInputFilter.mumexml = MumeXmlParser;
-
   new DecafMUD({
     host: 'mume.org',
     port: 443,
@@ -78,7 +76,6 @@ $(window).on('load', function () {
       start_full: false,
     },
     language: 'en',
-    textinputfilter: 'mumexml',
     socket: 'websocket',
   });
 
@@ -101,22 +98,54 @@ $(window).on('load', function () {
   });
 
   MumeMap.load('mume-map').done(function (map: MumeMap) {
-    let parser: MumeXmlParser;
-    let tagEventHandler;
+    if (DecafMUD.instances && DecafMUD.instances[0]) {
+      const decafInstance = DecafMUD.instances[0];
 
-    if (DecafMUD.instances && DecafMUD.instances[0] && DecafMUD.instances[0].textInputFilter) {
-      parser = DecafMUD.instances[0].textInputFilter as MumeXmlParser;
-      if (!parser || typeof parser.filterInputText !== 'function') {
-         console.error("Bug: expected to find a MumeXmlParser instance.");
-         throw new Error("MumeXmlParser not found or invalid.");
+      // Register GMCP module handlers using DecafMUD GMCP plugin methods
+      if (decafInstance.gmcp) {
+        const gmcp = decafInstance.gmcp;
+        const sendSupportsAdd = (gmcpObj: GMCPPlugin) => {
+          if (typeof gmcpObj.sendGMCP === 'function' && decafInstance.socket?.connected) {
+            try {
+              gmcpObj.sendGMCP('Core.Supports.Add', ['Char 1', 'Room 1', 'Event 1']);
+            } catch (err) {
+              console.warn('Failed to send GMCP Core.Supports.Add:', err);
+            }
+          }
+        };
+
+        const originalWill = gmcp._will;
+        gmcp._will = function (...args: unknown[]) {
+          if (typeof originalWill === 'function') {
+            originalWill.apply(this, args);
+          }
+          sendSupportsAdd(this as GMCPPlugin);
+        };
+
+        // If GMCP option negotiation already completed before MumeMap loaded and socket is connected, send immediately
+        if (decafInstance.socket?.connected) {
+          sendSupportsAdd(gmcp);
+        }
+
+        if (typeof gmcp.registerHandler === 'function') {
+          gmcp.registerHandler('Room.Info', (data: unknown) => {
+            console.log('GMCP Room.Info handler received:', data);
+            if (map && map.pathMachine) {
+              map.pathMachine.processGmcpRoomInfo(data as GMCPRoomInfoData);
+            }
+          });
+
+          gmcp.registerHandler('Event.Moved', (data: unknown) => {
+            console.log('GMCP Event.Moved handler received:', data);
+            if (map && map.pathMachine) {
+              map.pathMachine.processGmcpEventMoved(data as GMCPEventMovedData);
+            }
+          });
+        }
       }
-
-      tagEventHandler = map.processTag.bind(map);
-      $(parser).on(MumeXmlParser.SIG_TAG_END, tagEventHandler);
-      console.log('The map widget will now receive parsing events');
     } else {
-      console.error('DecafMUD instance or textInputFilter not found for map integration.');
-      throw new Error('DecafMUD instance or textInputFilter not found.');
+      console.error('DecafMUD instance not found for map integration.');
+      throw new Error('DecafMUD instance not found.');
     }
 
     globalMap = map;
@@ -138,6 +167,7 @@ $(window).on('load', function () {
     handleSizeChange();
   }).fail(function(error: unknown) {
     console.error("Failed to load MumeMap:", error);
+    $('#mume-map').html('<p style="color:#aaa;text-align:center;padding-top:20px;">Map unable to load. Please refresh to try again.</p>');
   });
 
   if ('serviceWorker' in navigator) {
@@ -149,7 +179,7 @@ $(window).on('load', function () {
   }
 });
 
-$(window).on('unload', function () {
+$(window).on('pagehide', function () {
   if (globalMapWindow != undefined) {
     globalMapWindow.close();
   }

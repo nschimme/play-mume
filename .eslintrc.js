@@ -53,7 +53,8 @@ module.exports = {
     "node_modules/",
     "DecafMUD/",
     "resources/",
-    "*.d.ts"
+    "*.d.ts",
+    "built/"
   ],
   rules: {
     "@typescript-eslint/no-unused-vars": [
