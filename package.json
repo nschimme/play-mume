@@ -4,7 +4,7 @@
   "description": "Modern web client for MUME using DecafMUD",
   "main": "errorhandler.js",
   "scripts": {
-    "test": "npm run lint",
+    "test": "npm run tsc && npm run lint && node --test built/tools/*.test.js",
     "tsc": "tsc -p tsconfig.json",
     "lint": "eslint . --ext .js,.ts --fix",
     "lint:check": "eslint . --ext .js,.ts",
