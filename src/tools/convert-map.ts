@@ -295,7 +295,7 @@ export function convertMap(xmlPath: string, outputDir: string, options: ConvertO
   // We need to map XML room IDs (can be large) to 0-based sequential IDs for the JSON format
   const xmlIdToSequential = new Map<string, number>();
   rooms.forEach((room, index) => {
-    xmlIdToSequential.set(room['@_id'], index);
+    xmlIdToSequential.set(String(room['@_id']), index);
   });
 
   rooms.forEach((room, index) => {
@@ -356,7 +356,7 @@ export function convertMap(xmlPath: string, outputDir: string, options: ConvertO
         // MMapper2 XML 'to' contains the destination room ID.
         const toIds = ensureArray(exit.to);
         toIds.forEach(toId => {
-          const seqId = xmlIdToSequential.get(toId);
+          const seqId = xmlIdToSequential.get(String(toId));
           if (seqId !== undefined) {
             // jsonmapstorage.cpp uses strings for IDs in the arrays too
             (jsonExits[dir].out).push(seqId.toString());

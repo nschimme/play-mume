@@ -5,3 +5,4 @@ built/
 dist/
 package-lock.json
 .DS_Store
+arda.xml
