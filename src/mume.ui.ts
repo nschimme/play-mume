@@ -17,7 +17,7 @@
 
 import $ from 'jquery';
 
-export type MapMode = 'auto' | 'overlay' | 'split' | 'map-only' | 'hidden';
+export type MapMode = 'auto' | 'overlay' | 'split' | 'map-only' | 'detached' | 'hidden';
 
 export interface UIManagerOptions {
   onCanvasFit?: () => void;
@@ -26,7 +26,7 @@ export interface UIManagerOptions {
 
 export class UIManager {
   private currentModeSetting: MapMode = 'auto';
-  private activeEffectiveMode: 'split' | 'overlay' | 'map-only' | 'hidden' = 'split';
+  private activeEffectiveMode: 'split' | 'overlay' | 'map-only' | 'detached' | 'hidden' = 'split';
   private opacity: number = 0.85;
   private offsetPercent: number = 15; // Positive = Right offset, Negative = Left offset
   private onCanvasFit?: () => void;
@@ -37,7 +37,7 @@ export class UIManager {
     this.onMapModeChange = options?.onMapModeChange;
 
     const savedMode = localStorage.getItem('mume_map_mode') as MapMode | null;
-    if (savedMode && ['auto', 'overlay', 'split', 'map-only', 'hidden'].includes(savedMode)) {
+    if (savedMode && ['auto', 'overlay', 'split', 'map-only', 'detached', 'hidden'].includes(savedMode)) {
       this.currentModeSetting = savedMode;
     }
 
@@ -66,6 +66,7 @@ export class UIManager {
     this.checkNewcomerBanner();
     this.checkConstrainedViewportBanner();
     this.bindEvents();
+    this.startDetachedWindowMonitor();
 
     window.showPersistentPopup = (message: string, title?: string) => {
       this.showPersistentPopup(message, title);
@@ -76,7 +77,18 @@ export class UIManager {
     };
   }
 
-  public getEffectiveMode(): 'split' | 'overlay' | 'map-only' | 'hidden' {
+  private startDetachedWindowMonitor(): void {
+    setInterval(() => {
+      if (this.currentModeSetting === 'detached') {
+        if (!window.globalMapWindow || window.globalMapWindow.closed) {
+          window.globalMapWindow = null;
+          this.setMapMode('auto');
+        }
+      }
+    }, 1000);
+  }
+
+  public getEffectiveMode(): 'split' | 'overlay' | 'map-only' | 'detached' | 'hidden' {
     return this.activeEffectiveMode;
   }
 
@@ -85,8 +97,19 @@ export class UIManager {
   }
 
   public setMapMode(mode: MapMode): void {
+    const prevMode = this.currentModeSetting;
     this.currentModeSetting = mode;
     localStorage.setItem('mume_map_mode', mode);
+
+    if (mode === 'detached') {
+      if (window.open_mume_map_window) {
+        window.open_mume_map_window();
+      }
+    } else if (prevMode === 'detached' && window.globalMapWindow && !window.globalMapWindow.closed) {
+      window.globalMapWindow.close();
+      window.globalMapWindow = null;
+    }
+
     this.updateLayoutState();
     if (this.onMapModeChange) {
       this.onMapModeChange(mode);
@@ -107,7 +130,7 @@ export class UIManager {
 
   private updateLayoutState(): void {
     const isNarrow = window.innerWidth <= 768;
-    let effective: 'split' | 'overlay' | 'map-only' | 'hidden';
+    let effective: 'split' | 'overlay' | 'map-only' | 'detached' | 'hidden';
 
     if (this.currentModeSetting === 'auto') {
       effective = isNarrow ? 'overlay' : 'split';
@@ -118,7 +141,7 @@ export class UIManager {
     this.activeEffectiveMode = effective;
     const $app = $('#mume-app');
 
-    $app.removeClass('mode-split mode-overlay mode-map-only mode-hidden');
+    $app.removeClass('mode-split mode-overlay mode-map-only mode-detached mode-hidden');
     $app.addClass(`mode-${effective}`);
 
     // Update active state in drawer buttons
@@ -186,6 +209,9 @@ export class UIManager {
   private createHeaderAndDrawer(): void {
     if ($('#mume-drawer').length > 0) return;
 
+    const isTouchOrMobile = ('ontouchstart' in window) || (window.innerWidth <= 768);
+    const detachedBtnHtml = isTouchOrMobile ? '' : '<button class="mume-btn mume-drawer-mode-btn" data-mode="detached">Detached</button>';
+
     const uiHtml = `
       <div id="mume-banner-container" class="mume-banner-container"></div>
       <div id="mume-drawer-overlay" class="mume-drawer-overlay"></div>
@@ -201,6 +227,7 @@ export class UIManager {
               <button class="mume-btn mume-drawer-mode-btn" data-mode="auto">Auto</button>
               <button class="mume-btn mume-drawer-mode-btn" data-mode="overlay">Overlay</button>
               <button class="mume-btn mume-drawer-mode-btn" data-mode="split">Split View</button>
+              ${detachedBtnHtml}
               <button class="mume-btn mume-drawer-mode-btn" data-mode="hidden">Hide Map</button>
             </div>
 
@@ -212,10 +239,6 @@ export class UIManager {
             <div class="mume-setting-row">
               <label for="mume-opacity-slider">Terminal Transparency: <span id="mume-opacity-val">85%</span></label>
               <input type="range" id="mume-opacity-slider" min="0.2" max="1.0" step="0.05" value="${this.opacity}">
-            </div>
-
-            <div class="mume-setting-row">
-              <button id="mume-detach-map-btn" class="mume-btn mume-full-btn">Detach Map Window</button>
             </div>
           </section>
 
@@ -291,11 +314,6 @@ export class UIManager {
     });
 
     // Drawer actions & links
-    $('#mume-detach-map-btn').on('click', () => {
-      if (window.open_mume_map_window) window.open_mume_map_window();
-      this.toggleDrawer(false);
-    });
-
     $('#mume-btn-font').on('click', () => {
       if (window.menu_font_size) window.menu_font_size();
       this.toggleDrawer(false);

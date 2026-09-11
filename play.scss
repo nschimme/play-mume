@@ -578,8 +578,8 @@ html.no-scroll, html.no-scroll body {
   }
 }
 
-/* Hidden Map Mode */
-#mume-app.mode-hidden {
+/* Hidden & Detached Map Modes */
+#mume-app.mode-hidden, #mume-app.mode-detached {
   #mume-map-panel {
     display: none !important;
   }
