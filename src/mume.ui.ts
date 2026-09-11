@@ -18,6 +18,7 @@
 import $ from 'jquery';
 
 export type MapMode = 'auto' | 'overlay' | 'split' | 'map-only' | 'hidden';
+export type OffsetSide = 'left' | 'right';
 
 export interface UIManagerOptions {
   onCanvasFit?: () => void;
@@ -28,6 +29,8 @@ export class UIManager {
   private currentModeSetting: MapMode = 'auto';
   private activeEffectiveMode: 'split' | 'overlay' | 'map-only' | 'hidden' = 'split';
   private opacity: number = 0.85;
+  private offsetSide: OffsetSide = 'right';
+  private offsetPercent: number = 15;
   private onCanvasFit?: () => void;
   private onMapModeChange?: (mode: MapMode) => void;
 
@@ -47,12 +50,26 @@ export class UIManager {
         this.opacity = parsed;
       }
     }
+
+    const savedSide = localStorage.getItem('mume_map_offset_side') as OffsetSide | null;
+    if (savedSide && ['left', 'right'].includes(savedSide)) {
+      this.offsetSide = savedSide;
+    }
+
+    const savedOffset = localStorage.getItem('mume_map_offset_percent');
+    if (savedOffset) {
+      const parsed = parseInt(savedOffset, 10);
+      if (!isNaN(parsed) && parsed >= 0 && parsed <= 50) {
+        this.offsetPercent = parsed;
+      }
+    }
   }
 
   public init(): void {
     this.createHeaderAndDrawer();
     this.updateLayoutState();
     this.applyOpacity();
+    this.applyOffset();
     this.bindEvents();
   }
 
@@ -77,6 +94,18 @@ export class UIManager {
     this.opacity = Math.max(0.2, Math.min(1.0, opacity));
     localStorage.setItem('mume_map_opacity', this.opacity.toString());
     this.applyOpacity();
+  }
+
+  public setOffsetSide(side: OffsetSide): void {
+    this.offsetSide = side;
+    localStorage.setItem('mume_map_offset_side', side);
+    this.applyOffset();
+  }
+
+  public setOffsetPercent(percent: number): void {
+    this.offsetPercent = Math.max(0, Math.min(50, percent));
+    localStorage.setItem('mume_map_offset_percent', this.offsetPercent.toString());
+    this.applyOffset();
   }
 
   private updateLayoutState(): void {
@@ -118,6 +147,29 @@ export class UIManager {
     }
   }
 
+  private applyOffset(): void {
+    const leftVal = this.offsetSide === 'right' ? `${this.offsetPercent}%` : '0%';
+    const rightVal = this.offsetSide === 'left' ? `${this.offsetPercent}%` : '0%';
+    const widthVal = `${100 - this.offsetPercent}%`;
+
+    document.documentElement.style.setProperty('--map-offset-left', leftVal);
+    document.documentElement.style.setProperty('--map-offset-right', rightVal);
+    document.documentElement.style.setProperty('--map-offset-width', widthVal);
+
+    $('#mume-offset-val').text(`${this.offsetPercent}%`);
+    const $slider = $('#mume-offset-slider');
+    if ($slider.length) {
+      ($slider[0] as HTMLInputElement).value = this.offsetPercent.toString();
+    }
+
+    $('.mume-offset-side-btn').removeClass('active');
+    $(`.mume-offset-side-btn[data-side="${this.offsetSide}"]`).addClass('active');
+
+    if (this.onCanvasFit) {
+      this.onCanvasFit();
+    }
+  }
+
   private createHeaderAndDrawer(): void {
     if ($('#mume-header').length > 0) return;
 
@@ -125,7 +177,6 @@ export class UIManager {
       <header id="mume-header">
         <div class="mume-header-left">
           <span class="mume-brand">Play MUME!</span>
-          <span id="mume-status-badge" class="mume-status-badge disconnected" title="Connection Status">●</span>
         </div>
         <div class="mume-header-right">
           <button id="mume-hamburger-btn" class="mume-btn mume-icon-btn" aria-label="Toggle Navigation Menu">
@@ -149,10 +200,25 @@ export class UIManager {
               <button class="mume-btn mume-drawer-mode-btn" data-mode="split" title="Side-by-side split">Split View</button>
               <button class="mume-btn mume-drawer-mode-btn" data-mode="hidden" title="Terminal only">Hide Map</button>
             </div>
+
+            <div class="mume-setting-row">
+              <label>Overlay Map Offset Side:</label>
+              <div class="mume-mode-buttons">
+                <button class="mume-btn mume-offset-side-btn" data-side="right">Right</button>
+                <button class="mume-btn mume-offset-side-btn" data-side="left">Left</button>
+              </div>
+            </div>
+
+            <div class="mume-setting-row">
+              <label for="mume-offset-slider">Overlay Map Offset (<span id="mume-offset-val">15%</span>):</label>
+              <input type="range" id="mume-offset-slider" min="0" max="50" step="5" value="${this.offsetPercent}">
+            </div>
+
             <div class="mume-setting-row">
               <label for="mume-opacity-slider">Terminal Opacity (<span id="mume-opacity-val">85%</span>):</label>
               <input type="range" id="mume-opacity-slider" min="0.2" max="1.0" step="0.05" value="${this.opacity}">
             </div>
+
             <div class="mume-setting-row">
               <button id="mume-detach-map-btn" class="mume-btn mume-full-btn">Detach Map Window</button>
             </div>
@@ -197,6 +263,20 @@ export class UIManager {
       if (mode) {
         this.setMapMode(mode);
       }
+    });
+
+    // Offset side buttons
+    $('.mume-offset-side-btn').on('click', (e) => {
+      const side = $(e.currentTarget).attr('data-side') as OffsetSide;
+      if (side) {
+        this.setOffsetSide(side);
+      }
+    });
+
+    // Offset percent slider
+    $('#mume-offset-slider').on('input change', (e) => {
+      const val = parseInt((e.target as HTMLInputElement).value, 10);
+      this.setOffsetPercent(val);
     });
 
     // Opacity slider
@@ -278,15 +358,6 @@ export class UIManager {
     } else {
       $drawer.removeClass('open').attr('aria-hidden', 'true');
       $overlay.removeClass('open');
-    }
-  }
-
-  public updateConnectionStatus(connected: boolean): void {
-    const $badge = $('#mume-status-badge');
-    if (connected) {
-      $badge.removeClass('disconnected').addClass('connected').attr('title', 'Connected to MUME');
-    } else {
-      $badge.removeClass('connected').addClass('disconnected').attr('title', 'Disconnected');
     }
   }
 }

@@ -104,13 +104,6 @@ $(window).on('load', function () {
     onDragEnd: canvasFitParent,
   });
 
-  // Periodically check connection status for badge
-  setInterval(() => {
-    if (DecafMUD.instances && DecafMUD.instances[0]) {
-      const isConnected = !!DecafMUD.instances[0].socket?.connected;
-      uiManager?.updateConnectionStatus(isConnected);
-    }
-  }, 1000);
 
   MumeMap.load('mume-map').done(function (map: MumeMap) {
     if (DecafMUD.instances && DecafMUD.instances[0]) {
@@ -170,8 +163,7 @@ $(window).on('load', function () {
 
     const mumeClientPanel = $('#mume-client-panel');
     function handleSizeChange() {
-      const isWide = mumeClientPanel.width()! > 600;
-      $('.decafmud.display.c7').css('white-space', isWide ? 'nowrap' : 'normal');
+      $('.decafmud.display.c7').css('white-space', 'pre-wrap');
     }
 
     if (typeof ResizeObserver !== 'undefined') {
