@@ -239,7 +239,7 @@ Display.prototype.processData = function() {
 	this._display.setAttribute('aria-busy',true);
 	
 	var span = document.createElement('span');
-	span.innerHTML = data.replace(/\n\r?/g,'<br>').replace(/> /g,'>&nbsp;')
+	span.innerHTML = data.replace(/\r\n|\r|\n/g,'<br>').replace(/> /g,'>&nbsp;')
 		.replace(/ ( +)/g, function(m) { if (m.length ===2) {return ' &nbsp;';}
 			return ' ' + new Array(m.length-1).join('&nbsp;') + ' '; });
 	this.shouldScroll();
