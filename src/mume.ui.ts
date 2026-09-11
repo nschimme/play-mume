@@ -151,17 +151,11 @@ export class UIManager {
     this.updateMapCenterOffset();
     this.notifyCanvasFit();
 
-    // Trigger DecafMUD interface resize and transmit Telnet NAWS (RFC 1073) window dimensions immediately
+    // Trigger DecafMUD interface resize which handles TELOPT NAWS negotiations natively
     if (typeof DecafMUD !== 'undefined' && DecafMUD.instances && DecafMUD.instances[0]) {
       const decaf = DecafMUD.instances[0];
       if (decaf.ui?.resizeScreen) {
         decaf.ui.resizeScreen(false, true);
-      }
-      const nawsKey = DecafMUD.TN?.NAWS || '\x1F';
-      if (decaf.telopt && decaf.telopt[nawsKey]) {
-        const naws = decaf.telopt[nawsKey] as unknown as { last?: unknown; send: () => void };
-        naws.last = undefined;
-        naws.send();
       }
     }
   }

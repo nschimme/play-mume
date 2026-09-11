@@ -105,12 +105,6 @@ $(window).on('load', function () {
       if (typeof DecafMUD !== 'undefined' && DecafMUD.instances && DecafMUD.instances[0]) {
         const decaf = DecafMUD.instances[0];
         decaf.ui?.resizeScreen?.(false, true);
-        const nawsKey = DecafMUD.TN?.NAWS || '\x1F';
-        if (decaf.telopt && decaf.telopt[nawsKey]) {
-          const naws = decaf.telopt[nawsKey] as unknown as { last?: unknown; send: () => void };
-          naws.last = undefined;
-          naws.send();
-        }
       }
     },
     onDragEnd: canvasFitParent,
@@ -181,12 +175,6 @@ $(window).on('load', function () {
       if (typeof DecafMUD !== 'undefined' && DecafMUD.instances && DecafMUD.instances[0]) {
         const decaf = DecafMUD.instances[0];
         decaf.ui?.resizeScreen?.(false, true);
-        const nawsKey = DecafMUD.TN?.NAWS || '\x1F';
-        if (decaf.telopt && decaf.telopt[nawsKey]) {
-          const naws = decaf.telopt[nawsKey] as unknown as { last?: unknown; send: () => void };
-          naws.last = undefined;
-          naws.send();
-        }
       }
     }
 

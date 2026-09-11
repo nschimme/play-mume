@@ -606,11 +606,11 @@ html.no-scroll, html.no-scroll body {
 }
 
 .decafmud .mud-pane {
-  font-family: Menlo, Monaco, Consolas, "Fira Code", "Cascadia Code", "Courier New", monospace;
-  font-size: 15px;
-  line-height: 1.18;
-  margin: 0;
-  padding: 10px 12px 60px 12px;
+  font-family: Consolas, Courier, 'Courier New', 'Andale Mono', Monaco, monospace;
+  font-size: 14px;
+  line-height: normal;
+  margin: 5px;
+  padding: 5px 8px 50px 8px;
   overflow-y: auto;
   box-sizing: border-box;
   height: 100%;
@@ -653,7 +653,7 @@ html.no-scroll, html.no-scroll body {
 .decafmud .input {
   flex: 1 1 auto;
   box-sizing: border-box;
-  font-family: Consolas, "Fira Code", "Cascadia Code", "Courier New", Monaco, monospace;
+  font-family: Consolas, Courier, 'Courier New', 'Andale Mono', Monaco, monospace;
   font-size: 16px; /* 16px prevents iOS Safari auto-zoom on input focus */
   padding: 8px 36px 8px 12px; /* Extra right padding for the status icon */
   background-color: #101014;

@@ -45,15 +45,15 @@ $(document).ready(function() {
 });
 
 export function mume_menu_new(): void {
-    window.open('https://mume.org/newcomers.php', 'mume_new_players');
+    window.open('https://docs.mume.org/resources/newcomers', 'mume_new_players');
 }
 
 export function mume_menu_help(): void {
-    window.open('https://mume.org/help.php', 'mume_help');
+    window.open('https://mume.org/help/', 'mume_help');
 }
 
 export function mume_menu_rules(): void {
-    window.open('https://mume.org/rules.php', 'mume_rules');
+    window.open('https://mume.org/rules/', 'mume_rules');
 }
 
 export function mume_menu_about_map(): void {
