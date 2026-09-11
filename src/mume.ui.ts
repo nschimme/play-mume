@@ -128,6 +128,7 @@ export class UIManager {
     $('.mume-drawer-mode-btn').removeClass('active');
     $(`.mume-drawer-mode-btn[data-mode="${this.currentModeSetting}"]`).addClass('active');
 
+    this.updateMapCenterOffset();
     this.notifyCanvasFit();
 
     // Trigger DecafMUD interface resize and transmit Telnet NAWS (RFC 1073) window dimensions immediately
@@ -155,23 +156,6 @@ export class UIManager {
   }
 
   private applyOffset(): void {
-    const absPercent = Math.abs(this.offsetPercent);
-    let leftVal = '0%';
-    let rightVal = '0%';
-    const widthVal = `${100 - absPercent}%`;
-
-    if (this.offsetPercent >= 0) {
-      leftVal = `${this.offsetPercent}%`;
-      rightVal = '0%';
-    } else {
-      leftVal = '0%';
-      rightVal = `${absPercent}%`;
-    }
-
-    document.documentElement.style.setProperty('--map-offset-left', leftVal);
-    document.documentElement.style.setProperty('--map-offset-right', rightVal);
-    document.documentElement.style.setProperty('--map-offset-width', widthVal);
-
     const labelText = this.offsetPercent > 0 ? `+${this.offsetPercent}% (Right)` : (this.offsetPercent < 0 ? `${this.offsetPercent}% (Left)` : '0% (Center)');
     $('#mume-offset-val').text(labelText);
 
@@ -180,7 +164,17 @@ export class UIManager {
       ($slider[0] as HTMLInputElement).value = this.offsetPercent.toString();
     }
 
+    this.updateMapCenterOffset();
     this.notifyCanvasFit();
+  }
+
+  public updateMapCenterOffset(): void {
+    if (window.globalMap) {
+      const activeOffset = this.activeEffectiveMode === 'overlay' ? this.offsetPercent : 0;
+      if (window.globalMap.display) {
+        window.globalMap.display.setCenterOffsetPercent(activeOffset);
+      }
+    }
   }
 
   private notifyCanvasFit(): void {

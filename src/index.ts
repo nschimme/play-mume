@@ -38,15 +38,14 @@ import './mume.menu';
 import { MumeMap } from './mume.mapper';
 import { UIManager } from './mume.ui';
 
-let globalMapWindow: Window | null | undefined;
 let _globalSplit: Split.Instance | undefined;
 let globalMap: MumeMap | undefined;
 let uiManager: UIManager | undefined;
 
 function canvasFitParent(): void {
-  if (globalMapWindow != undefined && $('#mume-map-panel').width()! >= 1) {
-    globalMapWindow.close();
-    globalMapWindow = null;
+  if (window.globalMapWindow != undefined && $('#mume-map-panel').width()! >= 1) {
+    window.globalMapWindow.close();
+    window.globalMapWindow = null;
   }
 
   if (globalMap != undefined && globalMap.display) {
@@ -212,8 +211,8 @@ $(window).on('load', function () {
 });
 
 $(window).on('pagehide', function () {
-  if (globalMapWindow != undefined) {
-    globalMapWindow.close();
+  if (window.globalMapWindow != undefined) {
+    window.globalMapWindow.close();
   }
 });
 

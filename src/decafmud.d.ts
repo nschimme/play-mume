@@ -138,6 +138,9 @@ declare function toggle_numpad(enable: boolean): void;
 
 interface Window {
   globalMap?: {
+    display?: {
+      setCenterOffsetPercent: (percent: number) => void;
+    };
     pathMachine?: {
       here?: {
         x: number;
@@ -146,6 +149,7 @@ interface Window {
       } | null;
     };
   } | null;
+  globalMapWindow?: Window | null;
   globalSplit?: {
     collapse: (index: number) => void;
   } | null;

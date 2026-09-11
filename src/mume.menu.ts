@@ -19,7 +19,6 @@ import $ from 'jquery';
 
 
 declare function canvasFitParent(): void;
-declare let globalMapWindow: Window | null;
 
 $(document).ready(function() {
     if (window.toolbar_menus && window.toolbar_menus[MENU_HELP]) {
@@ -79,8 +78,8 @@ export function open_mume_map_window(): void {
         "map.html#" + gMap.pathMachine.here.x + "," + gMap.pathMachine.here.y + "," + gMap.pathMachine.here.z :
         "map.html";
 
-    globalMapWindow = window.open( url, "mume_map", "dialog,minimizable,width=820,height=620" );
-    if ( globalMapWindow === null ) {
+    window.globalMapWindow = window.open( url, "mume_map", "dialog,minimizable,width=820,height=620" );
+    if ( window.globalMapWindow === null ) {
         alert( "Your browser refused to open the map window, you have to allow it "
             +"somewhere near the top right corner of your screen. Look for a "
             +"notification about blocking popups." );
@@ -95,6 +94,7 @@ export function open_mume_map_window(): void {
     }
 }
 
+// Bind to global window object
 window.open_mume_map_window = open_mume_map_window;
 window.mume_menu_new = mume_menu_new;
 window.mume_menu_help = mume_menu_help;

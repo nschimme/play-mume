@@ -74,7 +74,7 @@ html.no-scroll, html.no-scroll body {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 250;
+  z-index: 180;
   display: flex;
   flex-direction: column;
   pointer-events: none;
@@ -567,13 +567,13 @@ html.no-scroll, html.no-scroll body {
 #mume-app.mode-overlay {
   #mume-map-panel {
     position: absolute;
-    top: 0;
-    bottom: 0;
-    left: var(--map-offset-left, 15%);
-    right: var(--map-offset-right, 0%);
-    width: var(--map-offset-width, 85%);
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
     z-index: 1;
     pointer-events: none;
+    left: 0 !important;
+    right: 0 !important;
   }
 
   #mume-client-panel {
