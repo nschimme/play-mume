@@ -607,8 +607,8 @@ html.no-scroll, html.no-scroll body {
 
 .decafmud .mud-pane {
   font-family: Consolas, Courier, 'Courier New', 'Andale Mono', Monaco, monospace;
-  font-size: inherit;
-  line-height: 1.0;
+  font-size: 13px;
+  line-height: 1.05;
   letter-spacing: 0px;
   margin: 5px;
   padding: 5px 8px 50px 8px;
@@ -617,7 +617,12 @@ html.no-scroll, html.no-scroll body {
   height: 100%;
 
   span {
-    line-height: 1.0;
+    line-height: 1.05;
+    display: inline;
+  }
+
+  br {
+    line-height: 1.05;
   }
 }
 
