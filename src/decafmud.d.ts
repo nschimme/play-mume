@@ -73,6 +73,10 @@ interface DecafMUDStatic {
     TextInputFilter?: Record<string, unknown>;
   };
   instances?: DecafMUDInstance[];
+  TN?: {
+    NAWS: string;
+    [key: string]: string;
+  };
 }
 
 declare var DecafMUD: DecafMUDStatic;
@@ -115,6 +119,7 @@ interface DecafMUDInstance {
   gmcp?: GMCPPlugin;
   socket: DecafMUDSocket;
   ui?: DecafMUDUI;
+  telopt?: Record<string, unknown>;
   sendInput: (command: string) => void;
   reconnect: () => void;
   about: () => void;
@@ -128,6 +133,18 @@ declare function toggle_fkeys(enable: boolean): void;
 declare function toggle_numpad(enable: boolean): void;
 
 interface Window {
+  globalMap?: {
+    pathMachine?: {
+      here?: {
+        x: number;
+        y: number;
+        z: number;
+      } | null;
+    };
+  } | null;
+  globalSplit?: {
+    collapse: (index: number) => void;
+  } | null;
   toolbar_menus: ToolbarMenuItem[];
   open_mume_map_window?: () => void;
   mume_menu_new?: () => void;

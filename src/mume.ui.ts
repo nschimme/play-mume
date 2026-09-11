@@ -18,7 +18,6 @@
 import $ from 'jquery';
 
 export type MapMode = 'auto' | 'overlay' | 'split' | 'map-only' | 'hidden';
-export type OffsetSide = 'left' | 'right';
 
 export interface UIManagerOptions {
   onCanvasFit?: () => void;
@@ -29,8 +28,7 @@ export class UIManager {
   private currentModeSetting: MapMode = 'auto';
   private activeEffectiveMode: 'split' | 'overlay' | 'map-only' | 'hidden' = 'split';
   private opacity: number = 0.85;
-  private offsetSide: OffsetSide = 'right';
-  private offsetPercent: number = 15;
+  private offsetPercent: number = 15; // Positive = Right offset, Negative = Left offset
   private onCanvasFit?: () => void;
   private onMapModeChange?: (mode: MapMode) => void;
 
@@ -51,15 +49,10 @@ export class UIManager {
       }
     }
 
-    const savedSide = localStorage.getItem('mume_map_offset_side') as OffsetSide | null;
-    if (savedSide && ['left', 'right'].includes(savedSide)) {
-      this.offsetSide = savedSide;
-    }
-
     const savedOffset = localStorage.getItem('mume_map_offset_percent');
     if (savedOffset) {
       const parsed = parseInt(savedOffset, 10);
-      if (!isNaN(parsed) && parsed >= 0 && parsed <= 50) {
+      if (!isNaN(parsed) && parsed >= -50 && parsed <= 50) {
         this.offsetPercent = parsed;
       }
     }
@@ -96,14 +89,8 @@ export class UIManager {
     this.applyOpacity();
   }
 
-  public setOffsetSide(side: OffsetSide): void {
-    this.offsetSide = side;
-    localStorage.setItem('mume_map_offset_side', side);
-    this.applyOffset();
-  }
-
   public setOffsetPercent(percent: number): void {
-    this.offsetPercent = Math.max(0, Math.min(50, percent));
+    this.offsetPercent = Math.max(-50, Math.min(50, percent));
     localStorage.setItem('mume_map_offset_percent', this.offsetPercent.toString());
     this.applyOffset();
   }
@@ -128,13 +115,20 @@ export class UIManager {
     $('.mume-drawer-mode-btn').removeClass('active');
     $(`.mume-drawer-mode-btn[data-mode="${this.currentModeSetting}"]`).addClass('active');
 
-    if (this.onCanvasFit) {
-      this.onCanvasFit();
-    }
+    this.notifyCanvasFit();
 
-    // Trigger DecafMUD interface resize to transmit Telnet NAWS (RFC 1073) window dimensions
-    if (typeof DecafMUD !== 'undefined' && DecafMUD.instances && DecafMUD.instances[0] && DecafMUD.instances[0].ui) {
-      DecafMUD.instances[0].ui?.resizeScreen?.(false, true);
+    // Trigger DecafMUD interface resize and transmit Telnet NAWS (RFC 1073) window dimensions immediately
+    if (typeof DecafMUD !== 'undefined' && DecafMUD.instances && DecafMUD.instances[0]) {
+      const decaf = DecafMUD.instances[0];
+      if (decaf.ui?.resizeScreen) {
+        decaf.ui.resizeScreen(false, true);
+      }
+      const nawsKey = DecafMUD.TN?.NAWS || '\x1F';
+      if (decaf.telopt && decaf.telopt[nawsKey]) {
+        const naws = decaf.telopt[nawsKey] as unknown as { last?: unknown; send: () => void };
+        naws.last = undefined;
+        naws.send();
+      }
     }
   }
 
@@ -148,25 +142,40 @@ export class UIManager {
   }
 
   private applyOffset(): void {
-    const leftVal = this.offsetSide === 'right' ? `${this.offsetPercent}%` : '0%';
-    const rightVal = this.offsetSide === 'left' ? `${this.offsetPercent}%` : '0%';
-    const widthVal = `${100 - this.offsetPercent}%`;
+    const absPercent = Math.abs(this.offsetPercent);
+    let leftVal = '0%';
+    let rightVal = '0%';
+    const widthVal = `${100 - absPercent}%`;
+
+    if (this.offsetPercent >= 0) {
+      leftVal = `${this.offsetPercent}%`;
+      rightVal = '0%';
+    } else {
+      leftVal = '0%';
+      rightVal = `${absPercent}%`;
+    }
 
     document.documentElement.style.setProperty('--map-offset-left', leftVal);
     document.documentElement.style.setProperty('--map-offset-right', rightVal);
     document.documentElement.style.setProperty('--map-offset-width', widthVal);
 
-    $('#mume-offset-val').text(`${this.offsetPercent}%`);
+    const labelText = this.offsetPercent > 0 ? `+${this.offsetPercent}% (Right)` : (this.offsetPercent < 0 ? `${this.offsetPercent}% (Left)` : '0% (Center)');
+    $('#mume-offset-val').text(labelText);
+
     const $slider = $('#mume-offset-slider');
     if ($slider.length) {
       ($slider[0] as HTMLInputElement).value = this.offsetPercent.toString();
     }
 
-    $('.mume-offset-side-btn').removeClass('active');
-    $(`.mume-offset-side-btn[data-side="${this.offsetSide}"]`).addClass('active');
+    this.notifyCanvasFit();
+  }
 
+  private notifyCanvasFit(): void {
     if (this.onCanvasFit) {
       this.onCanvasFit();
+      requestAnimationFrame(() => {
+        if (this.onCanvasFit) this.onCanvasFit();
+      });
     }
   }
 
@@ -191,16 +200,8 @@ export class UIManager {
             </div>
 
             <div class="mume-setting-row">
-              <label>Overlay Map Offset Side:</label>
-              <div class="mume-mode-buttons">
-                <button class="mume-btn mume-offset-side-btn" data-side="right">Right</button>
-                <button class="mume-btn mume-offset-side-btn" data-side="left">Left</button>
-              </div>
-            </div>
-
-            <div class="mume-setting-row">
-              <label for="mume-offset-slider">Overlay Map Offset (<span id="mume-offset-val">15%</span>):</label>
-              <input type="range" id="mume-offset-slider" min="0" max="50" step="5" value="${this.offsetPercent}">
+              <label for="mume-offset-slider">Overlay Map Offset (<span id="mume-offset-val">+15% (Right)</span>):</label>
+              <input type="range" id="mume-offset-slider" min="-50" max="50" step="5" value="${this.offsetPercent}">
             </div>
 
             <div class="mume-setting-row">
@@ -272,15 +273,7 @@ export class UIManager {
       }
     });
 
-    // Offset side buttons
-    $('.mume-offset-side-btn').on('click', (e) => {
-      const side = $(e.currentTarget).attr('data-side') as OffsetSide;
-      if (side) {
-        this.setOffsetSide(side);
-      }
-    });
-
-    // Offset percent slider
+    // Offset percent slider (-50 to +50)
     $('#mume-offset-slider').on('input change', (e) => {
       const val = parseInt((e.target as HTMLInputElement).value, 10);
       this.setOffsetPercent(val);

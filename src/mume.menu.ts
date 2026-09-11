@@ -17,25 +17,7 @@
 
 import $ from 'jquery';
 
-interface GlobalMapHere {
-    x: number;
-    y: number;
-    z: number;
-}
 
-interface GlobalMapPathMachine {
-    here: GlobalMapHere | null | undefined;
-}
-
-interface GlobalMap {
-    pathMachine: GlobalMapPathMachine;
-}
-declare let globalMap: GlobalMap | null | undefined;
-
-interface GlobalSplit {
-    collapse(index: number): void;
-}
-declare let globalSplit: GlobalSplit | null | undefined;
 declare function canvasFitParent(): void;
 declare let globalMapWindow: Window | null;
 
@@ -92,8 +74,9 @@ export function mume_menu_map_bug(): void {
 }
 
 export function open_mume_map_window(): void {
-    const url: string = (globalMap && globalMap.pathMachine && globalMap.pathMachine.here) ?
-        "map.html#" + globalMap.pathMachine.here.x + "," + globalMap.pathMachine.here.y + "," + globalMap.pathMachine.here.z :
+    const gMap = window.globalMap;
+    const url: string = (gMap && gMap.pathMachine && gMap.pathMachine.here) ?
+        "map.html#" + gMap.pathMachine.here.x + "," + gMap.pathMachine.here.y + "," + gMap.pathMachine.here.z :
         "map.html";
 
     globalMapWindow = window.open( url, "mume_map", "dialog,minimizable,width=820,height=620" );
@@ -104,9 +87,11 @@ export function open_mume_map_window(): void {
         return;
     }
 
-    if ( globalSplit ) {
-        globalSplit.collapse( 1 );
-        canvasFitParent();
+    if ( window.globalSplit ) {
+        window.globalSplit.collapse( 1 );
+        if (typeof canvasFitParent === 'function') {
+            canvasFitParent();
+        }
     }
 }
 

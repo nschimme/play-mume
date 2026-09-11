@@ -101,8 +101,22 @@ $(window).on('load', function () {
         'flex-basis': gutterSize + 'px',
       };
     },
+    onDrag: function() {
+      canvasFitParent();
+      if (typeof DecafMUD !== 'undefined' && DecafMUD.instances && DecafMUD.instances[0]) {
+        const decaf = DecafMUD.instances[0];
+        decaf.ui?.resizeScreen?.(false, true);
+        const nawsKey = DecafMUD.TN?.NAWS || '\x1F';
+        if (decaf.telopt && decaf.telopt[nawsKey]) {
+          const naws = decaf.telopt[nawsKey] as unknown as { last?: unknown; send: () => void };
+          naws.last = undefined;
+          naws.send();
+        }
+      }
+    },
     onDragEnd: canvasFitParent,
   });
+  window.globalSplit = _globalSplit;
 
 
   MumeMap.load('mume-map').done(function (map: MumeMap) {
@@ -157,6 +171,7 @@ $(window).on('load', function () {
     }
 
     globalMap = map;
+    window.globalMap = map;
 
     $(window).on('resize', throttle(canvasFitParent, 500));
     canvasFitParent();
@@ -164,6 +179,16 @@ $(window).on('load', function () {
     const mumeClientPanel = $('#mume-client-panel');
     function handleSizeChange() {
       $('.decafmud.display.c7').css('white-space', 'pre-wrap');
+      if (typeof DecafMUD !== 'undefined' && DecafMUD.instances && DecafMUD.instances[0]) {
+        const decaf = DecafMUD.instances[0];
+        decaf.ui?.resizeScreen?.(false, true);
+        const nawsKey = DecafMUD.TN?.NAWS || '\x1F';
+        if (decaf.telopt && decaf.telopt[nawsKey]) {
+          const naws = decaf.telopt[nawsKey] as unknown as { last?: unknown; send: () => void };
+          naws.last = undefined;
+          naws.send();
+        }
+      }
     }
 
     if (typeof ResizeObserver !== 'undefined') {
