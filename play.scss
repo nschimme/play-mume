@@ -15,6 +15,10 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
+@import './DecafMUD/src/css/mud-colors.css';
+@import './DecafMUD/src/css/decafmud.css';
+@import './DecafMUD/src/css/decafmud-dark.css';
+
 :root {
   --header-height: 0px;
   --bg-dark: #121215;
@@ -442,4 +446,283 @@ html.no-scroll, html.no-scroll body {
 
 .decafmud .toolbar {
   display: none !important; /* Replaced by bottom input bar hamburger button & drawer */
+}
+
+/* --- Modernized DecafMUD Popups & Settings Overrides --- */
+.decafmud.window {
+  position: absolute;
+  z-index: 100 !important;
+  max-width: 92vw;
+  max-height: 90vh;
+  box-sizing: border-box;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-drawer) !important;
+}
+
+.decafmud.window-header {
+  background-color: var(--bg-header) !important;
+  color: var(--text-main) !important;
+  border-bottom: 1px solid var(--border-color);
+  height: 38px !important;
+  line-height: 38px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0 12px;
+  box-sizing: border-box;
+  cursor: move;
+}
+
+.decafmud.window-middle {
+  margin: 0 !important;
+  background-color: var(--bg-drawer) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  font-size: 0.95rem !important;
+  color: var(--text-main) !important;
+  height: calc(100% - 38px) !important;
+  overflow-y: auto !important;
+  box-sizing: border-box;
+  padding: 16px !important;
+}
+
+.decafmud.window-inner {
+  padding: 0 !important;
+  color: var(--text-main) !important;
+
+  h2 {
+    margin-top: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+
+  p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+}
+
+.decafmud.window img.closebutton {
+  width: 22px !important;
+  height: 22px !important;
+  top: 8px !important;
+  right: 10px !important;
+  cursor: pointer;
+  filter: invert(1) opacity(0.8);
+  transition: opacity 0.2s;
+
+  &:hover {
+    filter: invert(1) opacity(1);
+  }
+}
+
+/* Settings Form Fieldsets & Components */
+fieldset.decafmud.settings {
+  border: 1px solid var(--border-color) !important;
+  border-radius: 8px !important;
+  background-color: #16161b !important;
+  padding: 12px 16px !important;
+  margin: 12px 0 !important;
+
+  legend {
+    color: var(--accent) !important;
+    font-weight: 600;
+    padding: 0 8px;
+    font-size: 0.9rem;
+  }
+
+  label {
+    color: var(--text-main) !important;
+    width: auto !important;
+    max-width: 100% !important;
+    font-size: 0.9rem;
+    display: inline-block;
+  }
+
+  div {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 0;
+
+    p {
+      margin-left: 0 !important;
+      width: 100%;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+  }
+
+  div + div {
+    border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+  }
+
+  input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 18px !important;
+    height: 18px !important;
+    margin: 0 !important;
+    cursor: pointer;
+  }
+
+  input[type="checkbox"] + label {
+    margin-left: 8px !important;
+    cursor: pointer;
+  }
+
+  input[type="text"], input[type="number"], select, textarea {
+    background-color: #101014 !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 6px !important;
+    padding: 6px 10px !important;
+    font-size: 0.9rem !important;
+    outline: none !important;
+
+    &:focus {
+      border-color: var(--accent) !important;
+    }
+  }
+
+  button, input[type="button"], input[type="submit"] {
+    background-color: var(--accent) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 8px 16px !important;
+    font-size: 0.85rem !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s !important;
+
+    &:hover {
+      background-color: var(--accent-hover) !important;
+    }
+  }
+}
+
+/* Generic Popup Textarea & Textdiv */
+#popup, .decafmud.window {
+  textarea {
+    width: 100% !important;
+    box-sizing: border-box;
+    background-color: #101014 !important;
+    color: #f8fafc !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 6px !important;
+    padding: 10px !important;
+    font-family: Consolas, "Fira Code", monospace !important;
+    font-size: 0.9rem !important;
+  }
+
+  input[type="text"], input[type="number"], select {
+    background-color: #101014 !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 6px !important;
+    padding: 6px 10px !important;
+    font-size: 0.9rem !important;
+    outline: none !important;
+    margin: 4px 0;
+
+    &:focus {
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+    }
+  }
+
+  input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 18px !important;
+    height: 18px !important;
+    vertical-align: middle;
+    margin-right: 8px !important;
+    cursor: pointer;
+  }
+
+  a {
+    color: var(--accent);
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  button, a.button {
+    background-color: #2a2a32 !important;
+    color: var(--text-main) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 6px !important;
+    padding: 6px 12px !important;
+    font-size: 0.85rem !important;
+    cursor: pointer !important;
+    text-decoration: none !important;
+    display: inline-block;
+
+    &:hover {
+      background-color: #363642 !important;
+      color: #ffffff !important;
+    }
+  }
+
+  a.fakebutton, .fakebutton {
+    background-color: var(--accent) !important;
+    color: #ffffff !important;
+    border: 1px solid var(--accent-hover) !important;
+    border-radius: 6px !important;
+    padding: 6px 16px !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+    text-decoration: none !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer !important;
+    transition: background-color 0.2s, border-color 0.2s;
+    margin-top: 8px;
+
+    &:hover, &:focus, &:visited {
+      background-color: var(--accent-hover) !important;
+      color: #ffffff !important;
+      text-decoration: none !important;
+    }
+
+    big {
+      font-size: 0.85rem !important;
+      font-weight: 500 !important;
+    }
+  }
+}
+
+a.fakebutton, .fakebutton {
+  background-color: var(--accent) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--accent-hover) !important;
+  border-radius: 6px !important;
+  padding: 6px 16px !important;
+  font-size: 0.85rem !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer !important;
+  transition: background-color 0.2s, border-color 0.2s;
+  margin-top: 8px;
+
+  &:hover, &:focus, &:visited {
+    background-color: var(--accent-hover) !important;
+    color: #ffffff !important;
+    text-decoration: none !important;
+  }
+
+  big {
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+  }
 }
