@@ -36,10 +36,12 @@ import './errorhandler';
 import './mume.macros';
 import './mume.menu';
 import { MumeMap } from './mume.mapper';
+import { UIManager } from './mume.ui';
 
 let globalMapWindow: Window | null | undefined;
 let _globalSplit: Split.Instance | undefined;
 let globalMap: MumeMap | undefined;
+let uiManager: UIManager | undefined;
 
 function canvasFitParent(): void {
   if (globalMapWindow != undefined && $('#mume-map-panel').width()! >= 1) {
@@ -57,6 +59,11 @@ $(window).on('load', function () {
     console.error('DecafMUD or DecafMUD.plugins.TextInputFilter is not loaded!');
     return;
   }
+
+  uiManager = new UIManager({
+    onCanvasFit: canvasFitParent,
+  });
+  uiManager.init();
 
   new DecafMUD({
     host: 'mume.org',
@@ -96,6 +103,14 @@ $(window).on('load', function () {
     },
     onDragEnd: canvasFitParent,
   });
+
+  // Periodically check connection status for badge
+  setInterval(() => {
+    if (DecafMUD.instances && DecafMUD.instances[0]) {
+      const isConnected = !!DecafMUD.instances[0].socket?.connected;
+      uiManager?.updateConnectionStatus(isConnected);
+    }
+  }, 1000);
 
   MumeMap.load('mume-map').done(function (map: MumeMap) {
     if (DecafMUD.instances && DecafMUD.instances[0]) {
@@ -184,14 +199,5 @@ $(window).on('pagehide', function () {
     globalMapWindow.close();
   }
 });
-
-if (screen.availWidth < screen.availHeight) {
-  alert(
-    'It is not recommended to play MUME with a portrait orientation. ' +
-    'If on a mobile device, consider playing in landscape mode with an external keyboard' +
-    ' or on a desktop device for a better experience. ' +
-    'If on a vertical monitor, consider "popping out" (Options > Detach Map) the map.'
-  );
-}
 
 export {};
