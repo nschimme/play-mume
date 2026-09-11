@@ -1,0 +1,12 @@
+127.0.0.1 - - [11/Sep/2026 15:37:20] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [11/Sep/2026 15:37:20] "GET /main.bundle.js HTTP/1.1" 200 -
+127.0.0.1 - - [11/Sep/2026 15:37:21] code 404, message File not found
+127.0.0.1 - - [11/Sep/2026 15:37:21] "GET /mapdata/v1/arda.json HTTP/1.1" 404 -
+127.0.0.1 - - [11/Sep/2026 15:37:21] "GET /sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [11/Sep/2026 15:37:21] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [11/Sep/2026 15:37:21] "GET /map.html HTTP/1.1" 200 -
+127.0.0.1 - - [11/Sep/2026 15:37:21] "GET /map.bundle.js HTTP/1.1" 200 -
+127.0.0.1 - - [11/Sep/2026 15:37:21] "GET /main.bundle.js HTTP/1.1" 200 -
+127.0.0.1 - - [11/Sep/2026 15:37:21] "GET /manifest.webmanifest HTTP/1.1" 200 -
+127.0.0.1 - - [11/Sep/2026 15:37:21] "GET /icons/icon-192x192.png HTTP/1.1" 200 -
+127.0.0.1 - - [11/Sep/2026 15:37:21] "GET /icons/icon-512x512.png HTTP/1.1" 200 -

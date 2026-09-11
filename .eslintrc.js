@@ -51,7 +51,9 @@ module.exports = {
   ignorePatterns: [
     "dist/",
     "node_modules/",
-    "DecafMUD/",
+    "DecafMUD/build/",
+    "DecafMUD/docs/",
+    "DecafMUD/src/js/",
     "resources/",
     "*.d.ts",
     "built/"
