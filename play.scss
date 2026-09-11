@@ -443,6 +443,10 @@ html.no-scroll, html.no-scroll body {
   box-sizing: border-box;
 }
 
+.decafmud .icon-tray {
+  display: none !important; /* Hide duplicate green status dot next to input field */
+}
+
 .decafmud .input {
   width: 100%;
   box-sizing: border-box;
