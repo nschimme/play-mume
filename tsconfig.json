@@ -2,6 +2,7 @@
     "compilerOptions": {
         "module": "commonjs",
         "moduleResolution": "node",
+        "rootDir": ".",
         "target": "es2021",
         "lib": [
             "es2021",
