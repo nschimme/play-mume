@@ -606,14 +606,39 @@ html.no-scroll, html.no-scroll body {
 }
 
 .decafmud .mud-pane {
-  font-family: Consolas, Courier, 'Courier New', 'Andale Mono', Monaco, monospace;
-  font-size: 13.2px;
-  line-height: normal;
-  margin: 5px;
-  padding: 0 0 50px 0;
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, 'Fira Code', 'Courier New', monospace;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  letter-spacing: 0.2px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 12px 16px 60px 16px;
   overflow-y: auto;
   box-sizing: border-box;
   height: 100%;
+
+  ::selection {
+    background: rgba(59, 130, 246, 0.35);
+    color: #ffffff;
+  }
+}
+
+.decafmud .mud-pane::-webkit-scrollbar {
+  width: 8px;
+}
+
+.decafmud .mud-pane::-webkit-scrollbar-track {
+  background: rgba(18, 18, 22, 0.4);
+}
+
+.decafmud .mud-pane::-webkit-scrollbar-thumb {
+  background: #2e3646;
+  border-radius: 4px;
+
+  &:hover {
+    background: #475569;
+  }
 }
 
 .decafmud .input-cont {

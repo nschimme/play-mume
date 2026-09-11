@@ -402,24 +402,35 @@ export class UIManager {
   }
 
   private checkNewcomerBanner(): void {
-    const dismissed = localStorage.getItem('mume_newcomer_banner_dismissed');
-    if (!dismissed) {
-      if ($('#mume-newcomer-notice').length === 0) {
-        const noticeHtml = `
-          <div id="mume-newcomer-notice" class="mume-notice-banner">
-            <div class="mume-notice-content">
-              <span>👋 <strong>New to MUDs?</strong> MUME is a text-based multiplayer RPG. Type <code>NEW</code> in the terminal to create a character, or <code>?</code> for help!</span>
-            </div>
-            <button id="mume-dismiss-newcomer-notice" class="mume-btn mume-notice-dismiss" aria-label="Dismiss">✕</button>
+    if ($('#mume-newcomer-notice').length === 0) {
+      const noticeHtml = `
+        <div id="mume-newcomer-notice" class="mume-notice-banner">
+          <div class="mume-notice-content">
+            <span>👋 <strong>New to MUDs?</strong> MUME is a text-based multiplayer RPG. Type <code>NEW</code> in the terminal to create a character, or <code>?</code> for help!</span>
           </div>
-        `;
-        this.getBannerContainer().append(noticeHtml);
+          <button id="mume-dismiss-newcomer-notice" class="mume-btn mume-notice-dismiss" aria-label="Dismiss">✕</button>
+        </div>
+      `;
+      this.getBannerContainer().append(noticeHtml);
 
-        $('#mume-dismiss-newcomer-notice').on('click', () => {
-          localStorage.setItem('mume_newcomer_banner_dismissed', '1');
-          $('#mume-newcomer-notice').fadeOut(200, () => $('#mume-newcomer-notice').remove());
-        });
-      }
+      const dismissBanner = () => {
+        const $notice = $('#mume-newcomer-notice');
+        if ($notice.length > 0) {
+          $notice.fadeOut(200, () => $notice.remove());
+        }
+      };
+
+      $('#mume-dismiss-newcomer-notice').on('click', dismissBanner);
+
+      // Automatically dismiss banner when user sends their first input (using capture phase to intercept before DecafMUD stopPropagation)
+      document.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+          const target = e.target as HTMLElement | null;
+          if (target && (target.tagName === 'INPUT' || target.matches('.decafmud .input, input'))) {
+            dismissBanner();
+          }
+        }
+      }, true);
     }
   }
 
