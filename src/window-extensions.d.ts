@@ -35,6 +35,7 @@ declare global {
       InflateStream?: any;
     };
     DecafMUD?: DecafMUDStatic;
+    showPersistentPopup?: (message: string, title?: string) => void;
     open_mume_map_window?: () => void;
     mume_menu_new?: () => void;
     mume_menu_help?: () => void;

@@ -63,7 +63,16 @@ export class UIManager {
     this.updateLayoutState();
     this.applyOpacity();
     this.applyOffset();
+    this.checkConstrainedViewportBanner();
     this.bindEvents();
+
+    window.showPersistentPopup = (message: string, title?: string) => {
+      this.showPersistentPopup(message, title);
+    };
+
+    window.alert = (message?: unknown) => {
+      this.showPersistentPopup(String(message ?? ''));
+    };
   }
 
   public getEffectiveMode(): 'split' | 'overlay' | 'map-only' | 'hidden' {
@@ -190,10 +199,16 @@ export class UIManager {
           <button id="mume-drawer-close" class="mume-btn mume-close-btn" aria-label="Close Menu">✕</button>
         </div>
         <div class="mume-drawer-content">
+          <div class="mume-newcomer-card">
+            <span class="mume-newcomer-badge">👋 New to MUDs?</span>
+            <p>MUME is a text-based multiplayer RPG. Type <code>NEW</code> in the terminal to create a character, or <code>?</code> for help!</p>
+          </div>
+
           <section class="mume-drawer-section">
-            <h4>🗺️ Map View Settings</h4>
+            <h4>🗺️ Map View Mode</h4>
+            <p class="mume-setting-hint">Choose how the live world map is displayed alongside your terminal:</p>
             <div class="mume-mode-buttons">
-              <button class="mume-btn mume-drawer-mode-btn" data-mode="auto" title="Auto: Split on desktop, translucent overlay on mobile">Auto</button>
+              <button class="mume-btn mume-drawer-mode-btn" data-mode="auto" title="Auto: Split view on desktop, translucent overlay on mobile">Auto</button>
               <button class="mume-btn mume-drawer-mode-btn" data-mode="overlay" title="Terminal on top, map behind">Overlay</button>
               <button class="mume-btn mume-drawer-mode-btn" data-mode="split" title="Side-by-side split">Split View</button>
               <button class="mume-btn mume-drawer-mode-btn" data-mode="hidden" title="Terminal only">Hide Map</button>
@@ -201,11 +216,13 @@ export class UIManager {
 
             <div class="mume-setting-row">
               <label for="mume-offset-slider">Overlay Map Offset (<span id="mume-offset-val">+15% (Right)</span>):</label>
+              <p class="mume-setting-subhint">Shifts map canvas left (-) or right (+) under translucent terminal.</p>
               <input type="range" id="mume-offset-slider" min="-50" max="50" step="5" value="${this.offsetPercent}">
             </div>
 
             <div class="mume-setting-row">
               <label for="mume-opacity-slider">Terminal Opacity (<span id="mume-opacity-val">85%</span>):</label>
+              <p class="mume-setting-subhint">Adjust terminal transparency in Overlay mode.</p>
               <input type="range" id="mume-opacity-slider" min="0.2" max="1.0" step="0.05" value="${this.opacity}">
             </div>
 
@@ -215,7 +232,7 @@ export class UIManager {
           </section>
 
           <section class="mume-drawer-section">
-            <h4>⚙️ Client Controls</h4>
+            <h4>⚙️ Terminal & Controls</h4>
             <div class="mume-action-grid">
               <button id="mume-btn-font" class="mume-btn">Font Size</button>
               <button id="mume-btn-macros" class="mume-btn">Macros</button>
@@ -225,13 +242,13 @@ export class UIManager {
           </section>
 
           <section class="mume-drawer-section">
-            <h4>📚 Guides & Info</h4>
+            <h4>📚 Beginner Guides & Rules</h4>
             <ul class="mume-drawer-links">
-              <li><a href="#" id="mume-link-new">New to MUME?</a></li>
-              <li><a href="#" id="mume-link-help">MUME Help</a></li>
-              <li><a href="#" id="mume-link-rules">MUME Rules</a></li>
-              <li><a href="#" id="mume-link-about-map">About Map</a></li>
-              <li><a href="#" id="mume-link-bug">Report Mapper Bug</a></li>
+              <li><a href="#" id="mume-link-new">🌱 New Player Guide</a></li>
+              <li><a href="#" id="mume-link-help">📖 Command & Game Help</a></li>
+              <li><a href="#" id="mume-link-rules">⚖️ Official MUME Rules</a></li>
+              <li><a href="#" id="mume-link-about-map">🗺️ About Mapper</a></li>
+              <li><a href="#" id="mume-link-bug">🐛 Report Mapper Issue</a></li>
             </ul>
           </section>
         </div>
@@ -345,6 +362,58 @@ export class UIManager {
     $(window).on('resize', () => {
       this.updateLayoutState();
     });
+  }
+
+  public showPersistentPopup(message: string, title: string = 'Notification'): void {
+    let $popupContainer = $('#mume-persistent-popups');
+    if ($popupContainer.length === 0) {
+      $popupContainer = $('<div id="mume-persistent-popups" class="mume-persistent-popups"></div>');
+      $('body').append($popupContainer);
+    }
+
+    const popupId = 'mume-popup-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    const formattedMessage = message.replace(/\n/g, '<br>');
+
+    const popupHtml = `
+      <div id="${popupId}" class="mume-popup-card">
+        <div class="mume-popup-header">
+          <span class="mume-popup-title">${title}</span>
+          <button class="mume-popup-dismiss" aria-label="Dismiss">&times;</button>
+        </div>
+        <div class="mume-popup-body">${formattedMessage}</div>
+      </div>
+    `;
+
+    const $popup = $(popupHtml);
+    $popupContainer.append($popup);
+
+    $popup.find('.mume-popup-dismiss').on('click', () => {
+      $popup.fadeOut(200, () => $popup.remove());
+    });
+  }
+
+  private checkConstrainedViewportBanner(): void {
+    const isTouchOrConstrained = ('ontouchstart' in window) || (window.innerWidth <= 768);
+    const dismissed = localStorage.getItem('mume_keyboard_notice_dismissed');
+
+    if (isTouchOrConstrained && !dismissed) {
+      if ($('#mume-keyboard-notice').length === 0) {
+        const noticeHtml = `
+          <div id="mume-keyboard-notice" class="mume-notice-banner">
+            <div class="mume-notice-content">
+              <span>⌨️ <strong>Recommendation:</strong> For the best MUME playing experience on mobile or small screens, a physical keyboard is recommended.</span>
+            </div>
+            <button id="mume-dismiss-keyboard-notice" class="mume-btn mume-notice-dismiss" aria-label="Dismiss">✕</button>
+          </div>
+        `;
+        $('body').append(noticeHtml);
+
+        $('#mume-dismiss-keyboard-notice').on('click', () => {
+          localStorage.setItem('mume_keyboard_notice_dismissed', '1');
+          $('#mume-keyboard-notice').fadeOut(200, () => $('#mume-keyboard-notice').remove());
+        });
+      }
+    }
   }
 
   private toggleDrawer(forceState?: boolean): void {
