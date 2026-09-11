@@ -99,6 +99,13 @@ export class MumeMap
     {
         this.display.repositionTo( where );
     }
+
+    public setCenterOffsetPercent( percent: number ): void
+    {
+        if ( this.display ) {
+            this.display.setCenterOffsetPercent( percent );
+        }
+    }
 }
 
 
@@ -1441,6 +1448,7 @@ class MumeMapDisplay
 {
     private mapData: MumeMapData;
     private here: RoomCoords | undefined;
+    public centerOffsetPercent: number = 0;
 
     // PIXI elements
     private roomDisplays: SpatialIndex<PIXI.Container>;
@@ -1719,7 +1727,8 @@ class MumeMapDisplay
 
         // Scroll to make the herePointer visible
         const hpPos = this.herePointer.position;
-        this.pixi.stage.x = - hpPos.x + this.pixi.screen.width / 2;
+        const xOffsetPixels = ( this.pixi.screen.width * ( this.centerOffsetPercent || 0 ) ) / 100;
+        this.pixi.stage.x = - hpPos.x + this.pixi.screen.width / 2 + xOffsetPixels;
         this.pixi.stage.y = - hpPos.y + this.pixi.screen.height / 2;
         // PIXI.CanvasRenderer doesn't seem to update the stage's transform
         // correctly (not all all, lagging, plain wrong, pick one). This forces
@@ -1759,6 +1768,12 @@ class MumeMapDisplay
         this.initialHint.y = this.pixi.renderer.height / 2;
 
         this.pixi.render();
+    }
+
+    public setCenterOffsetPercent( percent: number ): void
+    {
+        this.centerOffsetPercent = percent;
+        this.fullRefresh();
     }
 
     /* Update all graphical elements to match the current position, going as

@@ -73,6 +73,10 @@ interface DecafMUDStatic {
     TextInputFilter?: Record<string, unknown>;
   };
   instances?: DecafMUDInstance[];
+  TN?: {
+    NAWS: string;
+    [key: string]: string;
+  };
 }
 
 declare var DecafMUD: DecafMUDStatic;
@@ -82,9 +86,85 @@ declare interface DecafMUDSocket {
   write(data: string): void;
 }
 
+declare const MENU_FILE: number;
+declare const MENU_LOG: number;
+declare const MENU_OPTIONS: number;
 declare const MENU_HELP: number;
 declare const MI_SUBMENU: number;
-declare const MENU_OPTIONS: number;
+
+type SubmenuList = (string | undefined)[];
+type ToolbarMenuItem = [string, string, string, SubmenuList];
+
+interface DecafMUDUI {
+  container?: HTMLElement;
+  el_display?: HTMLElement;
+  display?: {
+    display: HTMLElement;
+    scroll: () => void;
+    clear: () => void;
+  };
+  input?: {
+    focus: () => void;
+  };
+  click_fsbutton?: () => void;
+  maxPopupWidth?: () => number;
+  maxPopupHeight?: () => number;
+  verticalPopupOffset?: () => number;
+  horizontalPopupOffset?: () => number;
+  resizeScreen?: (showSize?: boolean, force?: boolean) => void;
+}
+
+interface DecafMUDInstance {
+  textInputFilter?: unknown;
+  gmcp?: GMCPPlugin;
+  socket: DecafMUDSocket;
+  ui?: DecafMUDUI;
+  telopt?: Record<string, unknown>;
+  connected?: boolean;
+  connecting?: boolean;
+  sendInput: (command: string) => void;
+  reconnect: () => void;
+  disconnect?: () => void;
+  connect?: () => void;
+  about: () => void;
+}
 
 declare function fkeys_enabled(): boolean;
 declare function numpad_enabled(): boolean;
+declare function get_fontsize(): number;
+declare function set_fontsize(size: number): void;
+declare function toggle_fkeys(enable: boolean): void;
+declare function toggle_numpad(enable: boolean): void;
+
+interface Window {
+  globalMap?: {
+    display?: {
+      setCenterOffsetPercent: (percent: number) => void;
+    };
+    pathMachine?: {
+      here?: {
+        x: number;
+        y: number;
+        z: number;
+      } | null;
+    };
+  } | null;
+  globalMapWindow?: Window | null;
+  globalSplit?: {
+    collapse: (index: number) => void;
+  } | null;
+  toolbar_menus: ToolbarMenuItem[];
+  open_mume_map_window?: () => void;
+  mume_menu_new?: () => void;
+  mume_menu_help?: () => void;
+  mume_menu_rules?: () => void;
+  mume_menu_about_map?: () => void;
+  mume_menu_map_bug?: () => void;
+  menu_reconnect?: () => void;
+  menu_log?: (style: string) => void;
+  menu_font_size?: () => void;
+  menu_macros?: () => void;
+  menu_history_flush?: () => void;
+  menu_features?: () => void;
+  menu_about?: () => void;
+}

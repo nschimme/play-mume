@@ -1453,14 +1453,16 @@ DecafMUD.prototype.connectFail = function() {
 
 
 DecafMUD.prototype.reconnect = function() {
+  if ( this.socket ) {
+    try { this.socket.close(); } catch ( e ) {}
+  }
+  this.socketClosed();
   this.connect_try++;
-  //if ( this.connect_try < this.options.reconnect_tries ) {
-	var d = this;
-	if ( d.ui && d.ui.connecting ) {
-	  d.ui.connecting();
-	}
-	d.socket.connect();
-  //}
+  var d = this;
+  if ( d.ui && d.ui.connecting ) {
+    d.ui.connecting();
+  }
+  d.socket.connect();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1977,7 +1979,7 @@ DecafMUD.options = {
 		blurclass	: 'mud-input-blur',
 		
 		msg_connect		: 'Press Enter to connect and type here...',
-		msg_connecting	: 'DecafMUD is attempting to connect...',
+		msg_connecting	: 'Attempting to connect...',
 		msg_empty		: 'Type commands here, or use the Up and Down arrows to browse your recently used commands.',
 
 		connect_hint	: true

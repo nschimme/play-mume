@@ -36,15 +36,16 @@ import './errorhandler';
 import './mume.macros';
 import './mume.menu';
 import { MumeMap } from './mume.mapper';
+import { UIManager } from './mume.ui';
 
-let globalMapWindow: Window | null | undefined;
 let _globalSplit: Split.Instance | undefined;
 let globalMap: MumeMap | undefined;
+let uiManager: UIManager | undefined;
 
 function canvasFitParent(): void {
-  if (globalMapWindow != undefined && $('#mume-map-panel').width()! >= 1) {
-    globalMapWindow.close();
-    globalMapWindow = null;
+  if (window.globalMapWindow != undefined && $('#mume-map-panel').width()! >= 1) {
+    window.globalMapWindow.close();
+    window.globalMapWindow = null;
   }
 
   if (globalMap != undefined && globalMap.display) {
@@ -57,6 +58,11 @@ $(window).on('load', function () {
     console.error('DecafMUD or DecafMUD.plugins.TextInputFilter is not loaded!');
     return;
   }
+
+  uiManager = new UIManager({
+    onCanvasFit: canvasFitParent,
+  });
+  uiManager.init();
 
   new DecafMUD({
     host: 'mume.org',
@@ -94,8 +100,17 @@ $(window).on('load', function () {
         'flex-basis': gutterSize + 'px',
       };
     },
+    onDrag: function() {
+      canvasFitParent();
+      if (typeof DecafMUD !== 'undefined' && DecafMUD.instances && DecafMUD.instances[0]) {
+        const decaf = DecafMUD.instances[0];
+        decaf.ui?.resizeScreen?.(false, true);
+      }
+    },
     onDragEnd: canvasFitParent,
   });
+  window.globalSplit = _globalSplit;
+
 
   MumeMap.load('mume-map').done(function (map: MumeMap) {
     if (DecafMUD.instances && DecafMUD.instances[0]) {
@@ -149,14 +164,18 @@ $(window).on('load', function () {
     }
 
     globalMap = map;
+    window.globalMap = map;
 
     $(window).on('resize', throttle(canvasFitParent, 500));
     canvasFitParent();
 
     const mumeClientPanel = $('#mume-client-panel');
     function handleSizeChange() {
-      const isWide = mumeClientPanel.width()! > 600;
-      $('.decafmud.display.c7').css('white-space', isWide ? 'nowrap' : 'normal');
+      $('.decafmud.display.c7').css('white-space', 'pre-wrap');
+      if (typeof DecafMUD !== 'undefined' && DecafMUD.instances && DecafMUD.instances[0]) {
+        const decaf = DecafMUD.instances[0];
+        decaf.ui?.resizeScreen?.(false, true);
+      }
     }
 
     if (typeof ResizeObserver !== 'undefined') {
@@ -180,18 +199,9 @@ $(window).on('load', function () {
 });
 
 $(window).on('pagehide', function () {
-  if (globalMapWindow != undefined) {
-    globalMapWindow.close();
+  if (window.globalMapWindow != undefined) {
+    window.globalMapWindow.close();
   }
 });
-
-if (screen.availWidth < screen.availHeight) {
-  alert(
-    'It is not recommended to play MUME with a portrait orientation. ' +
-    'If on a mobile device, consider playing in landscape mode with an external keyboard' +
-    ' or on a desktop device for a better experience. ' +
-    'If on a vertical monitor, consider "popping out" (Options > Detach Map) the map.'
-  );
-}
 
 export {};

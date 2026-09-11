@@ -76,8 +76,7 @@ var Display = function(decaf, ui, disp) {
 	// Clear the display, initializing the default state as well.
 	this.clear();
 	
-	// Display the DecafMUD banner.
-	this.message('<br><a href="https://github.com/MUME/DecafMUD">DecafMUD</a> v' + DecafMUD.version + ' by Stendec &lt;<a href="mailto:stendec365@gmail.com">stendec365@gmail.com</a>&gt;<br>');
+	// Display the splash text if any exists.
 	if ( this.splash.length > 0 ) {
 		this.message(this.splash + '<br>'); }
 };
@@ -240,7 +239,7 @@ Display.prototype.processData = function() {
 	this._display.setAttribute('aria-busy',true);
 	
 	var span = document.createElement('span');
-	span.innerHTML = data.replace(/\n\r?/g,'<br>').replace(/> /g,'>&nbsp;')
+	span.innerHTML = data.replace(/\r\n|\r|\n/g,'<br>').replace(/> /g,'>&nbsp;')
 		.replace(/ ( +)/g, function(m) { if (m.length ===2) {return ' &nbsp;';}
 			return ' ' + new Array(m.length-1).join('&nbsp;') + ' '; });
 	this.shouldScroll();
