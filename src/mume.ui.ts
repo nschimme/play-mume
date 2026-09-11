@@ -63,6 +63,7 @@ export class UIManager {
     this.updateLayoutState();
     this.applyOpacity();
     this.applyOffset();
+    this.checkNewcomerBanner();
     this.checkConstrainedViewportBanner();
     this.bindEvents();
 
@@ -73,6 +74,9 @@ export class UIManager {
     window.alert = (message?: unknown) => {
       this.showPersistentPopup(String(message ?? ''));
     };
+
+    // Periodically update socket status indicator
+    setInterval(() => this.syncSocketState(), 1000);
   }
 
   public getEffectiveMode(): 'split' | 'overlay' | 'map-only' | 'hidden' {
@@ -192,6 +196,7 @@ export class UIManager {
     if ($('#mume-drawer').length > 0) return;
 
     const uiHtml = `
+      <div id="mume-banner-container" class="mume-banner-container"></div>
       <div id="mume-drawer-overlay" class="mume-drawer-overlay"></div>
       <aside id="mume-drawer" class="mume-drawer" aria-hidden="true">
         <div class="mume-drawer-header">
@@ -199,30 +204,22 @@ export class UIManager {
           <button id="mume-drawer-close" class="mume-btn mume-close-btn" aria-label="Close Menu">✕</button>
         </div>
         <div class="mume-drawer-content">
-          <div class="mume-newcomer-card">
-            <span class="mume-newcomer-badge">👋 New to MUDs?</span>
-            <p>MUME is a text-based multiplayer RPG. Type <code>NEW</code> in the terminal to create a character, or <code>?</code> for help!</p>
-          </div>
-
           <section class="mume-drawer-section">
-            <h4>🗺️ Map View Mode</h4>
-            <p class="mume-setting-hint">Choose how the live world map is displayed alongside your terminal:</p>
+            <h4>Map Display</h4>
             <div class="mume-mode-buttons">
-              <button class="mume-btn mume-drawer-mode-btn" data-mode="auto" title="Auto: Split view on desktop, translucent overlay on mobile">Auto</button>
-              <button class="mume-btn mume-drawer-mode-btn" data-mode="overlay" title="Terminal on top, map behind">Overlay</button>
-              <button class="mume-btn mume-drawer-mode-btn" data-mode="split" title="Side-by-side split">Split View</button>
-              <button class="mume-btn mume-drawer-mode-btn" data-mode="hidden" title="Terminal only">Hide Map</button>
+              <button class="mume-btn mume-drawer-mode-btn" data-mode="auto">Auto</button>
+              <button class="mume-btn mume-drawer-mode-btn" data-mode="overlay">Overlay</button>
+              <button class="mume-btn mume-drawer-mode-btn" data-mode="split">Split View</button>
+              <button class="mume-btn mume-drawer-mode-btn" data-mode="hidden">Hide Map</button>
             </div>
 
             <div class="mume-setting-row">
-              <label for="mume-offset-slider">Overlay Map Offset (<span id="mume-offset-val">+15% (Right)</span>):</label>
-              <p class="mume-setting-subhint">Shifts map canvas left (-) or right (+) under translucent terminal.</p>
+              <label for="mume-offset-slider">Overlay Offset: <span id="mume-offset-val">+15% (Right)</span></label>
               <input type="range" id="mume-offset-slider" min="-50" max="50" step="5" value="${this.offsetPercent}">
             </div>
 
             <div class="mume-setting-row">
-              <label for="mume-opacity-slider">Terminal Opacity (<span id="mume-opacity-val">85%</span>):</label>
-              <p class="mume-setting-subhint">Adjust terminal transparency in Overlay mode.</p>
+              <label for="mume-opacity-slider">Terminal Transparency: <span id="mume-opacity-val">85%</span></label>
               <input type="range" id="mume-opacity-slider" min="0.2" max="1.0" step="0.05" value="${this.opacity}">
             </div>
 
@@ -232,7 +229,7 @@ export class UIManager {
           </section>
 
           <section class="mume-drawer-section">
-            <h4>⚙️ Terminal & Controls</h4>
+            <h4>Terminal & Controls</h4>
             <div class="mume-action-grid">
               <button id="mume-btn-font" class="mume-btn">Font Size</button>
               <button id="mume-btn-macros" class="mume-btn">Macros</button>
@@ -242,7 +239,7 @@ export class UIManager {
           </section>
 
           <section class="mume-drawer-section">
-            <h4>📚 Beginner Guides & Rules</h4>
+            <h4>Guides & Links</h4>
             <ul class="mume-drawer-links">
               <li><a href="#" id="mume-link-new">🌱 New Player Guide</a></li>
               <li><a href="#" id="mume-link-help">📖 Command & Game Help</a></li>
@@ -268,11 +265,33 @@ export class UIManager {
         $inputCont.append(`
           <button id="mume-hamburger-btn" class="mume-btn mume-icon-btn mume-bottom-hamburger" aria-label="Toggle Navigation Menu" title="Menu">
             <span class="mume-hamburger-icon">☰</span>
+            <span id="mume-status-dot" class="mume-status-dot disconnected" title="Disconnected"></span>
           </button>
         `);
+        this.syncSocketState();
       } else {
         setTimeout(() => this.ensureBottomHamburgerButton(), 200);
       }
+    }
+  }
+
+  public syncSocketState(): void {
+    if (typeof DecafMUD === 'undefined' || !DecafMUD.instances || !DecafMUD.instances[0]) {
+      return;
+    }
+    const decaf = DecafMUD.instances[0];
+    const $dot = $('#mume-status-dot');
+    const $reconnectBtn = $('#mume-btn-reconnect');
+
+    if (decaf.connected) {
+      $dot.attr('class', 'mume-status-dot connected').attr('title', 'Connected');
+      $reconnectBtn.text('Disconnect');
+    } else if (decaf.connecting) {
+      $dot.attr('class', 'mume-status-dot connecting').attr('title', 'Connecting...');
+      $reconnectBtn.text('Cancel Connect');
+    } else {
+      $dot.attr('class', 'mume-status-dot disconnected').attr('title', 'Disconnected');
+      $reconnectBtn.text('Connect');
     }
   }
 
@@ -392,6 +411,37 @@ export class UIManager {
     });
   }
 
+  private getBannerContainer(): JQuery<HTMLElement> {
+    let $container = $('#mume-banner-container');
+    if ($container.length === 0) {
+      $container = $('<div id="mume-banner-container" class="mume-banner-container"></div>');
+      $('body').prepend($container);
+    }
+    return $container;
+  }
+
+  private checkNewcomerBanner(): void {
+    const dismissed = localStorage.getItem('mume_newcomer_banner_dismissed');
+    if (!dismissed) {
+      if ($('#mume-newcomer-notice').length === 0) {
+        const noticeHtml = `
+          <div id="mume-newcomer-notice" class="mume-notice-banner">
+            <div class="mume-notice-content">
+              <span>👋 <strong>New to MUDs?</strong> MUME is a text-based multiplayer RPG. Type <code>NEW</code> in the terminal to create a character, or <code>?</code> for help!</span>
+            </div>
+            <button id="mume-dismiss-newcomer-notice" class="mume-btn mume-notice-dismiss" aria-label="Dismiss">✕</button>
+          </div>
+        `;
+        this.getBannerContainer().append(noticeHtml);
+
+        $('#mume-dismiss-newcomer-notice').on('click', () => {
+          localStorage.setItem('mume_newcomer_banner_dismissed', '1');
+          $('#mume-newcomer-notice').fadeOut(200, () => $('#mume-newcomer-notice').remove());
+        });
+      }
+    }
+  }
+
   private checkConstrainedViewportBanner(): void {
     const isTouchOrConstrained = ('ontouchstart' in window) || (window.innerWidth <= 768);
     const dismissed = localStorage.getItem('mume_keyboard_notice_dismissed');
@@ -406,7 +456,7 @@ export class UIManager {
             <button id="mume-dismiss-keyboard-notice" class="mume-btn mume-notice-dismiss" aria-label="Dismiss">✕</button>
           </div>
         `;
-        $('body').append(noticeHtml);
+        this.getBannerContainer().append(noticeHtml);
 
         $('#mume-dismiss-keyboard-notice').on('click', () => {
           localStorage.setItem('mume_keyboard_notice_dismissed', '1');

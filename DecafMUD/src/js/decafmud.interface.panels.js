@@ -360,7 +360,7 @@ SimpleInterface.prototype.print_msg = function(txt) {
 
 /** Called by Decaf upon connection to let us know. */
 SimpleInterface.prototype.connected = function() {
-	this.updateIcon(this.ico_connected, "DecafMUD is currently connected.".tr(this.decaf),
+	this.updateIcon(this.ico_connected, "Connected.".tr(this.decaf),
 		'', 'connectivity connected');
 }
 
@@ -387,7 +387,7 @@ SimpleInterface.prototype.connecting = function() {
     }
   }
   this.updateIcon(this.ico_connected,
-                  "DecafMUD is attempting to connect.".tr(this.decaf),
+                  "Attempting to connect...".tr(this.decaf),
                   '', 'connectivity connecting');
 }
 
@@ -395,7 +395,7 @@ SimpleInterface.prototype.connecting = function() {
 SimpleInterface.prototype.disconnected = function() {
   this.print_msg("Connection closed.");
   this.updateIcon(this.ico_connected,
-                  "DecafMUD is currently not connected.".tr(this.decaf),
+                  "Disconnected.".tr(this.decaf),
                   '', 'connectivity disconnected');
 }
 

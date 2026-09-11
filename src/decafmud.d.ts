@@ -120,8 +120,12 @@ interface DecafMUDInstance {
   socket: DecafMUDSocket;
   ui?: DecafMUDUI;
   telopt?: Record<string, unknown>;
+  connected?: boolean;
+  connecting?: boolean;
   sendInput: (command: string) => void;
   reconnect: () => void;
+  disconnect?: () => void;
+  connect?: () => void;
   about: () => void;
 }
 

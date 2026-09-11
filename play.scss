@@ -68,6 +68,100 @@ html.no-scroll, html.no-scroll body {
   box-sizing: border-box;
 }
 
+/* --- Banner Stacking Container & Notice Banners --- */
+.mume-banner-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 250;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+}
+
+.mume-notice-banner {
+  pointer-events: auto;
+  position: relative;
+  background-color: #1e293b;
+  border-bottom: 1px solid var(--accent);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: mumeSlideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mume-notice-content {
+  font-size: 0.88rem;
+  color: #e2e8f0;
+  line-height: 1.4;
+
+  strong {
+    color: #ffffff;
+  }
+
+  code {
+    background-color: #0f172a;
+    color: #38bdf8;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+  }
+}
+
+.mume-notice-dismiss {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1rem;
+  min-height: auto;
+  padding: 4px 8px;
+
+  &:hover {
+    color: #ffffff;
+    background: transparent;
+  }
+}
+
+/* --- Status Indicator Badge on Bottom Hamburger Button --- */
+.mume-bottom-hamburger {
+  position: relative;
+}
+
+.mume-status-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid #1a1a20;
+
+  &.connected {
+    background-color: #22c55e;
+    box-shadow: 0 0 6px rgba(34, 197, 94, 0.8);
+  }
+
+  &.connecting {
+    background-color: #eab308;
+    box-shadow: 0 0 6px rgba(234, 179, 8, 0.8);
+    animation: mumePulse 1.2s infinite;
+  }
+
+  &.disconnected {
+    background-color: #ef4444;
+  }
+}
+
+@keyframes mumePulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
 /* --- UI Buttons --- */
 .mume-btn {
   background-color: #2a2a32;
@@ -547,9 +641,9 @@ html.no-scroll, html.no-scroll body {
 }
 
 .decafmud .mud-pane {
-  font-family: Consolas, "Fira Code", "Cascadia Code", "Courier New", Monaco, monospace;
+  font-family: Menlo, Monaco, Consolas, "Fira Code", "Cascadia Code", "Courier New", monospace;
   font-size: 15px;
-  line-height: 1.45;
+  line-height: 1.18;
   margin: 0;
   padding: 10px 12px 60px 12px;
   overflow-y: auto;
