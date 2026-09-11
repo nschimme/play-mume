@@ -107,6 +107,7 @@ interface DecafMUDUI {
   maxPopupHeight?: () => number;
   verticalPopupOffset?: () => number;
   horizontalPopupOffset?: () => number;
+  resizeScreen?: (showSize?: boolean, force?: boolean) => void;
 }
 
 interface DecafMUDInstance {

@@ -102,6 +102,11 @@ export class UIManager {
     if (this.onCanvasFit) {
       this.onCanvasFit();
     }
+
+    // Trigger DecafMUD interface resize to transmit Telnet NAWS (RFC 1073) window dimensions
+    if (typeof DecafMUD !== 'undefined' && DecafMUD.instances && DecafMUD.instances[0] && DecafMUD.instances[0].ui) {
+      DecafMUD.instances[0].ui?.resizeScreen?.(false, true);
+    }
   }
 
   private applyOpacity(): void {

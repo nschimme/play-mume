@@ -21,7 +21,7 @@ RUN npm test
 
 # Download Arda.xml pinned to a specific version (e.g. tag 42)
 ARG ARDA_VERSION=42
-RUN curl -fL https://raw.githubusercontent.com/MUME/arda/${ARDA_VERSION}/arda.xml -o arda.xml
+RUN curl -fL --retry 5 --retry-connrefused https://raw.githubusercontent.com/MUME/arda/${ARDA_VERSION}/arda.xml -o arda.xml
 
 # Convert map to JSON format
 RUN npm run convert-map -- --strict arda.xml dist/mapdata
