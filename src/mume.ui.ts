@@ -54,7 +54,6 @@ export class UIManager {
     this.updateLayoutState();
     this.applyOpacity();
     this.bindEvents();
-    this.setupMenuHooks();
   }
 
   public getEffectiveMode(): 'split' | 'overlay' | 'map-only' | 'hidden' {
@@ -96,29 +95,12 @@ export class UIManager {
     $app.removeClass('mode-split mode-overlay mode-map-only mode-hidden');
     $app.addClass(`mode-${effective}`);
 
-    $('#mume-map-mode-label').text(this.getModeLabel(this.currentModeSetting, effective));
-
     // Update active state in drawer buttons
     $('.mume-drawer-mode-btn').removeClass('active');
     $(`.mume-drawer-mode-btn[data-mode="${this.currentModeSetting}"]`).addClass('active');
 
     if (this.onCanvasFit) {
       this.onCanvasFit();
-    }
-  }
-
-  private getModeLabel(setting: MapMode, effective: string): string {
-    switch (setting) {
-      case 'auto':
-        return `Map: Auto (${effective === 'overlay' ? 'Overlay' : 'Split'})`;
-      case 'overlay':
-        return 'Map: Overlay';
-      case 'split':
-        return 'Map: Split View';
-      case 'map-only':
-        return 'Map: Full View';
-      case 'hidden':
-        return 'Map: Hidden';
     }
   }
 
@@ -141,9 +123,6 @@ export class UIManager {
           <span id="mume-status-badge" class="mume-status-badge disconnected" title="Connection Status">●</span>
         </div>
         <div class="mume-header-right">
-          <button id="mume-map-mode-btn" class="mume-btn mume-pill-btn" aria-label="Toggle Map Mode">
-            <span id="mume-map-mode-label">Map Mode</span> ▾
-          </button>
           <button id="mume-hamburger-btn" class="mume-btn mume-icon-btn" aria-label="Toggle Navigation Menu">
             <span class="mume-hamburger-icon">☰</span>
           </button>
@@ -158,13 +137,12 @@ export class UIManager {
         </div>
         <div class="mume-drawer-content">
           <section class="mume-drawer-section">
-            <h4>🗺️ Map Display</h4>
+            <h4>🗺️ Map View Settings</h4>
             <div class="mume-mode-buttons">
-              <button class="mume-btn mume-drawer-mode-btn" data-mode="auto">Auto</button>
-              <button class="mume-btn mume-drawer-mode-btn" data-mode="overlay">Overlay</button>
-              <button class="mume-btn mume-drawer-mode-btn" data-mode="split">Split View</button>
-              <button class="mume-btn mume-drawer-mode-btn" data-mode="map-only">Full Map</button>
-              <button class="mume-btn mume-drawer-mode-btn" data-mode="hidden">Hide Map</button>
+              <button class="mume-btn mume-drawer-mode-btn" data-mode="auto" title="Auto: Split on desktop, translucent overlay on mobile">Auto</button>
+              <button class="mume-btn mume-drawer-mode-btn" data-mode="overlay" title="Terminal on top, map behind">Overlay</button>
+              <button class="mume-btn mume-drawer-mode-btn" data-mode="split" title="Side-by-side split">Split View</button>
+              <button class="mume-btn mume-drawer-mode-btn" data-mode="hidden" title="Terminal only">Hide Map</button>
             </div>
             <div class="mume-setting-row">
               <label for="mume-opacity-slider">Terminal Opacity (<span id="mume-opacity-val">85%</span>):</label>
@@ -206,13 +184,6 @@ export class UIManager {
     // Hamburger menu toggle
     $('#mume-hamburger-btn, #mume-drawer-close, #mume-drawer-overlay').on('click', () => {
       this.toggleDrawer();
-    });
-
-    // Quick map mode cycle on pill click
-    $('#mume-map-mode-btn').on('click', () => {
-      const modes: MapMode[] = ['auto', 'overlay', 'split', 'map-only', 'hidden'];
-      const nextIndex = (modes.indexOf(this.currentModeSetting) + 1) % modes.length;
-      this.setMapMode(modes[nextIndex]);
     });
 
     // Drawer mode buttons
@@ -312,9 +283,5 @@ export class UIManager {
     } else {
       $badge.removeClass('connected').addClass('disconnected').attr('title', 'Disconnected');
     }
-  }
-
-  private setupMenuHooks(): void {
-    // Menu items are accessible through the hamburger menu and header pills
   }
 }
