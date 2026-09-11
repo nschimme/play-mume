@@ -74,9 +74,6 @@ export class UIManager {
     window.alert = (message?: unknown) => {
       this.showPersistentPopup(String(message ?? ''));
     };
-
-    // Periodically update socket status indicator
-    setInterval(() => this.syncSocketState(), 1000);
   }
 
   public getEffectiveMode(): 'split' | 'overlay' | 'map-only' | 'hidden' {
@@ -259,33 +256,11 @@ export class UIManager {
         $inputCont.append(`
           <button id="mume-hamburger-btn" class="mume-btn mume-icon-btn mume-bottom-hamburger" aria-label="Toggle Navigation Menu" title="Menu">
             <span class="mume-hamburger-icon">☰</span>
-            <span id="mume-status-dot" class="mume-status-dot disconnected" title="Disconnected"></span>
           </button>
         `);
-        this.syncSocketState();
       } else {
         setTimeout(() => this.ensureBottomHamburgerButton(), 200);
       }
-    }
-  }
-
-  public syncSocketState(): void {
-    if (typeof DecafMUD === 'undefined' || !DecafMUD.instances || !DecafMUD.instances[0]) {
-      return;
-    }
-    const decaf = DecafMUD.instances[0];
-    const $dot = $('#mume-status-dot');
-    const $reconnectBtn = $('#mume-btn-reconnect');
-
-    if (decaf.connected) {
-      $dot.attr('class', 'mume-status-dot connected').attr('title', 'Connected');
-      $reconnectBtn.text('Disconnect');
-    } else if (decaf.connecting) {
-      $dot.attr('class', 'mume-status-dot connecting').attr('title', 'Connecting...');
-      $reconnectBtn.text('Cancel Connect');
-    } else {
-      $dot.attr('class', 'mume-status-dot disconnected').attr('title', 'Disconnected');
-      $reconnectBtn.text('Connect');
     }
   }
 

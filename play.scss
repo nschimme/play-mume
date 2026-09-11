@@ -126,41 +126,6 @@ html.no-scroll, html.no-scroll body {
   }
 }
 
-/* --- Status Indicator Badge on Bottom Hamburger Button --- */
-.mume-bottom-hamburger {
-  position: relative;
-}
-
-.mume-status-dot {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  border: 1.5px solid #1a1a20;
-
-  &.connected {
-    background-color: #22c55e;
-    box-shadow: 0 0 6px rgba(34, 197, 94, 0.8);
-  }
-
-  &.connecting {
-    background-color: #eab308;
-    box-shadow: 0 0 6px rgba(234, 179, 8, 0.8);
-    animation: mumePulse 1.2s infinite;
-  }
-
-  &.disconnected {
-    background-color: #ef4444;
-  }
-}
-
-@keyframes mumePulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.3; }
-  100% { opacity: 1; }
-}
 
 /* --- UI Buttons --- */
 .mume-btn {
@@ -670,7 +635,7 @@ html.no-scroll, html.no-scroll body {
 
 .decafmud .icon-tray {
   position: absolute;
-  right: 60px;
+  right: 70px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
@@ -690,7 +655,7 @@ html.no-scroll, html.no-scroll body {
   box-sizing: border-box;
   font-family: Consolas, "Fira Code", "Cascadia Code", "Courier New", Monaco, monospace;
   font-size: 16px; /* 16px prevents iOS Safari auto-zoom on input focus */
-  padding: 8px 32px 8px 12px; /* Extra right padding for the status icon */
+  padding: 8px 36px 8px 12px; /* Extra right padding for the status icon */
   background-color: #101014;
   color: #f8fafc;
   border: 1px solid #334155;

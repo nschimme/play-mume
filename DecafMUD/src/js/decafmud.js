@@ -1453,14 +1453,16 @@ DecafMUD.prototype.connectFail = function() {
 
 
 DecafMUD.prototype.reconnect = function() {
+  if ( this.socket ) {
+    try { this.socket.close(); } catch ( e ) {}
+  }
+  this.socketClosed();
   this.connect_try++;
-  //if ( this.connect_try < this.options.reconnect_tries ) {
-	var d = this;
-	if ( d.ui && d.ui.connecting ) {
-	  d.ui.connecting();
-	}
-	d.socket.connect();
-  //}
+  var d = this;
+  if ( d.ui && d.ui.connecting ) {
+    d.ui.connecting();
+  }
+  d.socket.connect();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
