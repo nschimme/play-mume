@@ -16,7 +16,7 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA. */
 
 :root {
-  --header-height: 44px;
+  --header-height: 0px;
   --bg-dark: #121215;
   --bg-header: #18181c;
   --bg-drawer: #1e1e24;
@@ -64,34 +64,6 @@ html.no-scroll, html.no-scroll body {
   box-sizing: border-box;
 }
 
-/* --- Header Bar --- */
-#mume-header {
-  height: var(--header-height);
-  background-color: var(--bg-header);
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
-  box-sizing: border-box;
-  z-index: 100;
-  position: relative;
-  user-select: none;
-}
-
-.mume-header-left, .mume-header-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.mume-brand {
-  font-weight: 700;
-  font-size: 1.05rem;
-  letter-spacing: 0.5px;
-  color: #ffffff;
-}
-
 /* --- UI Buttons --- */
 .mume-btn {
   background-color: #2a2a32;
@@ -118,22 +90,13 @@ html.no-scroll, html.no-scroll body {
   }
 }
 
-.mume-pill-btn {
-  border-radius: 20px;
-  padding: 4px 14px;
-  background-color: #22222a;
-
-  &:hover {
-    background-color: #2f2f3a;
-  }
-}
-
 .mume-icon-btn {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   padding: 0;
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   border-radius: 8px;
+  flex-shrink: 0;
 }
 
 /* --- Drawer & Overlay --- */
@@ -290,7 +253,7 @@ html.no-scroll, html.no-scroll body {
 #mume-app {
   display: flex;
   flex-direction: row;
-  height: calc(100vh - var(--header-height));
+  height: 100vh;
   width: 100vw;
   position: relative;
   overflow: hidden;
@@ -355,7 +318,7 @@ html.no-scroll, html.no-scroll body {
     z-index: 2;
     width: 100%;
     background-color: var(--bg-overlay);
-    backdrop-filter: none; /* Keep map canvas underneath crisp and unblurred */
+    backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
 
@@ -418,7 +381,7 @@ html.no-scroll, html.no-scroll body {
   font-size: 15px;
   line-height: 1.45;
   margin: 0;
-  padding: 10px 12px 55px 12px;
+  padding: 10px 12px 60px 12px;
   overflow-y: auto;
   box-sizing: border-box;
   height: 100%;
@@ -436,14 +399,34 @@ html.no-scroll, html.no-scroll body {
   -webkit-backdrop-filter: blur(6px);
   z-index: 10;
   box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.decafmud .icon-tray {
+  position: absolute;
+  right: 60px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.decafmud .status-icon {
+  margin: 0;
+  float: none;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .decafmud .input {
-  width: 100%;
+  flex: 1 1 auto;
   box-sizing: border-box;
   font-family: Consolas, "Fira Code", "Cascadia Code", "Courier New", Monaco, monospace;
   font-size: 16px; /* 16px prevents iOS Safari auto-zoom on input focus */
-  padding: 8px 12px;
+  padding: 8px 32px 8px 12px; /* Extra right padding for the status icon */
   background-color: #101014;
   color: #f8fafc;
   border: 1px solid #334155;
@@ -458,5 +441,5 @@ html.no-scroll, html.no-scroll body {
 }
 
 .decafmud .toolbar {
-  display: none !important; /* Replaced by modern header & hamburger drawer */
+  display: none !important; /* Replaced by bottom input bar hamburger button & drawer */
 }

@@ -171,20 +171,9 @@ export class UIManager {
   }
 
   private createHeaderAndDrawer(): void {
-    if ($('#mume-header').length > 0) return;
+    if ($('#mume-drawer').length > 0) return;
 
-    const headerHtml = `
-      <header id="mume-header">
-        <div class="mume-header-left">
-          <span class="mume-brand">Play MUME!</span>
-        </div>
-        <div class="mume-header-right">
-          <button id="mume-hamburger-btn" class="mume-btn mume-icon-btn" aria-label="Toggle Navigation Menu">
-            <span class="mume-hamburger-icon">☰</span>
-          </button>
-        </div>
-      </header>
-
+    const uiHtml = `
       <div id="mume-drawer-overlay" class="mume-drawer-overlay"></div>
       <aside id="mume-drawer" class="mume-drawer" aria-hidden="true">
         <div class="mume-drawer-header">
@@ -248,12 +237,30 @@ export class UIManager {
       </aside>
     `;
 
-    $('body').prepend(headerHtml);
+    $('body').prepend(uiHtml);
+
+    // Attach bottom hamburger button into DecafMUD input-cont when present
+    this.ensureBottomHamburgerButton();
+  }
+
+  private ensureBottomHamburgerButton(): void {
+    if ($('#mume-hamburger-btn').length === 0) {
+      const $inputCont = $('.decafmud.input-cont');
+      if ($inputCont.length > 0) {
+        $inputCont.append(`
+          <button id="mume-hamburger-btn" class="mume-btn mume-icon-btn mume-bottom-hamburger" aria-label="Toggle Navigation Menu" title="Menu">
+            <span class="mume-hamburger-icon">☰</span>
+          </button>
+        `);
+      } else {
+        setTimeout(() => this.ensureBottomHamburgerButton(), 200);
+      }
+    }
   }
 
   private bindEvents(): void {
     // Hamburger menu toggle
-    $('#mume-hamburger-btn, #mume-drawer-close, #mume-drawer-overlay').on('click', () => {
+    $(document).on('click', '#mume-hamburger-btn, #mume-drawer-close, #mume-drawer-overlay', () => {
       this.toggleDrawer();
     });
 
