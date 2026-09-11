@@ -608,16 +608,12 @@ html.no-scroll, html.no-scroll body {
 .decafmud .mud-pane {
   font-family: Consolas, Courier, 'Courier New', 'Andale Mono', Monaco, monospace;
   font-size: 13.2px;
-  line-height: 1.2;
+  line-height: normal;
   margin: 5px;
   padding: 0 0 50px 0;
   overflow-y: auto;
   box-sizing: border-box;
   height: 100%;
-
-  span {
-    line-height: 1.2;
-  }
 }
 
 .decafmud .input-cont {
