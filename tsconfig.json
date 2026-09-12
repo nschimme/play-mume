@@ -1,6 +1,8 @@
 {
     "compilerOptions": {
-        "module": "commonjs", // Classic IIFE for now
+        "module": "commonjs",
+        "moduleResolution": "node",
+        "rootDir": ".",
         "target": "es2021",
         "lib": [
             "es2021",
@@ -14,6 +16,7 @@
     },
     "include": [
         "src/**/*",
-        "libs/*.d.ts",
-    ],
+        "DecafMUD/src/**/*",
+        "libs/*.d.ts"
+    ]
 }

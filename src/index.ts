@@ -19,17 +19,7 @@ import '../play.scss';
 import $ from 'jquery';
 import Split from 'split.js';
 
-import 'script-loader!../DecafMUD/src/js/decafmud.js';
-import 'script-loader!../DecafMUD/src/js/inflate_stream.min.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.display.standard.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.encoding.iso885915.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.socket.websocket.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.storage.standard.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.telopt.gmcp.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.menu.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.js';
-import 'script-loader!../DecafMUD/src/js/decafmud.interface.panels.settings.js';
-import 'script-loader!../DecafMUD/src/js/dragelement.js';
+import { DecafMUD, GMCPPlugin, GMCPRoomInfoData, GMCPEventMovedData } from '../DecafMUD/src/index';
 
 import { throttle } from './utils';
 import './errorhandler';
@@ -54,17 +44,12 @@ function canvasFitParent(): void {
 }
 
 $(window).on('load', function () {
-  if (typeof DecafMUD === 'undefined' || !DecafMUD.plugins?.TextInputFilter) {
-    console.error('DecafMUD or DecafMUD.plugins.TextInputFilter is not loaded!');
-    return;
-  }
-
   uiManager = new UIManager({
     onCanvasFit: canvasFitParent,
   });
   uiManager.init();
 
-  new DecafMUD({
+  const decafInstance = new DecafMUD({
     host: 'mume.org',
     port: 443,
     autoreconnect: false,
@@ -100,101 +85,86 @@ $(window).on('load', function () {
         'flex-basis': gutterSize + 'px',
       };
     },
-    onDrag: function() {
+    onDrag: function () {
       canvasFitParent();
-      if (typeof DecafMUD !== 'undefined' && DecafMUD.instances && DecafMUD.instances[0]) {
-        const decaf = DecafMUD.instances[0];
-        decaf.ui?.resizeScreen?.(false, true);
-      }
+      decafInstance.ui?.resizeScreen?.(false, true);
     },
     onDragEnd: canvasFitParent,
   });
   window.globalSplit = _globalSplit;
 
-
-  MumeMap.load('mume-map').done(function (map: MumeMap) {
-    if (DecafMUD.instances && DecafMUD.instances[0]) {
-      const decafInstance = DecafMUD.instances[0];
-
-      // Register GMCP module handlers using DecafMUD GMCP plugin methods
+  MumeMap.load('mume-map')
+    .done(function (map: MumeMap) {
       if (decafInstance.gmcp) {
-        const gmcp = decafInstance.gmcp;
-        const sendSupportsAdd = (gmcpObj: GMCPPlugin) => {
-          if (typeof gmcpObj.sendGMCP === 'function' && decafInstance.socket?.connected) {
+        const gmcp = decafInstance.gmcp as GMCPPlugin;
+        const sendSupportsAdd = () => {
+          if (typeof gmcp.sendGMCP === 'function' && decafInstance.socket?.connected) {
             try {
-              gmcpObj.sendGMCP('Core.Supports.Add', ['Char 1', 'Room 1', 'Event 1']);
+              gmcp.sendGMCP('Core.Supports.Add', ['Char 1', 'Room 1', 'Event 1']);
             } catch (err) {
               console.warn('Failed to send GMCP Core.Supports.Add:', err);
             }
           }
         };
 
-        const originalWill = gmcp._will;
-        gmcp._will = function (...args: unknown[]) {
-          if (typeof originalWill === 'function') {
-            originalWill.apply(this, args);
-          }
-          sendSupportsAdd(this as GMCPPlugin);
-        };
+        decafInstance.on('connect', () => {
+          sendSupportsAdd();
+        });
 
-        // If GMCP option negotiation already completed before MumeMap loaded and socket is connected, send immediately
         if (decafInstance.socket?.connected) {
-          sendSupportsAdd(gmcp);
+          sendSupportsAdd();
         }
 
         if (typeof gmcp.registerHandler === 'function') {
           gmcp.registerHandler('Room.Info', (data: unknown) => {
-            console.log('GMCP Room.Info handler received:', data);
             if (map && map.pathMachine) {
               map.pathMachine.processGmcpRoomInfo(data as GMCPRoomInfoData);
             }
           });
 
           gmcp.registerHandler('Event.Moved', (data: unknown) => {
-            console.log('GMCP Event.Moved handler received:', data);
             if (map && map.pathMachine) {
               map.pathMachine.processGmcpEventMoved(data as GMCPEventMovedData);
             }
           });
         }
       }
-    } else {
-      console.error('DecafMUD instance not found for map integration.');
-      throw new Error('DecafMUD instance not found.');
-    }
 
-    globalMap = map;
-    window.globalMap = map;
+      globalMap = map;
+      window.globalMap = map;
 
-    $(window).on('resize', throttle(canvasFitParent, 500));
-    canvasFitParent();
+      $(window).on('resize', throttle(canvasFitParent, 500));
+      canvasFitParent();
 
-    const mumeClientPanel = $('#mume-client-panel');
-    function handleSizeChange() {
-      $('.decafmud.display.c7').css('white-space', 'pre-wrap');
-      if (typeof DecafMUD !== 'undefined' && DecafMUD.instances && DecafMUD.instances[0]) {
-        const decaf = DecafMUD.instances[0];
-        decaf.ui?.resizeScreen?.(false, true);
+      const mumeClientPanel = $('#mume-client-panel');
+      function handleSizeChange() {
+        $('.decafmud.display.c7').css('white-space', 'pre-wrap');
+        decafInstance.ui?.resizeScreen?.(false, true);
       }
-    }
 
-    if (typeof ResizeObserver !== 'undefined') {
+      if (typeof ResizeObserver !== 'undefined') {
         new ResizeObserver(handleSizeChange).observe(mumeClientPanel[0]);
-    } else {
+      } else {
         console.warn('ResizeObserver not supported. Some UI elements might not adjust correctly.');
-    }
-    handleSizeChange();
-  }).fail(function(error: unknown) {
-    console.error("Failed to load MumeMap:", error);
-    $('#mume-map').html('<p style="color:#aaa;text-align:center;padding-top:20px;">Map unable to load. Please refresh to try again.</p>');
-  });
+      }
+      handleSizeChange();
+    })
+    .fail(function (error: unknown) {
+      console.error('Failed to load MumeMap:', error);
+      $('#mume-map').html(
+        '<p style="color:#aaa;text-align:center;padding-top:20px;">Map unable to load. Please refresh to try again.</p>'
+      );
+    });
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').then(function (registration) {
-      console.log('ServiceWorker registration successful with scope: ', registration.scope);
-    }).catch(function (error) {
-      console.log('ServiceWorker registration failed: ', error);
-    });
+    navigator.serviceWorker
+      .register('sw.js')
+      .then(function (registration) {
+        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+      })
+      .catch(function (error) {
+        console.log('ServiceWorker registration failed: ', error);
+      });
   }
 });
 

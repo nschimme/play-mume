@@ -4,14 +4,14 @@
   "description": "Modern web client for MUME using DecafMUD",
   "main": "errorhandler.js",
   "scripts": {
-    "test": "npm run tsc && npm run lint && node --test built/tools/*.test.js",
+    "test": "npm run tsc && npm run lint && node --test built/src/tools/*.test.js built/DecafMUD/src/*.test.js",
     "tsc": "tsc -p tsconfig.json",
     "lint": "eslint . --ext .js,.ts --fix",
     "lint:check": "eslint . --ext .js,.ts",
     "build": "webpack --mode production",
     "dev": "webpack --mode development",
     "watch": "webpack --mode development --watch",
-    "convert-map": "node built/tools/convert-map.js"
+    "convert-map": "node built/src/tools/convert-map.js"
   },
   "dependencies": {
     "jquery": "^3.7.1",
