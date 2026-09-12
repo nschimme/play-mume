@@ -499,6 +499,7 @@ html.no-scroll, html.no-scroll body {
   height: 100%;
   box-sizing: border-box;
   position: relative;
+  min-width: 0;
 }
 
 #mume-map-panel canvas {
@@ -622,6 +623,8 @@ html.no-scroll, html.no-scroll body {
   margin: 0;
   padding: 12px calc(16px + env(safe-area-inset-right, 0px)) calc(60px + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left, 0px));
   overflow-y: auto;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   box-sizing: border-box;
   height: 100%;
 
